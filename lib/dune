@@ -1,5 +1,0 @@
-(library
- (name jj_tui)
- (libraries core stdio core_unix.command_unix )
- )
-
