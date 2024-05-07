@@ -6,24 +6,22 @@ module W = Nottui_widgets;;
 
 (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
 
-let runCommand ()=
-  (* sys.Command.exec *)
-  (* let res=Jj_tui.Process.proc_stdOutAndErr "jj --no-pager help" in *)
-  let (stdout,stderr)=Feather.process "jj" []|>Feather.collect stdout_and_stderr in
+let cmdArgs cmd args=
+  let (stdout,stderr)=Feather.process cmd args|>Feather.collect stdout_and_stderr in
+  stdout^stderr
+;;
+let cmd cmd =
+  let (stdout,stderr)=Feather.process cmd []|>Feather.collect stdout_and_stderr in
   stdout^stderr
 
-let   ()=
-  (* sys.Command.exec *)
-  (* let res=Jj_tui.Process.proc_stdOutAndErr "jj --no-pager help" in *)
-  let (stdout,stderr)=Feather.process "jj" []|>Feather.collect stdout_and_stderr in
-  stdout^stderr
+;;
 
 
 let vcount = Lwd.var "";;
 
 let button = 
   W.button (Printf.sprintf "run jj" )
-           (fun () ->  vcount $= (runCommand()))
+           (fun () ->  vcount $= (cmd"jj"))
   |>Lwd.pure
          ;;
 let vQuit=Lwd.var false;;
@@ -36,13 +34,26 @@ let quitButton  =
 
 
 let (<-$) f v=Lwd.map ~f (Lwd.get v);; 
-
+let vShowStatus= Lwd.var "";;
 let inputs ui=
   Ui.event_filter (fun event->
     match event with
     |`Key (`ASCII 'l',_)-> 
-        let res=runCommand()in
+        let res=cmd "jj"in
         vcount$=res;
+
+        `Handled
+    |`Key (`ASCII 's',_)-> 
+        let res=cmdArgs "jj" ["show"]in
+        vShowStatus$=res;
+
+        `Handled
+    |`Key (`ASCII 'p',_)-> 
+        let _=cmdArgs "jj"["prev"]in
+
+        `Handled
+    |`Key (`ASCII 'n',_)-> 
+        let _=cmdArgs "jj "["next"]in
 
         `Handled
     |_->`Unhandled
@@ -51,11 +62,11 @@ let inputs ui=
 let mainUi= 
   Lwd.map ~f:inputs @@
   W.h_pane
-  Nottui_widgets.vbox [
+  (Nottui_widgets.vbox [
     button;
     W.string <-$ vcount;
-    quitButton]
-  W.string
+    quitButton])
+  (W.string <-$ vShowStatus)
 ;;
       
 
