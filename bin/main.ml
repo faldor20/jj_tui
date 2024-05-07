@@ -53,7 +53,7 @@ let inputs ui=
 
         `Handled
     |`Key (`ASCII 'n',_)-> 
-        let _=cmdArgs "jj "["next"]in
+        let _=cmdArgs "jj"["next"]in
 
         `Handled
     |_->`Unhandled
