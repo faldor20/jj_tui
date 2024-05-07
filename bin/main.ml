@@ -12,6 +12,12 @@ let runCommand ()=
   let (stdout,stderr)=Feather.process "jj" []|>Feather.collect stdout_and_stderr in
   stdout^stderr
 
+let   ()=
+  (* sys.Command.exec *)
+  (* let res=Jj_tui.Process.proc_stdOutAndErr "jj --no-pager help" in *)
+  let (stdout,stderr)=Feather.process "jj" []|>Feather.collect stdout_and_stderr in
+  stdout^stderr
+
 
 let vcount = Lwd.var "";;
 
@@ -43,10 +49,13 @@ let inputs ui=
       ) ui
   ;;
 let mainUi= 
-  Lwd.map ~f:inputs @@Nottui_widgets.vbox [
+  Lwd.map ~f:inputs @@
+  W.h_pane
+  Nottui_widgets.vbox [
     button;
     W.string <-$ vcount;
     quitButton]
+  W.string
 ;;
       
 
