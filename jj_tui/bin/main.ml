@@ -1,5 +1,4 @@
 open Nottui
-open Feather
 open Lwd_infix
 open Notty
 open Eio.Std
@@ -28,7 +27,7 @@ end
 (* let task_pool () = *)
 (* Option.get !Vars.pool *)
 
-let _eio_env () = Option.get !Vars.eio_env
+let eio_env () = Option.get !Vars.eio_env
 let term () = Option.get !Vars.term
 
 (** Makes a new process that has acess to all input and output
@@ -54,13 +53,17 @@ let colored_string = Jj_tui.AnsiReverse.colored_string
 
 (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
 let cmdArgs cmd args =
-  let stdout, stderr = Feather.process cmd args |> Feather.collect stdout_and_stderr in
-  stdout ^ stderr
+  let env= eio_env() in
+  let mgr=Eio.Stdenv.process_mgr env in
+  let cwd=Eio.Stdenv.cwd env in
+
+  let out=Eio_process.run_stdout ~cwd ~process_mgr:mgr ~prog:cmd ~args () in
+  out|>Result.to_option|>Option.value ~default: "there was an error"
 ;;
 
 let jj args =
-  print_endline "running command";
   let res = cmdArgs "jj" (List.concat [ args; [ "--color"; "always" ] ]) in
+
   if res |> String.length > 10000
   then String.sub res 0 10000 ^ "...truncated because it's really long"
   else res
@@ -91,7 +94,6 @@ let onChange () =
   let res = jj [ "show" ] |> colored_string in
   vShowStatus $= res;
   let res = jj []|>colored_string in
-print_endline "finished commands";
   vcount $= res 
 ;;
 
@@ -280,9 +282,10 @@ let ui_loop ~quit ~term root =
 (*TODO:For hosting a subprocess i should look into using EIO and Ui_loop.step like some of the other libraries built with nottui*)
 let start_ui env =
   (*initialse the state*)
-  onChange ();
   let term = Notty_unix.Term.create () in
   Vars.term := Some term;
+  Vars.eio_env:= Some env; 
+  onChange ();
   ui_loop ~quit:Vars.quit ~term (mainUi env)
 ;;
 

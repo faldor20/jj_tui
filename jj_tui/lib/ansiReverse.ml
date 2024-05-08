@@ -145,7 +145,7 @@ let string_to_image str =
     Printf.printf "restut: %s" a;
     Error a
   | Ok coded_strs ->
-    print_endline "parsed";
+    (* print_endline "parsed"; *)
     let locate_newlines codes =
       codes
       |> List.concat_map (fun (attr, str) ->
@@ -278,11 +278,10 @@ let%expect_test "hello" =
       \027[0m\027[K\027[0m\027[0m\027[K\027[0;32mThis is in green %s\027[0m\027[0m\027[K\027[0m \027[0m\027[0m\027[K\027[0;30mThisisnotGreen\027[0m\027[0m\027[K\027[0m|}]
 ;;
 
-let jjtest =
-  {|
-  @  [1m[38;5;13mm[38;5;8mtxzlotn[39m [38;5;3meli.jambu@gmail.com[39m [38;5;14m2024-05-08 12:19:37[39m [38;5;12mb[38;5;8mb87f772[39m[0m
-  │  [1m[38;5;3m(no description set)[39m[0m
-|}
+let read_file file =
+  In_channel.with_open_bin file In_channel.input_all
+  ;;
+  let jjtest = read_file "/home/eli/Code/ocaml/jj_tui/jj_tui/log3"
 ;;
 
 let%expect_test "jj_test" =
