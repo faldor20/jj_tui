@@ -10,21 +10,6 @@ type op = Buffer.t -> unit
    let ( <| ), ( <. ), ( <! ) = Buffer.(add_string, add_char, add_decimal) *)
 let invalid_arg fmt = Format.kasprintf invalid_arg fmt
 
-let rgb ~r ~g ~b =
-  if r < 0 || g < 0 || b < 0 || r > 5 || g > 5 || b > 5 then
-    invalid_arg "Notty.A.rgb %d %d %d: channel out of range" r g b
-  else 0x01000000 lor ((r * 36) + (g * 6) + b + 16)
-
-let gray level =
-  if level < 0 || level > 23 then
-    invalid_arg "Notty.A.gray %d: level out of range" level
-  else 0x01000000 lor (level + 232)
-
-let rgb_888 ~r ~g ~b =
-  if r < 0 || g < 0 || b < 0 || r > 255 || g > 255 || b > 255 then
-    invalid_arg "Notty.A.rgb_888 %d %d %d: channel out of range" r g b
-  else 0x02000000 lor ((r lsl 16) lor (g lsl 8) lor b)
-
 let sts = [ ";1"; ";3"; ";4"; ";5"; ";7" ]
 
 let attr_of_ints fg bg st =
@@ -88,7 +73,7 @@ let parse_ansi_escape_codes (input : string) : (A.t * string) list =
               | 46 :: _ -> A.bg A.cyan
               | 47 :: _ -> A.bg A.white
               | 48 :: 5 :: color :: _ ->
-                  A.bg (A.unsafe_color_of_int (0x02000000 lor color))
+                  A.bg (A.unsafe_color_of_int (0x01000000 lor color))
               | _ -> A.empty
             in
             (attr, !j + 1)

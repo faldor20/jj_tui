@@ -1,2 +1,45 @@
+profile = janestreet
+#good to stop errors propigating
+let-binding-spacing=double-semicolon
 
-profile=conventional
+type-decl=sparse
+
+#==== This section is basically for getting trailing commas ====
+
+#We want space around these for ease of adding newlines
+space-around-records=true
+space-around-lists=true
+space-around-arrays=true
+#This makes types lists etc start with a newline
+#let a=[
+#	item
+#instead of 
+# let a=[ item 
+dock-collection-brackets=true
+#We need this too otherwires the semicolons wee be before
+break-separators=after
+
+break-colon=after
+
+break-sequences=true
+
+#ensures
+
+#this ensures our match statements stay on multiple lines
+break-cases=nested
+
+
+
+#ensures that 'then' lines up with 'else' 
+if-then-else=keyword-first 
+
+#break-sequences=true
+
+
+#break-fun-decl=wrap
+#break-fun-sig=wrap
+#wrap-fun-args=true
+# assignment-operator=end-line
+
+#stops  thing @@ fun a-> from ending up on multiple lines
+break-infix-before-func=false

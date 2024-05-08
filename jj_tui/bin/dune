@@ -1,5 +1,5 @@
 (executable
  (public_name jj_tui)
  (name main)
- (libraries jj_tui feather lwd nottui base core stdio core_unix.command_unix )
+ (libraries jj_tui feather lwd nottui base core stdio core_unix.command_unix eio_main )
  )
