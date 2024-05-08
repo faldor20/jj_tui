@@ -20,7 +20,7 @@ module Vars = struct
   (* let ui_mode : ui_mode Lwd.var = Lwd.var Ui_multi_file *)
 
   let term : Notty_unix.Term.t option ref = ref None
-  let commit_message = Lwd.var ("", 0)
+  let prompt_message = Lwd.var ("", 0)
   let term_width_height : (int * int) Lwd.var = Lwd.var (0, 0)
 end
 
@@ -119,7 +119,7 @@ let changeInputs key =
   | 'h' ->
     noOut [ "new" ]
   | 'c' ->
-    post_change `Commit;
+    Lwd.set vExtern (`Prompt ("commit msg", [  "commit"; "-m" ]));
     `Handled
   | 'S' ->
     Lwd.set vExtern (`Cmd [ "jj"; "unsquash"; "-i" ]);
@@ -204,17 +204,16 @@ let mainUi env =
         `Handled
       | _ ->
         `Unhandled)
-  | (`Nothing | `Commit) as rest ->
+  | (`Nothing | `Prompt _) as rest ->
     let scrollState=Lwd.var W.default_scroll_state in
     let$* pane =
       W.h_pane
         (Nottui_widgets.vbox
            [
-             (* squashButton |> Lwd.pure; *)
-             (* button; *)
-             Ui.atom <-$ vcount (* quitButton *);
+             Ui.atom <-$ vcount;
            ])
         (W.vscroll_area~change:(fun _action state->
+        
         scrollState$=state;
 
         ) ~state:(Lwd.get scrollState) (Ui.atom <-$ vShowStatus))
@@ -222,29 +221,29 @@ let mainUi env =
     (match rest with
      | `Nothing ->
        inputs pane |> Lwd.pure
-     | `Commit ->
+     | `Prompt (name,cmd) ->
        let exit () =
          post_change `Nothing;
-         Lwd.set Vars.commit_message ("", 0)
+         Lwd.set Vars.prompt_message ("", 0)
        in
-       let$ commit_field =
+       let$ prompt_field =
          W.zbox
            [
              W.string ~attr:A.(st underline) "                                       "
              |> Lwd.pure;
              W.edit_field
-               (Lwd.get Vars.commit_message)
-               ~on_change:(fun state -> Lwd.set Vars.commit_message state)
+               (Lwd.get Vars.prompt_message)
+               ~on_change:(fun state -> Lwd.set Vars.prompt_message state)
                ~on_submit:(fun (str, _) ->
-                 let _ = jj [ "commit"; "-m"; str ] in
+                 let _ = jj (cmd @ [str]) in
                  exit ());
            ]
        in
        Ui.zcat
          [
            pane;
-           commit_field
-           |> Widgets.border_box ~pad:Gravity.default ~label:"commit msg"
+           prompt_field
+           |> Widgets.border_box ~pad:Gravity.default ~label:name
            |> Ui.resize ~pad:Widgets.neutral_grav;
          ]
        |> Ui.event_filter (fun event ->
