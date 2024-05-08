@@ -165,7 +165,6 @@ let inputs ui =
 (* let squashButton = *)
 (* W.button "squash" (fun _ -> Lwd.set vExtern (`Cmd [ "jj"; "squash"; "-i" ])) *)
 (* ;; *)
-
 let mainUi env =
   let$* running = Lwd.get vExtern in
   match running with
@@ -200,6 +199,7 @@ let mainUi env =
       | _ ->
         `Unhandled)
   | (`Nothing | `Commit) as rest ->
+    let scrollState=Lwd.var W.default_scroll_state in
     let$* pane =
       W.h_pane
         (Nottui_widgets.vbox
@@ -208,7 +208,10 @@ let mainUi env =
              (* button; *)
              Ui.atom <-$ vcount (* quitButton *);
            ])
-        (Ui.atom <-$ vShowStatus)
+        (W.vscroll_area~change:(fun _action state->
+        scrollState$=state;
+
+        ) ~state:(Lwd.get scrollState) (Ui.atom <-$ vShowStatus))
     in
     (match rest with
      | `Nothing ->
