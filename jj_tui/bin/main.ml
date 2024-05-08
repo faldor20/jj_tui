@@ -130,6 +130,12 @@ let changeInputs key =
   | 'R' ->
     Lwd.set vExtern (`Cmd [ "jj"; "resolve" ]);
     `Handled
+  | 'e' ->
+    Lwd.set vExtern (`Prompt ("revision", [  "edit" ]));
+    `Handled
+  | 'd' ->
+    Lwd.set vExtern (`Prompt ("description", [  "describe";"-m" ]));
+    `Handled
   | _ ->
     `Unhandled
 ;;
