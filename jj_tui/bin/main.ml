@@ -119,7 +119,7 @@ let changeInputs key =
   | 'h' ->
     noOut [ "new" ]
   | 'c' ->
-    Lwd.set vExtern (`Prompt ("commit msg", [  "commit"; "-m" ]));
+    Lwd.set vExtern (`Prompt ("commit msg", [ "commit"; "-m" ]));
     `Handled
   | 'S' ->
     Lwd.set vExtern (`Cmd [ "jj"; "unsquash"; "-i" ]);
@@ -131,10 +131,13 @@ let changeInputs key =
     Lwd.set vExtern (`Cmd [ "jj"; "resolve" ]);
     `Handled
   | 'e' ->
-    Lwd.set vExtern (`Prompt ("revision", [  "edit" ]));
+    Lwd.set vExtern (`Prompt ("revision", [ "edit" ]));
     `Handled
   | 'd' ->
-    Lwd.set vExtern (`Prompt ("description", [  "describe";"-m" ]));
+    Lwd.set vExtern (`Prompt ("description", [ "describe"; "-m" ]));
+    `Handled
+  | 'm' ->
+    Lwd.set vExtern (`Prompt ("destination", [ "rebase"; "-r"; "@"; "-d" ]));
     `Handled
   | _ ->
     `Unhandled
