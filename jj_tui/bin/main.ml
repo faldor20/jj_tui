@@ -58,7 +58,14 @@ let cmdArgs cmd args =
   stdout ^ stderr
 ;;
 
-let jj args = cmdArgs "jj" (List.concat [ args; [ "--color"; "always" ] ])
+let jj args =
+  print_endline "running command";
+  let res = cmdArgs "jj" (List.concat [ args; [ "--color"; "always" ] ]) in
+  if res |> String.length > 1000
+  then String.sub res 0 1000 ^ "...truncated because it's really long"
+  else res
+;;
+
 let vcount = Lwd.var I.empty
 
 let _button =
@@ -83,8 +90,9 @@ let vother = Lwd.var ""
 let onChange () =
   let res = jj [ "show" ] |> colored_string in
   vShowStatus $= res;
-  let res = jj [] in
-  vcount $= colored_string res
+  let res = jj []|>colored_string in
+print_endline "finished commands";
+  vcount $= res 
 ;;
 
 let post_change state =
@@ -153,7 +161,7 @@ let inputs ui =
 ;;
 
 (* let squashButton = *)
-  (* W.button "squash" (fun _ -> Lwd.set vExtern (`Cmd [ "jj"; "squash"; "-i" ])) *)
+(* W.button "squash" (fun _ -> Lwd.set vExtern (`Cmd [ "jj"; "squash"; "-i" ])) *)
 (* ;; *)
 
 let mainUi env =
@@ -193,9 +201,11 @@ let mainUi env =
     let$* pane =
       W.h_pane
         (Nottui_widgets.vbox
-           [ 
-           (* squashButton |> Lwd.pure; *)
-            (* button; *) Ui.atom <-$ vcount (* quitButton *) ])
+           [
+             (* squashButton |> Lwd.pure; *)
+             (* button; *)
+             Ui.atom <-$ vcount (* quitButton *);
+           ])
         (Ui.atom <-$ vShowStatus)
     in
     (match rest with
@@ -236,17 +246,18 @@ let mainUi env =
 ;;
 
 let ui_loop ~quit ~term root =
+  print_endline "starting loop";
   let renderer = Nottui.Renderer.make () in
-  (* let root = *)
-  (* let$ root = root in *)
-  (* root *)
-  (* |> Nottui.Ui.event_filter (fun x -> *)
-  (* match x with *)
-  (* | `Key (`Escape, []) -> *)
-  (* Lwd.set quit true; *)
-  (* `Handled *)
-  (* | _ -> `Unhandled) *)
-  (* in *)
+  let root =
+  let$ root = root in
+  root
+  |> Nottui.Ui.event_filter (fun x ->
+  match x with
+  | `Key (`Escape, []) ->
+  Lwd.set quit true;
+  `Handled
+  | _ -> `Unhandled)
+  in
   let rec loop () =
     if not (Lwd.peek quit)
     then (

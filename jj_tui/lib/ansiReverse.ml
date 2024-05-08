@@ -1,144 +1,195 @@
 open Notty
+open Angstrom
 
 type op = Buffer.t -> unit
 
 (* let ( & ) op1 op2 buf =
-     op1 buf;
-     op2 buf
-
+   op1 buf;
+   op2 buf
 
    let ( <| ), ( <. ), ( <! ) = Buffer.(add_string, add_char, add_decimal) *)
 let invalid_arg fmt = Format.kasprintf invalid_arg fmt
-
 let sts = [ ";1"; ";3"; ";4"; ";5"; ";7" ]
 
 let attr_of_ints fg bg st =
   A.fg @@ A.unsafe_color_of_int fg
   |> A.( ++ ) (A.bg @@ A.unsafe_color_of_int bg)
   |> A.( ++ ) (A.st @@ A.unsafe_style_of_int st)
+;;
 
 let fg_int i = A.fg @@ A.unsafe_color_of_int i
 let bg_int i = A.bg @@ A.unsafe_color_of_int i
 
-let print_image img =
+let print_image_escaped img =
   print_endline "image:";
   img |> Notty.Render.pp_image @@ Format.str_formatter;
   print_endline (Format.flush_str_formatter () |> String.escaped)
+;;
 
-let parse_ansi_escape_codes (input : string) : (A.t * string) list =
-  let len = String.length input in
-  let rec parse_codes acc i =
-    if i >= len then List.rev acc
-    else
-      let attr, j =
-        if i + 1 < len && input.[i] = '\027' && input.[i + 1] = '[' then (
-          let params = ref [] in
-          let j = ref (i + 2) in
-          while !j < len && input.[!j] <> 'm' do
-            let start = !j in
-            while !j < len && input.[!j] <> ';' && input.[!j] <> 'm' do
-              incr j
-            done;
-            let param = String.sub input start (!j - start) in
-            params := int_of_string param :: !params;
-            if !j < len && input.[!j] = ';' then incr j
-          done;
-          if !j < len && input.[!j] = 'm' then
-            let params = List.rev !params in
-            let attr =
-              match params with
-              | [] -> A.empty
-              | 0 :: _ -> A.empty
-              | 1 :: _ -> A.st A.bold
-              | 2 :: _ -> A.st A.italic
-              | 4 :: _ -> A.st A.underline
-              | 5 :: _ -> A.st A.blink
-              | 7 :: _ -> A.st A.reverse
-              | 30 :: _ -> A.fg A.black
-              | 31 :: _ -> A.fg A.red
-              | 32 :: _ -> A.fg A.green
-              | 33 :: _ -> A.fg A.yellow
-              | 34 :: _ -> A.fg A.blue
-              | 35 :: _ -> A.fg A.magenta
-              | 36 :: _ -> A.fg A.cyan
-              | 37 :: _ -> A.fg A.white
-              | 38 :: 5 :: color :: _ ->
-                  A.fg (A.unsafe_color_of_int (0x01000000 lor color))
-              | 40 :: _ -> A.bg A.black
-              | 41 :: _ -> A.bg A.red
-              | 42 :: _ -> A.bg A.green
-              | 43 :: _ -> A.bg A.yellow
-              | 44 :: _ -> A.bg A.blue
-              | 45 :: _ -> A.bg A.magenta
-              | 46 :: _ -> A.bg A.cyan
-              | 47 :: _ -> A.bg A.white
-              | 48 :: 5 :: color :: _ ->
-                  A.bg (A.unsafe_color_of_int (0x01000000 lor color))
-              | _ -> A.empty
-            in
-            (attr, !j + 1)
-          else (A.empty, i))
-        else (A.empty, i)
-      in
-      let k = ref j in
-      while !k < len && input.[!k] <> '\027' do
-        incr k
-      done;
-      let substring = String.sub input j (!k - j) in
-      parse_codes ((attr, substring) :: acc) !k
+let print_image img =
+  print_endline "image:";
+  img |> Notty.Render.pp_image @@ Format.str_formatter;
+  print_endline (Format.flush_str_formatter ())
+;;
+
+let print_attr img =
+  print_endline "attr:";
+  img |> Notty.Render.pp_attr @@ Format.str_formatter;
+  print_endline (Format.flush_str_formatter ())
+;;
+
+
+let parse_escape_seq =
+  let open A in
+  (* let digit = satisfy (function '0' .. '9' -> true | _ -> false) in *)
+  let digits = take_while1 (function '0' .. '9' -> true | _ -> false) in
+  (* let color_code = digits >>| int_of_string in *)
+  let param = digits <* option ' ' (char ';') in
+  let params = many (param >>| int_of_string) in
+  let escape_sequence = char '\027' *> char '[' *> params <* char 'm' in
+  let attr_of_params = function
+    | [] ->
+      empty
+    | 0 :: _ ->
+      empty
+    | 1 :: _ ->
+      st bold
+    | 2 :: _ ->
+      st italic
+    | 4 :: _ ->
+      st underline
+    | 5 :: _ ->
+      st blink
+    | 7 :: _ ->
+      st reverse
+    | 30 :: _ ->
+      fg black
+    | 31 :: _ ->
+      fg red
+    | 32 :: _ ->
+      fg green
+    | 33 :: _ ->
+      fg yellow
+    | 34 :: _ ->
+      fg blue
+    | 35 :: _ ->
+      fg magenta
+    | 36 :: _ ->
+      fg cyan
+    | 37 :: _ ->
+      fg white
+    | 38 :: 5 :: color :: _ ->
+      fg (unsafe_color_of_int (0x01000000 lor color))
+    | 40 :: _ ->
+      bg black
+    | 41 :: _ ->
+      bg red
+    | 42 :: _ ->
+      bg green
+    | 43 :: _ ->
+      bg yellow
+    | 44 :: _ ->
+      bg blue
+    | 45 :: _ ->
+      bg magenta
+    | 46 :: _ ->
+      bg cyan
+    | 47 :: _ ->
+      bg white
+    | 48 :: 5 :: color :: _ ->
+      bg (unsafe_color_of_int (0x01000000 lor color))
+    | _ ->
+      empty
   in
-  parse_codes [] 0
+  escape_sequence >>| attr_of_params
+;;
+
+let%expect_test "escape_parser" =
+  let test_str = "\027[32m" in
+  let res = parse_string ~consume:All parse_escape_seq test_str |> Result.get_ok in
+  print_attr res;
+  [%expect {| |}]
+;;
+
+let parse_ansi_escape_codes (input : string) =
+  let attr = parse_escape_seq in
+  let substring = take_while (fun c -> c <> '\027') in
+  let pair =
+    attr >>= fun a ->
+    substring >>= fun s -> return (a, s)
+  in
+  (* if we don't start on an escape we can match one here*)
+  let prefix = option "" substring >>| fun s -> A.empty, s in
+  let pairs =
+    prefix >>= fun prefix ->
+    many pair >>= fun pairs ->
+    if prefix |> snd == "" then return pairs else prefix :: pairs |> return
+  in
+  parse_string ~consume:Prefix pairs input
+;;
 
 (** Like fold left except we run the first element through init to get the state*)
-let fold_left_pre (f : 'acc -> 'a -> 'acc) (init : 'a -> 'acc) (input : 'a list)
-    =
+let fold_left_pre (f : 'acc -> 'a -> 'acc) (init : 'a -> 'acc) (input : 'a list) =
   match input with
-  | [] -> invalid_arg "empty list"
+  | [] ->
+    invalid_arg "empty list"
   | x :: xs ->
-      let state = init x in
-      xs |> List.fold_left f state
+    let state = init x in
+    xs |> List.fold_left f state
+;;
 
 let string_to_image str =
-  let coded_strs = parse_ansi_escape_codes str in
-  let locate_newlines codes =
-    codes
-    |> List.concat_map (fun (attr, str) ->
-           str |> String.split_on_char '\n'
-           |> List.map (fun x -> `Image (I.string attr x))
-           |> Base.List.intersperse ~sep:`Newline)
-  in
-  let newline_seperated = locate_newlines coded_strs in
-  (* Printf.printf "len:%d" (List.length newline_seperated); *)
-  let lines =
-    let open I in
-    (* newline_seperated
-       |> List.iter (fun x -> match x with `Imarge i -> print_image i | _ -> ()); *)
-    newline_seperated
-    |> Base.List.fold ~init:([], I.empty) ~f:(fun (images, image) x ->
-           match x with
-           | `Newline -> (image :: images, I.empty)
-           | `Image nextImage -> (images, image <|> nextImage))
-    |> fst
-    (* |> List.map (fun x ->
-           x |> print_image;
-           x) *)
-    |> Base.List.reduce_exn ~f:(fun bottom top -> top <-> bottom)
-  in
-  let image =
-    lines
-    (* |> fold_left_pre
+  match parse_ansi_escape_codes str with
+  | Error a ->
+    Printf.printf "restut: %s" a;
+    Error a
+  | Ok coded_strs ->
+    print_endline "parsed";
+    let locate_newlines codes =
+      codes
+      |> List.concat_map (fun (attr, str) ->
+        print_attr attr;
+        print_endline str;
+        str
+        |> String.split_on_char '\n'
+        |> List.map (fun x -> `Image (I.string attr x))
+        |> Base.List.intersperse ~sep:`Newline)
+    in
+    let newline_seperated = locate_newlines coded_strs in
+    (* Printf.printf "len:%d" (List.length newline_seperated); *)
+    let lines =
+      let open I in
+      (* newline_seperated
+         |> List.iter (fun x -> match x with `Imarge i -> print_image i | _ -> ()); *)
+      newline_seperated
+      |> Base.List.fold ~init:([], I.empty) ~f:(fun (images, image) x ->
+        match x with
+        | `Newline ->
+          image :: images, I.empty
+        | `Image nextImage ->
+          images, image <|> nextImage)
+      |> fst
+      (* |> List.map (fun x ->
+         x |> print_image;
+         x) *)
+      |> Base.List.reduce_exn ~f:(fun bottom top -> top <-> bottom)
+    in
+    let image =
+      lines
+      (* |> fold_left_pre
          (fun image (attr, str) ->
-           let parts = str |> String.split_on_char '\n' in
-           let nextImage =
-             parts
-             |> fold_left_pre
-                  (fun image str -> I.( <-> ) image (I.string attr str))
-                  (I.string attr)
-           in
-           I.( <|> ) image nextImage)
+         let parts = str |> String.split_on_char '\n' in
+         let nextImage =
+         parts
+         |> fold_left_pre
+         (fun image str -> I.( <-> ) image (I.string attr str))
+         (I.string attr)
+         in
+         I.( <|> ) image nextImage)
          (fun (attr, str) -> I.string attr str) *)
-  in
-  image
+    in
+    Ok image
+;;
 
 let escaped_string ?(attr = A.empty) str =
   let control_character_index str i =
@@ -156,15 +207,13 @@ let escaped_string ?(attr = A.empty) str =
   let rec split str i =
     match control_character_index str i with
     | j ->
-        let img = I.string attr (String.sub str i (j - i)) in
-        img :: split str (j + 1)
+      let img = I.string attr (String.sub str i (j - i)) in
+      img :: split str (j + 1)
     | exception Not_found ->
-        [
-          I.string attr
-            (if i = 0 then str else String.sub str i (String.length str - i));
-        ]
+      [ I.string attr (if i = 0 then str else String.sub str i (String.length str - i)) ]
   in
   I.vcat (split str 0)
+;;
 
 (* let colored_string s =
    s |> parse_ansi_escape_codes
@@ -173,8 +222,8 @@ let escaped_string ?(attr = A.empty) str =
 let colored_string s = s |> string_to_image
 
 let%expect_test "string_to_image" =
-  string_to_image
-    "\027[32mThis is in green %s\027[0m \027[30mThisisnotGreen\027[0m"
+  string_to_image "\027[32mThis is in green %s\027[0m \027[30mThisisnotGreen\027[0m"
+  |> Result.get_ok
   |> print_image;
   [%expect.unreachable]
 [@@expect.uncaught_exn
@@ -195,6 +244,7 @@ let%expect_test "string_to_image" =
   params 30
   params 0
   len:4 |}]
+;;
 
 let%expect_test "hello" =
   let outBuf = Buffer.create 100 in
@@ -202,10 +252,11 @@ let%expect_test "hello" =
   let res =
     parse_ansi_escape_codes
       "\027[32mThis is in green %s\027[0m \027[30mThisisnotGreen\027[0m"
+    |> Result.get_ok
   in
   res
   |> List.iter (fun (x, str) ->
-         Notty.I.string x str |> Notty.Render.pp_image @@ Format.str_formatter);
+    Notty.I.string x str |> Notty.Render.pp_image @@ Format.str_formatter);
   print_endline (Format.flush_str_formatter () |> String.escaped);
   print_endline (Buffer.contents outBuf);
   [%expect
@@ -215,15 +266,20 @@ let%expect_test "hello" =
       params 30
       params 0
       \027[0m\027[K\027[0;32mThis is in green %s\027[0m\027[0m\027[K\027[0m \027[0m\027[0m\027[K\027[0;30mThisisnotGreen\027[0m\027[0m\027[K\027[0m|}]
+;;
 
 let jjtest =
   {|
   @  [1m[38;5;13mm[38;5;8mtxzlotn[39m [38;5;3meli.jambu@gmail.com[39m [38;5;14m2024-05-08 12:19:37[39m [38;5;12mb[38;5;8mb87f772[39m[0m
   │  [1m[38;5;3m(no description set)[39m[0m
 |}
+;;
 
 let%expect_test "jj_test" =
-  jjtest |> string_to_image |> Notty.Render.pp_image @@ Format.str_formatter;
+  jjtest
+  |> string_to_image
+  |> Result.get_ok
+  |> Notty.Render.pp_image @@ Format.str_formatter;
   let res = Format.flush_str_formatter () in
   print_endline "====== input=====";
   print_endline (jjtest |> String.escaped);
@@ -267,9 +323,8 @@ let%expect_test "jj_test" =
       ====== output escaped=====
       \027[0m\027[K\027[0m\n\027[0m  @  \027[0;95mm\027[0;90mtxzlotn\027[0m \027[0;33meli.jambu@gmail.com\027[0m \027[0;96m2024-05-08 12:19:37\027[0m \027[0;94mb\027[0m\027[K\027[0;90mb87f772\027[0m\n\027[0m  \226\148\130  \027[0;33m(no description set)\027[0m\027[K\027[0m                                     \027[0m
       =====output====
-      [0m[K[0m
-      [0m  @  [0;95mm[0;90mtxzlotn[0m [0;33meli.jambu@gmail.com[0m [0;96m2024-05-08 12:19:37[0m [0;94mb[0m[K[0;90mb87f772[0m
-      [0m  │  [0;33m(no description set)[0m[K[0m                                     [0m|}]
+      |}]
+;;
 
 (* let ansi =
    {
@@ -319,7 +374,7 @@ let%expect_test "jj_test" =
      sgr;
    } *)
 (*
-     let no0 _ = ()
+   let no0 _ = ()
      and no1 _ _ = ()
      and no2 _ _ _ = ()
 
@@ -339,8 +394,8 @@ let%expect_test "jj_test" =
          bpaste = (fun _ -> false);
        } *)
 (*
-     let erase cap buf = Buffer.clear buf (* KEEP ETA-LONG. *)
+   let erase cap buf = Buffer.clear buf (* KEEP ETA-LONG. *)
 
-     let cursat0 cap b =
-       let w, h = cap.cursat b in
-       (max 0 (w - 1), max 0 (h - 1)) *)
+   let cursat0 cap b =
+   let w, h = cap.cursat b in
+   (max 0 (w - 1), max 0 (h - 1)) *)
