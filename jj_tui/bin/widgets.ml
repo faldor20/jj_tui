@@ -4,6 +4,22 @@ module W = Nottui_widgets
 
 let neutral_grav = Gravity.make ~h:`Neutral ~v:`Neutral
 let make_even num = num + (num mod 2 * 1)
+let upPipe = Uchar.of_int 0x2503
+let tlPipe = Uchar.of_int 0x250f
+let trPipe = Uchar.of_int 0x2513
+let blPipe = Uchar.of_int 0x2517
+let brPipe = Uchar.of_int 0x251b
+let sidePipe = Uchar.of_int 0x2501
+
+let make_with_ends start mid ending width =
+  Array.init width (fun i ->
+    let lastIdx = width - 1 in
+    match i with 0 -> start | a when a == lastIdx -> ending | _ -> mid)
+  |> I.uchars A.empty
+;;
+
+let make_top width = make_with_ends tlPipe sidePipe trPipe width
+let make_bot width = make_with_ends blPipe sidePipe brPipe width
 
 (** This is for shifting something away from the edge it is pushed against *)
 let pad_edge x_pad y_pad grav ui =
@@ -26,7 +42,7 @@ let pad_edge x_pad y_pad grav ui =
 ;;
 
 let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") input =
-  let width = Ui.layout_width input in
+  let width = Ui.layout_width input |> make_even in
   let height = Ui.layout_height input in
   let edit =
     Ui.zcat
@@ -35,19 +51,25 @@ let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") inp
         input |> Ui.resize ~pad |> pad_edge (pad_h / 2) (pad_v / 2) pad;
       ]
   in
-  let width = Ui.layout_width edit |> make_even in
-  let h_border = String.init width (fun _ -> '=') |> W.string in
+  let p = I.uchar A.empty upPipe 1 1 in
+  let v_border =
+    I.vcat (List.init (edit |> Ui.layout_height) (fun _ -> p))
+    |> Ui.atom
+    |> Ui.resize ~pad:neutral_grav
+  in
+  let h_body = Ui.hcat [ v_border; edit; v_border ] in
+  let width = Ui.layout_width h_body in
   let v_body =
     Ui.vcat
       [
-        Ui.zcat [ h_border; W.string label |> Ui.resize ~pad |> pad_edge 1 0 pad ];
-        edit;
-        h_border;
+        Ui.zcat
+          [
+            make_top width |> Ui.atom;
+            W.string label |> Ui.resize ~pad |> pad_edge 1 0 pad;
+          ];
+        h_body;
+        make_bot width|>Ui.atom
       ]
   in
-  let p = I.string A.empty "|" in
-  let v_border =
-    I.vcat (List.init (v_body |> Ui.layout_height) (fun _ -> p)) |> Ui.atom
-  in
-  Ui.hcat [ v_border; v_body; v_border ]
+  v_body
 ;;
