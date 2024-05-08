@@ -61,8 +61,8 @@ let cmdArgs cmd args =
 let jj args =
   print_endline "running command";
   let res = cmdArgs "jj" (List.concat [ args; [ "--color"; "always" ] ]) in
-  if res |> String.length > 1000
-  then String.sub res 0 1000 ^ "...truncated because it's really long"
+  if res |> String.length > 10000
+  then String.sub res 0 10000 ^ "...truncated because it's really long"
   else res
 ;;
 

@@ -38,7 +38,6 @@ let print_attr img =
   print_endline (Format.flush_str_formatter ())
 ;;
 
-
 let parse_escape_seq =
   let open A in
   (* let digit = satisfy (function '0' .. '9' -> true | _ -> false) in *)
@@ -108,7 +107,9 @@ let%expect_test "escape_parser" =
   let test_str = "\027[32m" in
   let res = parse_string ~consume:All parse_escape_seq test_str |> Result.get_ok in
   print_attr res;
-  [%expect {| |}]
+  [%expect {|
+    attr:
+    [0m<[0;32mATTR[0m[K[0m>[0m |}]
 ;;
 
 let parse_ansi_escape_codes (input : string) =
@@ -148,8 +149,8 @@ let string_to_image str =
     let locate_newlines codes =
       codes
       |> List.concat_map (fun (attr, str) ->
-        print_attr attr;
-        print_endline str;
+        (* print_attr attr; *)
+        (* print_endline str; *)
         str
         |> String.split_on_char '\n'
         |> List.map (fun x -> `Image (I.string attr x))
@@ -172,7 +173,8 @@ let string_to_image str =
       (* |> List.map (fun x ->
          x |> print_image;
          x) *)
-      |> Base.List.reduce_exn ~f:(fun bottom top -> top <-> bottom)
+      |> Base.List.reduce~f:(fun bottom top -> top <-> bottom)
+      |>Option.value ~default: I.empty
     in
     let image =
       lines
@@ -219,7 +221,7 @@ let escaped_string ?(attr = A.empty) str =
    s |> parse_ansi_escape_codes
    |> List.map (fun (x, str) -> escaped_string ~attr:x str)
    |> I.vcat *)
-let colored_string s = s |> string_to_image
+let colored_string s = s |> string_to_image|>Result.get_ok
 
 let%expect_test "string_to_image" =
   string_to_image "\027[32mThis is in green %s\027[0m \027[30mThisisnotGreen\027[0m"
@@ -234,16 +236,28 @@ let%expect_test "string_to_image" =
 
   (Invalid_argument List.reduce_exn)
   Raised at Stdlib.invalid_arg in file "stdlib.ml", line 30, characters 20-45
-  Called from Jj_tui__AnsiReverse.(fun) in file "lib/ansiReverse.ml", line 197, characters 2-88
+  Called from Jj_tui__AnsiReverse.string_to_image in file "lib/ansiReverse.ml" (inlined), line 175, characters 9-67
+  Called from Jj_tui__AnsiReverse.string_to_image in file "lib/ansiReverse.ml", line 164, characters 6-397
+  Called from Jj_tui__AnsiReverse.(fun) in file "lib/ansiReverse.ml", line 225, characters 2-84
   Called from Expect_test_collector.Make.Instance_io.exec in file "collector/expect_test_collector.ml", line 234, characters 12-19
 
   Trailing output
   ---------------
-  params 32
-  params 0
-  params 30
-  params 0
-  len:4 |}]
+  parsed
+  attr:
+  [0m<[0mATTR[0m[K[0m>[0m
+
+  attr:
+  [0m<[0;32mATTR[0m[K[0m>[0m
+  This is in green %s
+  attr:
+  [0m<[0mATTR[0m[K[0m>[0m
+
+  attr:
+  [0m<[0;30mATTR[0m[K[0m>[0m
+  ThisisnotGreen
+  attr:
+  [0m<[0mATTR[0m[K[0m>[0m |}]
 ;;
 
 let%expect_test "hello" =
@@ -261,11 +275,7 @@ let%expect_test "hello" =
   print_endline (Buffer.contents outBuf);
   [%expect
     {|
-      params 32
-      params 0
-      params 30
-      params 0
-      \027[0m\027[K\027[0;32mThis is in green %s\027[0m\027[0m\027[K\027[0m \027[0m\027[0m\027[K\027[0;30mThisisnotGreen\027[0m\027[0m\027[K\027[0m|}]
+      \027[0m\027[K\027[0m\027[0m\027[K\027[0;32mThis is in green %s\027[0m\027[0m\027[K\027[0m \027[0m\027[0m\027[K\027[0;30mThisisnotGreen\027[0m\027[0m\027[K\027[0m|}]
 ;;
 
 let jjtest =
@@ -289,40 +299,69 @@ let%expect_test "jj_test" =
   print_endline res;
   [%expect
     {|
-      params 1
-      params 38;5;13
-      nfg [0m<[0;95mATTR[0m[K[0m>[0m
-      params 38;5;8
-      nfg [0m<[0;90mATTR[0m[K[0m>[0m
-      params 39
-      params 38;5;3
-      nfg [0m<[0;33mATTR[0m[K[0m>[0m
-      params 39
-      params 38;5;14
-      nfg [0m<[0;96mATTR[0m[K[0m>[0m
-      params 39
-      params 38;5;12
-      nfg [0m<[0;94mATTR[0m[K[0m>[0m
-      params 38;5;8
-      nfg [0m<[0;90mATTR[0m[K[0m>[0m
-      params 39
-      params 0
-      params 1
-      params 38;5;3
-      nfg [0m<[0;33mATTR[0m[K[0m>[0m
-      params 39
-      params 0
-      len:23image:
-      \027[0m  \226\148\130  \027[0m\027[K\027[0;33m(no description set)\027[0m
-      image:
-      \027[0m  @  \027[0;95mm\027[0;90mtxzlotn\027[0m \027[0;33meli.jambu@gmail.com\027[0m \027[0;96m2024-05-08 12:19:37\027[0m \027[0;94mb\027[0m\027[K\027[0;90mb87f772\027[0m
-      image:
-      \027[0m\027[K\027[0m
+      parsed
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+        @
+      attr:
+      [0m<[0;1mATTR[0m[K[0m>[0m
+
+      attr:
+      [0m<[0;95mATTR[0m[K[0m>[0m
+      m
+      attr:
+      [0m<[0;90mATTR[0m[K[0m>[0m
+      txzlotn
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+      attr:
+      [0m<[0;33mATTR[0m[K[0m>[0m
+      eli.jambu@gmail.com
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+      attr:
+      [0m<[0;96mATTR[0m[K[0m>[0m
+      2024-05-08 12:19:37
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+      attr:
+      [0m<[0;94mATTR[0m[K[0m>[0m
+      b
+      attr:
+      [0m<[0;90mATTR[0m[K[0m>[0m
+      b87f772
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+        │
+      attr:
+      [0m<[0;1mATTR[0m[K[0m>[0m
+
+      attr:
+      [0m<[0;33mATTR[0m[K[0m>[0m
+      (no description set)
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+      attr:
+      [0m<[0mATTR[0m[K[0m>[0m
+
+
       ====== input=====
       \n  @  \027[1m\027[38;5;13mm\027[38;5;8mtxzlotn\027[39m \027[38;5;3meli.jambu@gmail.com\027[39m \027[38;5;14m2024-05-08 12:19:37\027[39m \027[38;5;12mb\027[38;5;8mb87f772\027[39m\027[0m\n  \226\148\130  \027[1m\027[38;5;3m(no description set)\027[39m\027[0m\n
       ====== output escaped=====
       \027[0m\027[K\027[0m\n\027[0m  @  \027[0;95mm\027[0;90mtxzlotn\027[0m \027[0;33meli.jambu@gmail.com\027[0m \027[0;96m2024-05-08 12:19:37\027[0m \027[0;94mb\027[0m\027[K\027[0;90mb87f772\027[0m\n\027[0m  \226\148\130  \027[0;33m(no description set)\027[0m\027[K\027[0m                                     \027[0m
       =====output====
+      [0m[K[0m
+      [0m  @  [0;95mm[0;90mtxzlotn[0m [0;33meli.jambu@gmail.com[0m [0;96m2024-05-08 12:19:37[0m [0;94mb[0m[K[0;90mb87f772[0m
+      [0m  │  [0;33m(no description set)[0m[K[0m                                     [0m
       |}]
 ;;
 
