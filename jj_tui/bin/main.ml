@@ -53,17 +53,29 @@ let colored_string = Jj_tui.AnsiReverse.colored_string
 
 (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
 let cmdArgs cmd args =
-  let env= eio_env() in
-  let mgr=Eio.Stdenv.process_mgr env in
-  let cwd=Eio.Stdenv.cwd env in
-
-  let out=Eio_process.run_stdout ~cwd ~process_mgr:mgr ~prog:cmd ~args () in
-  out|>Result.to_option|>Option.value ~default: "there was an error"
+  let env = eio_env () in
+  let mgr = Eio.Stdenv.process_mgr env in
+  let cwd = Eio.Stdenv.cwd env in
+  let out =
+    Eio_process.run
+      ~cwd
+      ~process_mgr:mgr
+      ~prog:cmd
+      ~args
+      ~f:(fun x ->
+        (match x.exit_status with
+         | `Exited i ->
+           if i == 0 then x.stdout else x.stdout ^ x.stderr
+         | `Signaled _ ->
+           x.stderr)
+        |> Base.Or_error.return)
+      ()
+  in
+  out |> Result.to_option |> Option.value ~default:"there was an error"
 ;;
 
 let jj args =
   let res = cmdArgs "jj" (List.concat [ args; [ "--color"; "always" ] ]) in
-
   if res |> String.length > 10000
   then String.sub res 0 10000 ^ "...truncated because it's really long"
   else res
@@ -93,8 +105,8 @@ let vother = Lwd.var ""
 let onChange () =
   let res = jj [ "show" ] |> colored_string in
   vShowStatus $= res;
-  let res = jj []|>colored_string in
-  vcount $= res 
+  let res = jj [] |> colored_string in
+  vcount $= res
 ;;
 
 let post_change state =
@@ -174,6 +186,8 @@ let inputs ui =
 (* let squashButton = *)
 (* W.button "squash" (fun _ -> Lwd.set vExtern (`Cmd [ "jj"; "squash"; "-i" ])) *)
 (* ;; *)
+let vCmdOut = Lwd.var ""
+
 let mainUi env =
   let$* running = Lwd.get vExtern in
   match running with
@@ -208,23 +222,19 @@ let mainUi env =
       | _ ->
         `Unhandled)
   | (`Nothing | `Prompt _) as rest ->
-    let scrollState=Lwd.var W.default_scroll_state in
+    let scrollState = Lwd.var W.default_scroll_state in
     let$* pane =
       W.h_pane
-        (Nottui_widgets.vbox
-           [
-             Ui.atom <-$ vcount;
-           ])
-        (W.vscroll_area~change:(fun _action state->
-        
-        scrollState$=state;
-
-        ) ~state:(Lwd.get scrollState) (Ui.atom <-$ vShowStatus))
+        (Nottui_widgets.vbox [ (Ui.atom <-$ vcount); W.string"--------"|>Lwd.pure; (W.string <-$ vCmdOut) ])
+        (W.vscroll_area
+           ~change:(fun _action state -> scrollState $= state)
+           ~state:(Lwd.get scrollState)
+           (Ui.atom <-$ vShowStatus))
     in
     (match rest with
      | `Nothing ->
        inputs pane |> Lwd.pure
-     | `Prompt (name,cmd) ->
+     | `Prompt (name, cmd) ->
        let exit () =
          post_change `Nothing;
          Lwd.set Vars.prompt_message ("", 0)
@@ -238,7 +248,7 @@ let mainUi env =
                (Lwd.get Vars.prompt_message)
                ~on_change:(fun state -> Lwd.set Vars.prompt_message state)
                ~on_submit:(fun (str, _) ->
-                 let _ = jj (cmd @ [str]) in
+                 vCmdOut $= jj (cmd @ [ str ]);
                  exit ());
            ]
        in
@@ -262,14 +272,15 @@ let ui_loop ~quit ~term root =
   print_endline "starting loop";
   let renderer = Nottui.Renderer.make () in
   let root =
-  let$ root = root in
-  root
-  |> Nottui.Ui.event_filter (fun x ->
-  match x with
-  | `Key (`Escape, []) ->
-  Lwd.set quit true;
-  `Handled
-  | _ -> `Unhandled)
+    let$ root = root in
+    root
+    |> Nottui.Ui.event_filter (fun x ->
+      match x with
+      | `Key (`Escape, []) ->
+        Lwd.set quit true;
+        `Handled
+      | _ ->
+        `Unhandled)
   in
   let rec loop () =
     if not (Lwd.peek quit)
@@ -295,7 +306,7 @@ let start_ui env =
   (*initialse the state*)
   let term = Notty_unix.Term.create () in
   Vars.term := Some term;
-  Vars.eio_env:= Some env; 
+  Vars.eio_env := Some env;
   onChange ();
   ui_loop ~quit:Vars.quit ~term (mainUi env)
 ;;
