@@ -4,6 +4,7 @@ module W = Nottui_widgets
 
 let neutral_grav = Gravity.make ~h:`Neutral ~v:`Neutral
 let make_even num = num + (num mod 2 * 1)
+
 let upPipe = Uchar.of_int 0x2503
 let tlPipe = Uchar.of_int 0x250f
 let trPipe = Uchar.of_int 0x2513
@@ -11,6 +12,7 @@ let blPipe = Uchar.of_int 0x2517
 let brPipe = Uchar.of_int 0x251b
 let sidePipe = Uchar.of_int 0x2501
 
+(** makes a line of chars with a specific start , midlle and end*)
 let make_with_ends start mid ending width =
   Array.init width (fun i ->
     let lastIdx = width - 1 in

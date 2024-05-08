@@ -225,11 +225,11 @@ let mainUi env =
     let scrollState = Lwd.var W.default_scroll_state in
     let$* pane =
       W.h_pane
-        (Nottui_widgets.vbox [ (Ui.atom <-$ vcount); W.string"━━━━━━━━━━━━━━━━━━"|>Lwd.pure; (W.string <-$ vCmdOut) ])
+        (Nottui_widgets.vbox [ ((fun x->x|>I.pad ~l:1 ~r:1|> Ui.atom) <-$ vcount); W.string"━━━━━━━━━━━━━━━━━━"|>Lwd.pure; (W.string <-$ vCmdOut) ])
         (W.vscroll_area
            ~change:(fun _action state -> scrollState $= state)
            ~state:(Lwd.get scrollState)
-           (Ui.atom <-$ vShowStatus))
+           ((fun x->x|>I.pad ~l:1 ~r:1 |> Ui.atom) <-$ vShowStatus))
     in
     (match rest with
      | `Nothing ->
