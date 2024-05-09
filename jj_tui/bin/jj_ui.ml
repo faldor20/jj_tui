@@ -47,39 +47,46 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* let ( let<- ) v f = Lwd.map ~f (Lwd.get v) *)
 
-  let onChange () =
-    let res = jj [ "show" ] |> colored_string in
+  let on_change () =
+    let res = jj_no_log [ "show" ] |> colored_string in
     ui_state.jj_show $= res;
-    let res = jj [] |> colored_string in
+    let res = jj_no_log [] |> colored_string in
     ui_state.jj_tree $= res
   ;;
 
   let post_change new_view =
-    onChange ();
+    on_change ();
     Lwd.set ui_state.view new_view
   ;;
 
   let inputs ui =
-    Ui.event_filter
-      (fun event ->
-        match event with
-        | `Key (`ASCII 'q', _) ->
-          Vars.quit $= true;
-          `Handled
-        | `Key (`ASCII key, _) ->
-          (match Jj_commands.handle_inputs key with
-           | `Handled ->
-             onChange ();
-             `Handled
-           | `Unhandled ->
-             `Unhandled)
-        | _ ->
-          `Unhandled)
-      ui
+    let$ input_state = Lwd.get ui_state.input in
+    let handler =
+      match input_state with
+      | `Normal ->
+        Jj_commands.handle_inputs
+      | `Mode handle ->
+        handle
+    in
+    ui
+    |> Ui.event_filter @@ fun event ->
+       match event with
+       | `Key (`ASCII 'q', _) ->
+         Vars.quit $= true;
+         `Handled
+       | `Key (`ASCII key, _) ->
+         (match handler key with
+          | `Handled ->
+            on_change ();
+            `Handled
+          | `Unhandled ->
+            `Unhandled)
+       | _ ->
+         `Unhandled
   ;;
 
   (** Start a process that will take full control of both stdin and stdout.
-  This is used for interactive diffs and such*)
+      This is used for interactive diffs and such*)
   let interactive_process env cmd =
     let exit_status_to_str y =
       match match y with `Exited x -> x | `Signaled x -> x with
@@ -114,7 +121,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let mainUi env =
     (*we want to initialize our states*)
-    onChange ();
+    on_change ();
     let$* running = Lwd.get ui_state.view in
     match running with
     | `Cmd cmd ->
@@ -128,10 +135,13 @@ module Make (Vars : Global_vars.Vars) = struct
       let scrollState = Lwd.var W.default_scroll_state in
       let pane =
         W.h_pane
-          (Nottui_widgets.vbox
+          (W.vbox
              [
                ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom);
                W.string "━━━━━━━━━━━━━━━━━━" |> Lwd.pure;
+               ui_state.command_log
+               |> Lwd.get
+               |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist);
                v_cmd_out $-> W.string;
              ])
           (W.vscroll_area
@@ -141,7 +151,7 @@ module Make (Vars : Global_vars.Vars) = struct
       in
       (match rest with
        | `Main ->
-         pane |>$ inputs
+         pane |> Lwd.bind ~f:inputs
        | `Prompt (name, cmd) ->
          W.zbox
            [

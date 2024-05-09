@@ -7,7 +7,17 @@ module Make (Vars : Global_vars.Vars) = struct
       let _ = jj args in
       `Handled
     in
-    let change_view view = Lwd.set ui_state.view view in
+    let change_view view =
+      Lwd.set ui_state.view view;
+      `Handled
+    in
+    let change_view_sub view =
+      Lwd.set ui_state.view view;
+      Lwd.set ui_state.input `Normal;
+      `Handled
+    in
+    let send_cmd args = change_view (`Cmd args) in
+    let send_cmd_sub args = change_view_sub (`Cmd args) in
     match key with
     | 'P' ->
       noOut [ "prev" ]
@@ -20,25 +30,52 @@ module Make (Vars : Global_vars.Vars) = struct
     | 'h' ->
       noOut [ "new" ]
     | 'c' ->
-      change_view @@ `Prompt ("commit msg", [ "commit"; "-m" ]);
-      `Handled
+      change_view @@ `Prompt ("commit msg", [ "commit"; "-m" ])
     | 'S' ->
-      change_view @@ `Cmd [ "jj"; "unsquash"; "-i" ];
-      `Handled
+      send_cmd [ "unsquash"; "-i" ]
     | 's' ->
-      change_view @@ `Cmd [ "jj"; "squash"; "-i" ];
-      `Handled
-    | 'R' ->
-      change_view @@ `Cmd [ "jj"; "resolve" ];
-      `Handled
-    | 'e' ->
-      change_view @@ `Prompt ("revision", [ "edit" ]);
-      `Handled
-    | 'd' ->
-      change_view @@ `Prompt ("description", [ "describe"; "-m" ]);
+      `Mode
+        (function
+          | 's' ->
+            send_cmd_sub [ "squash" ]
+          | 'i' ->
+            send_cmd_sub [ "squash"; "-i" ]
+          | _ ->
+            `Unhandled)
+      |> Lwd.set ui_state.input;
       `Handled
     | 'm' ->
-      change_view @@ `Prompt ("destination", [ "rebase"; "-r"; "@"; "-d" ]);
+      `Mode
+        (function
+          | 'm' ->
+            change_view_sub
+            @@ `Prompt ("Move revesion content to:", [ "move"; "-f"; "@"; "-t" ])
+          | 'i' ->
+            change_view_sub
+            @@ `Prompt ("Move revesion content to:", [ "move"; "-i"; "-f"; "@"; "-t" ])
+          | _ ->
+            `Unhandled)
+      |> Lwd.set ui_state.input;
+      `Handled
+    | 'e' ->
+      change_view @@ `Prompt ("revision", [ "edit" ])
+    | 'd' ->
+      change_view @@ `Prompt ("description", [ "describe"; "-m" ])
+    | 'R' ->
+      send_cmd [ "resolve" ]
+    | 'r' ->
+      (* We can move to a different command mode using this mode setup*)
+      `Mode
+        (function
+          | 'm' ->
+            change_view_sub
+            @@ `Prompt ("destination for revision rebase", [ "rebase"; "-r"; "@"; "-d" ])
+          | 'b' ->
+            change_view_sub
+            @@ `Prompt ("destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ])
+          | _ ->
+            `Unhandled)
+      |> Lwd.set ui_state.input;
       `Handled
     | _ ->
       `Unhandled
