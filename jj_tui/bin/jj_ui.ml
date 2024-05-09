@@ -64,7 +64,7 @@ module Make (Vars : Global_vars.Vars) = struct
     let handler =
       match input_state with
       | `Normal ->
-        Jj_commands.handle_inputs
+        Jj_commands.command_input Jj_commands.commandMapping
       | `Mode handle ->
         handle
     in
@@ -129,7 +129,7 @@ module Make (Vars : Global_vars.Vars) = struct
       Lwd.set ui_state.view @@ `RunCmd cmd;
       full_term_sized_background
     | `RunCmd cmd ->
-      interactive_process env cmd
+      interactive_process env ("jj" :: cmd)
     | (`Main | `Prompt _) as rest ->
       let v_cmd_out = Lwd.var "" in
       let scrollState = Lwd.var W.default_scroll_state in

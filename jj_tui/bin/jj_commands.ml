@@ -2,82 +2,110 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
 
-  let handle_inputs key =
+  type cmd_args = string list
+
+  type command_variant =
+    | No_Output of cmd_args
+    | Cmd of cmd_args
+    | Prompt of string * cmd_args
+    | SubCmd of command list
+
+  and command = {
+    key : char;
+    cmd : command_variant;
+  }
+
+  type command_list = command list
+
+  exception Handled
+
+  let commandMapping =
+    [
+      { cmd = No_Output [ "prev" ]; key = 'P' };
+      { cmd = No_Output [ "prev"; "--edit" ]; key = 'p' };
+      { cmd = No_Output [ "next" ]; key = 'N' };
+      { cmd = No_Output [ "next"; "--edit" ]; key = 'n' };
+      { cmd = No_Output [ "new" ]; key = 'h' };
+      { cmd = Prompt ("commit msg", [ "commit"; "-m" ]); key = 'c' };
+      { cmd = Cmd [ "unsquash"; "-i" ]; key = 'S' };
+      {
+        key = 's';
+        cmd =
+          SubCmd
+            [
+              { key = 's'; cmd = No_Output [ "squash" ] };
+              { key = 'i'; cmd = Cmd [ "squash"; "-i" ] };
+            ];
+      };
+      {
+        key = 'm';
+        cmd =
+          SubCmd
+            [
+              {
+                key = 'm';
+                cmd = Prompt ("Move revesion content to:", [ "move"; "-f"; "@"; "-t" ]);
+              };
+              {
+                key = 'i';
+                cmd =
+                  Prompt ("Move revesion content to:", [ "move"; "-i"; "-f"; "@"; "-t" ]);
+              };
+            ];
+      };
+      { cmd = Prompt ("revision", [ "edit" ]); key = 'e' };
+      { cmd = Prompt ("description", [ "describe"; "-m" ]); key = 'd' };
+      { cmd = Cmd [ "resolve" ]; key = 'R' };
+      {
+        key = 'r';
+        cmd =
+          SubCmd
+            [
+              {
+                key = 'm';
+                cmd =
+                  Prompt ("destination for revision rebase", [ "rebase"; "-r"; "@"; "-d" ]);
+              };
+              {
+                key = 'b';
+                cmd =
+                  Prompt ("destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ]);
+              };
+            ];
+      };
+    ]
+  ;;
+
+  let rec command_input ?(is_sub = false) keymap key =
     let noOut args =
       let _ = jj args in
-      `Handled
+      ()
     in
-    let change_view view =
-      Lwd.set ui_state.view view;
-      `Handled
-    in
-    let change_view_sub view =
-      Lwd.set ui_state.view view;
-      Lwd.set ui_state.input `Normal;
-      `Handled
-    in
+    let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd args) in
-    let send_cmd_sub args = change_view_sub (`Cmd args) in
-    match key with
-    | 'P' ->
-      noOut [ "prev" ]
-    | 'p' ->
-      noOut [ "prev"; "--edit" ]
-    | 'N' ->
-      noOut [ "next" ]
-    | 'n' ->
-      noOut [ "next"; "--edit" ]
-    | 'h' ->
-      noOut [ "new" ]
-    | 'c' ->
-      change_view @@ `Prompt ("commit msg", [ "commit"; "-m" ])
-    | 'S' ->
-      send_cmd [ "unsquash"; "-i" ]
-    | 's' ->
-      `Mode
-        (function
-          | 's' ->
-            send_cmd_sub [ "squash" ]
-          | 'i' ->
-            send_cmd_sub [ "squash"; "-i" ]
-          | _ ->
-            `Unhandled)
-      |> Lwd.set ui_state.input;
-      `Handled
-    | 'm' ->
-      `Mode
-        (function
-          | 'm' ->
-            change_view_sub
-            @@ `Prompt ("Move revesion content to:", [ "move"; "-f"; "@"; "-t" ])
-          | 'i' ->
-            change_view_sub
-            @@ `Prompt ("Move revesion content to:", [ "move"; "-i"; "-f"; "@"; "-t" ])
-          | _ ->
-            `Unhandled)
-      |> Lwd.set ui_state.input;
-      `Handled
-    | 'e' ->
-      change_view @@ `Prompt ("revision", [ "edit" ])
-    | 'd' ->
-      change_view @@ `Prompt ("description", [ "describe"; "-m" ])
-    | 'R' ->
-      send_cmd [ "resolve" ]
-    | 'r' ->
-      (* We can move to a different command mode using this mode setup*)
-      `Mode
-        (function
-          | 'm' ->
-            change_view_sub
-            @@ `Prompt ("destination for revision rebase", [ "rebase"; "-r"; "@"; "-d" ])
-          | 'b' ->
-            change_view_sub
-            @@ `Prompt ("destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ])
-          | _ ->
-            `Unhandled)
-      |> Lwd.set ui_state.input;
-      `Handled
-    | _ ->
+    (* Use exceptions so we can break out of the list*)
+    try
+      keymap
+      |> List.iter (fun cmd ->
+        if cmd.key == key
+        then (
+          match cmd.cmd with
+          | Cmd args ->
+            send_cmd args;
+            raise Handled
+          | No_Output args ->
+            noOut args;
+            raise Handled
+          | Prompt (str, args) ->
+            change_view (`Prompt (str, args));
+            raise Handled
+          | SubCmd sub_map ->
+            `Mode (command_input ~is_sub:true sub_map) |> Lwd.set ui_state.input)
+        else ());
       `Unhandled
+    with
+    | Handled ->
+      if is_sub then Lwd.set ui_state.input `Normal;
+      `Handled
   ;;
 end
