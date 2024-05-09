@@ -1,10 +1,10 @@
 open Notty
 open Nottui
+open Lwd_infix
 module W = Nottui_widgets
 
 let neutral_grav = Gravity.make ~h:`Neutral ~v:`Neutral
 let make_even num = num + (num mod 2 * 1)
-
 let upPipe = Uchar.of_int 0x2503
 let tlPipe = Uchar.of_int 0x250f
 let trPipe = Uchar.of_int 0x2513
@@ -70,8 +70,34 @@ let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") inp
             W.string label |> Ui.resize ~pad |> pad_edge 1 0 pad;
           ];
         h_body;
-        make_bot width|>Ui.atom
+        make_bot width |> Ui.atom;
       ]
   in
   v_body
 ;;
+
+(*========Prompt=======*)
+let prompt onExit name =
+  let prompt_input = Lwd.var ("", 0) in
+  let$ prompt_field =
+    W.zbox
+      [
+        W.string ~attr:A.(st underline) "                                       "
+        |> Lwd.pure;
+        W.edit_field
+          (Lwd.get prompt_input)
+          ~on_change:(fun state -> Lwd.set prompt_input state)
+          ~on_submit:(fun (str, _) -> onExit (`Finished str));
+      ]
+  in
+  prompt_field
+  |> border_box ~pad:Gravity.default ~label:name
+  |> Ui.event_filter (fun event ->
+    match event with
+    | `Key (`Escape, _) ->
+      onExit `Closed;
+      `Handled
+    | _ ->
+      `Unhandled)
+;;
+
