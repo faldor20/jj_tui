@@ -14,6 +14,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | Prompt of string * cmd_args
     | Prompt_I of string * cmd_args
     | SubCmd of command list
+    | Fun of (unit -> unit)
 
   and command = {
     key : char;
@@ -25,12 +26,35 @@ module Make (Vars : Global_vars.Vars) = struct
 
   exception Handled
 
-  let commandMapping =
+  let rec render_commands ?(sub_level = 0) commands =
+    let indent = String.init (sub_level * 2) (fun _ -> ' ') in
+    let line key desc =
+      I.hcat
+        [ I.string A.empty indent; I.char (A.fg A.lightblue) key 1 1; I.strf " %s" desc ]
+    in
+    commands
+    |> List.concat_map @@ fun command ->
+       match command with
+       | { key; description; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ } ->
+         [ line key description ]
+       | { key; description; cmd = SubCmd subs } ->
+          line key description :: render_commands ~sub_level:(sub_level + 1) subs
+;;
+
+  let commands_list_ui commands = commands |> render_commands |> I.vcat |> Ui.atom
+
+  let rec commandMapping =
     [
-    (* {key = '?'; *)
-        (* description = "Move the working copy to the previous child "; *)
-        (* cmd= Fun (fun _-> ui_state.popup) *)
-  (* }; *)
+      {
+        key = 'h';
+        description = "Show help";
+        cmd =
+          Fun
+            (fun _ ->
+              ui_state.show_popup
+              $= Some (commands_list_ui ( commandMapping ), " Help ");
+              ui_state.input $= `Mode (fun _ -> `Unhandled));
+      };
       {
         key = 'P';
         description = "Move the working copy to the previous child ";
@@ -140,21 +164,6 @@ module Make (Vars : Global_vars.Vars) = struct
     ]
   ;;
 
-  let rec render_commands ?(sub_level = 0) commands =
-    let indent = String.init (sub_level / 2) (fun _ -> ' ') in
-    let line key desc =
-      I.hcat
-        [ I.string A.empty indent; I.char (A.fg A.lightblue) key 1 1; I.strf " %s" desc ]
-    in
-    commands
-    |> List.concat_map @@ fun command ->
-       match command with
-       | { key; description; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ } ->
-         [ line key description ]
-       | { key; description; cmd = SubCmd subs } ->
-         line key description :: render_commands ~sub_level:(sub_level + 1) subs
-  ;;
-
   let rec command_input ?(is_sub = false) keymap key =
     let noOut args =
       let _ = jj args in
@@ -181,18 +190,19 @@ module Make (Vars : Global_vars.Vars) = struct
           | Prompt_I (str, args) ->
             change_view (`Prompt (str, `Cmd_I args));
             raise Handled
+          | Fun func ->
+            func ();
+            raise Handled
           | SubCmd sub_map ->
             ui_state.show_popup
-            $= Some
-                 ( render_commands sub_map |> I.vcat |> Ui.atom,
-                   Printf.sprintf " %s " cmd.description );
-            ui_state.input $= `Mode (command_input ~is_sub:true sub_map))
+            $= Some (commands_list_ui sub_map, Printf.sprintf " %s " cmd.description);
+            ui_state.input $= `Mode (command_input ~is_sub:true sub_map);
+            raise Handled)
         else ());
       `Unhandled
     with
     | Handled ->
       if is_sub then ui_state.input $= `Normal;
-      ui_state.show_popup $= None;
       `Handled
   ;;
 end
