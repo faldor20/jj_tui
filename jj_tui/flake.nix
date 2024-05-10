@@ -5,7 +5,7 @@
   inputs = {
 
     # nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs.url = "nixpkgs"; # also valid: "nixpkgs"
+    nixpkgs.url = "github:nixos/nixpkgs"; # also valid: "nixpkgs"
 
     # roc={
     #   url="github:roc-lang/roc";
@@ -35,7 +35,7 @@
         default =
 
           pkgs.mkShell {
-            packages = with pkgs; [ pkgs.pkg-config gmp stdenv.cc.cc.lib ];
+            packages = with pkgs; [ pkgs.pkg-config gmp stdenv.cc.cc.lib jujutsu ];
             shellHook = let
               libPath =
                 pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib pkgs.gmp ];

@@ -55,6 +55,24 @@ module Make (Vars : Global_vars.Vars) = struct
               ui_state.input $= `Mode (fun _ -> `Unhandled));
       };
       {
+        key = '5';
+        description = "Show help2";
+        cmd =
+          SubCmd
+            [
+              {
+                key = '1';
+                description = "Show help2";
+                cmd =
+                  Fun
+                    (fun _ ->
+                      ui_state.show_popup
+                      $= Some (commands_list_ui commandMapping, " Help ");
+                      ui_state.input $= `Mode (fun _ -> `Unhandled));
+              };
+            ];
+      };
+      {
         key = 'P';
         description = "Move the working copy to the previous child ";
         cmd = Cmd [ "prev" ];
@@ -91,7 +109,16 @@ module Make (Vars : Global_vars.Vars) = struct
                 cmd = Cmd_I [ "unsquash"; "-i" ];
                 description = "Interactivaly unsquash";
               };
-              { key = 's'; description = "Squash into parent"; cmd = Cmd [ "squash" ] };
+              {
+                key = 's';
+                description = "Squash into parent";
+                cmd =
+                  Fun
+                    (fun _ ->
+                      let curr_msg, prev_msg = get_messages () in
+                      let new_msg =  prev_msg ^ curr_msg in
+                      jj [ "squash"; "--quiet"; "-m"; new_msg ] |> ignore);
+              };
               {
                 key = 'i';
                 description = "Interactively choose what to squash into parent";
@@ -178,7 +205,7 @@ module Make (Vars : Global_vars.Vars) = struct
                (match cmd with
                 | `Cmd args ->
                   let _result = jj (args @ [ str ]) in
-                  Global_funcs.on_change();
+                  Global_funcs.on_change ();
                   ()
                   (* v_cmd_out $= jj (args @ [ str ]); *)
                 | `Cmd_I _ as cmd ->
@@ -196,18 +223,23 @@ module Make (Vars : Global_vars.Vars) = struct
         then (
           match cmd.cmd with
           | Cmd_I args ->
+            ui_state.show_popup $= None;
             send_cmd args;
             raise Handled
           | Cmd args ->
+            ui_state.show_popup $= None;
             noOut args;
             raise Handled
           | Prompt (str, args) ->
+            ui_state.show_popup $= None;
             prompt str (`Cmd args);
             raise Handled
           | Prompt_I (str, args) ->
+            ui_state.show_popup $= None;
             prompt str (`Cmd_I args);
             raise Handled
           | Fun func ->
+            ui_state.show_popup $= None;
             func ();
             raise Handled
           | SubCmd sub_map ->
@@ -219,10 +251,7 @@ module Make (Vars : Global_vars.Vars) = struct
       `Unhandled
     with
     | Handled ->
-      if is_sub
-      then (
-        ui_state.show_prompt $= None;
-        ui_state.input $= `Normal);
+      if is_sub then ui_state.input $= `Normal;
       `Handled
   ;;
 end
