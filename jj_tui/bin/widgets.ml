@@ -165,13 +165,7 @@ let prompt onExit name =
 
 (*TODO: I should check that focus handle isn't being made eadh time*)
 (**This prompt will either *)
-let general_prompt
-  ?(focus = Focus.make ())
-  ?(char_count = false)
-  ~show_prompt:show_prompt_var
-  name
-  ui
-  =
+let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_var ui =
   let prompt_input = Lwd.var ("", 0) in
   let prompt_val = Lwd.get prompt_input in
   (*Build the ui so that it is either the prompt or nothing depending on whether show prompt is enabled*)
@@ -179,7 +173,7 @@ let general_prompt
     let$* show_prompt_val = Lwd.get show_prompt_var in
     let prompt_ui =
       show_prompt_val
-      |> Option.map @@ fun (pre_fill, on_exit) ->
+      |> Option.map @@ fun (label, pre_fill, on_exit) ->
          let on_exit result =
            Focus.release focus;
            show_prompt_var $= None;
@@ -211,7 +205,7 @@ let general_prompt
            else None
          in
          prompt_field
-         |> ui_outline ~label:name ?label_bottom
+         |> ui_outline ~label ?label_bottom
          |> Ui.event_filter ~focus (fun event ->
            match event with
            | `Key (`Escape, _) ->
@@ -242,7 +236,7 @@ let popup ~show_popup_var ui =
 ;;
 
 let prompt_example =
-  let show_prompt = Lwd.var None in
+  let show_prompt_var = Lwd.var None in
   let ui =
     Ui.vcat
       [
@@ -268,12 +262,12 @@ let prompt_example =
     |> Ui.keyboard_area (fun x ->
       match x with
       | `ASCII 'p', _ ->
-        Lwd.set show_prompt @@ Some ("pre_fill", fun _ -> ());
+        Lwd.set show_prompt_var @@ Some ("hi prompt", "pre_fill", fun _ -> ());
         `Handled
       | _ ->
         `Unhandled)
     |> Lwd.pure
   in
-  let prompt = general_prompt ~show_prompt "this is a prompt" ui in
+  let prompt = general_prompt ~show_prompt_var ui in
   W.h_pane prompt (W.string "other side" |> Lwd.pure)
 ;;

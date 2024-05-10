@@ -1,6 +1,7 @@
 open Notty
 open Nottui
 open Lwd_infix
+open Global_funcs
 module W = Nottui_widgets
 
 module Ui = struct
@@ -31,7 +32,6 @@ module Make (Vars : Global_vars.Vars) = struct
     Notty.I.void term_width term_height |> Nottui.Ui.atom
   ;;
 
-  let colored_string = Jj_tui.AnsiReverse.colored_string
 
   (* let vQuit = Lwd.var false *)
 
@@ -47,12 +47,6 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* let ( let<- ) v f = Lwd.map ~f (Lwd.get v) *)
 
-  let on_change () =
-    let res = jj_no_log [ "show" ] |> colored_string in
-    ui_state.jj_show $= res;
-    let res = jj_no_log [] |> colored_string in
-    ui_state.jj_tree $= res
-  ;;
 
   let post_change new_view =
     on_change ();
@@ -69,19 +63,19 @@ module Make (Vars : Global_vars.Vars) = struct
         handle
     in
     ui
-    |> Ui.event_filter @@ fun event ->
+    |> Ui.keyboard_area@@ fun event ->
        match event with
-       | `Key (`ASCII 'q', _) ->
+       | (`ASCII 'q', _) ->
          Vars.quit $= true;
          `Handled
-       | `Key (`ASCII key, _) ->
+       | (`ASCII key, _) ->
          (match handler key with
           | `Handled ->
             on_change ();
             `Handled
           | `Unhandled ->
             `Unhandled)
-       | `Key (`Escape, _) ->
+       | (`Escape, _) ->
          (*TODO: I could refactor this and the rest of the mode handling so that when the popup is up and in focus it handles all key inputs *)
          (match input_state with
           | `Mode _ ->
@@ -115,9 +109,9 @@ module Make (Vars : Global_vars.Vars) = struct
         ]
     in
     ui
-    |> Ui.event_filter (fun event ->
+    |> Ui.keyboard_area (fun event ->
       match event with
-      | `Key (`ASCII ' ', _) ->
+      |(`ASCII ' ', _) ->
         post_change `Main;
         `Handled
       | _ ->
@@ -139,10 +133,10 @@ module Make (Vars : Global_vars.Vars) = struct
       full_term_sized_background
     | `RunCmd cmd ->
       interactive_process env ("jj" :: cmd)
-    | (`Main | `Prompt _) as rest ->
+    | (`Main )  ->
       let v_cmd_out = Lwd.var "" in
       let scrollState = Lwd.var W.default_scroll_state in
-      let pane =
+      let$* pane =
         W.h_pane
           (W.vbox
              [
@@ -157,29 +151,9 @@ module Make (Vars : Global_vars.Vars) = struct
              ~change:(fun _action state -> scrollState $= state)
              ~state:(Lwd.get scrollState)
              ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
+        |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
         |> Widgets.popup ~show_popup_var:ui_state.show_popup
       in
-      (match rest with
-       | `Main ->
-         pane |> Lwd.bind ~f:inputs
-       | `Prompt (name, cmd) ->
-         W.zbox
-           [
-             pane;
-
-             Widgets.prompt
-               (function
-                 | `Finished str ->
-                   (match cmd with
-                    | `Cmd args ->
-                      v_cmd_out $= jj (args @ [ str ]);
-                      post_change `Main
-                    | `Cmd_I _ as cmd ->
-                      Lwd.set ui_state.view cmd)
-                 | `Closed ->
-                   post_change `Main)
-               (Printf.sprintf " %s " name)
-             |>$ Ui.resize ~pad:Widgets.neutral_grav;
-           ])
+      pane |> inputs
   ;;
 end

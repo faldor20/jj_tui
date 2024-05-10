@@ -38,8 +38,8 @@ module Make (Vars : Global_vars.Vars) = struct
        | { key; description; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ } ->
          [ line key description ]
        | { key; description; cmd = SubCmd subs } ->
-          line key description :: render_commands ~sub_level:(sub_level + 1) subs
-;;
+         line key description :: render_commands ~sub_level:(sub_level + 1) subs
+  ;;
 
   let commands_list_ui commands = commands |> render_commands |> I.vcat |> Ui.atom
 
@@ -51,8 +51,7 @@ module Make (Vars : Global_vars.Vars) = struct
         cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup
-              $= Some (commands_list_ui ( commandMapping ), " Help ");
+              ui_state.show_popup $= Some (commands_list_ui commandMapping, " Help ");
               ui_state.input $= `Mode (fun _ -> `Unhandled));
       };
       {
@@ -169,6 +168,24 @@ module Make (Vars : Global_vars.Vars) = struct
       let _ = jj args in
       ()
     in
+    let prompt str cmd =
+      ui_state.show_prompt
+      $= Some
+           ( Printf.sprintf " %s " str,
+             "",
+             function
+             | `Finished str ->
+               (match cmd with
+                | `Cmd args ->
+                  let _result = jj (args @ [ str ]) in
+                  Global_funcs.on_change();
+                  ()
+                  (* v_cmd_out $= jj (args @ [ str ]); *)
+                | `Cmd_I _ as cmd ->
+                  Lwd.set ui_state.view cmd)
+             | `Closed ->
+               () )
+    in
     let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd_I args) in
     (* Use exceptions so we can break out of the list*)
@@ -185,10 +202,10 @@ module Make (Vars : Global_vars.Vars) = struct
             noOut args;
             raise Handled
           | Prompt (str, args) ->
-            change_view (`Prompt (str, `Cmd args));
+            prompt str (`Cmd args);
             raise Handled
           | Prompt_I (str, args) ->
-            change_view (`Prompt (str, `Cmd_I args));
+            prompt str (`Cmd_I args);
             raise Handled
           | Fun func ->
             func ();
@@ -202,7 +219,10 @@ module Make (Vars : Global_vars.Vars) = struct
       `Unhandled
     with
     | Handled ->
-      if is_sub then ui_state.input $= `Normal;
+      if is_sub
+      then (
+        ui_state.show_prompt $= None;
+        ui_state.input $= `Normal);
       `Handled
   ;;
 end
