@@ -166,6 +166,7 @@ module Make (Vars : Global_vars.Vars) = struct
          W.zbox
            [
              pane;
+
              Widgets.prompt
                (function
                  | `Finished str ->
@@ -177,7 +178,7 @@ module Make (Vars : Global_vars.Vars) = struct
                       Lwd.set ui_state.view cmd)
                  | `Closed ->
                    post_change `Main)
-               name
+               (Printf.sprintf " %s " name)
              |>$ Ui.resize ~pad:Widgets.neutral_grav;
            ])
   ;;
