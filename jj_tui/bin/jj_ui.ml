@@ -81,6 +81,15 @@ module Make (Vars : Global_vars.Vars) = struct
             `Handled
           | `Unhandled ->
             `Unhandled)
+       | `Key (`Escape, _) ->
+         (*TODO: I could refactor this and the rest of the mode handling so that when the popup is up and in focus it handles all key inputs *)
+         (match input_state with
+          | `Mode _ ->
+            ui_state.show_popup $= None;
+            ui_state.input $= `Normal;
+            `Handled
+          | _ ->
+            `Unhandled)
        | _ ->
          `Unhandled
   ;;
@@ -148,6 +157,7 @@ module Make (Vars : Global_vars.Vars) = struct
              ~change:(fun _action state -> scrollState $= state)
              ~state:(Lwd.get scrollState)
              ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
+        |> Widgets.popup ~show_popup_var:ui_state.show_popup
       in
       (match rest with
        | `Main ->

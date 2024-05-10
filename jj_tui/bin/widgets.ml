@@ -227,6 +227,19 @@ let general_prompt
   W.zbox [ ui; prompt_ui |> Lwd.map ~f:(Ui.resize ~pad:neutral_grav) ]
 ;;
 
+(**This is a simple popup that can show ontop of *)
+let popup ~show_popup_var ui =
+  let popup_ui =
+    let$ show_popup = Lwd.get show_popup_var in
+    match show_popup with
+    | Some (content, label) ->
+      let prompt_field = content in
+      prompt_field |> ui_outline ~label
+    | None ->
+      Ui.empty
+  in
+  W.zbox [ ui; popup_ui |> Lwd.map ~f:(Ui.resize ~pad:neutral_grav) ]
+;;
 
 let prompt_example =
   let show_prompt = Lwd.var None in

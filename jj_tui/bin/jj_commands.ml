@@ -1,6 +1,10 @@
 module Make (Vars : Global_vars.Vars) = struct
+  open Lwd_infix
   open Vars
   open Jj_process.Make (Vars)
+  open Notty
+  module W = Nottui_widgets
+  open Nottui
 
   type cmd_args = string list
 
@@ -13,6 +17,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   and command = {
     key : char;
+    description : string;
     cmd : command_variant;
   }
 
@@ -22,59 +27,132 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let commandMapping =
     [
-      { cmd = Cmd [ "prev" ]; key = 'P' };
-      { cmd = Cmd [ "prev"; "--edit" ]; key = 'p' };
-      { cmd = Cmd [ "next" ]; key = 'N' };
-      { cmd = Cmd [ "next"; "--edit" ]; key = 'n' };
-      { cmd = Cmd [ "new" ]; key = 'h' };
-      { cmd = Prompt ("commit msg", [ "commit"; "-m" ]); key = 'c' };
-      { cmd = Cmd_I [ "unsquash"; "-i" ]; key = 'S' };
+    (* {key = '?'; *)
+        (* description = "Move the working copy to the previous child "; *)
+        (* cmd= Fun (fun _-> ui_state.popup) *)
+  (* }; *)
+      {
+        key = 'P';
+        description = "Move the working copy to the previous child ";
+        cmd = Cmd [ "prev" ];
+      };
+      {
+        key = 'p';
+        description = "Edit the previous child change";
+        cmd = Cmd [ "prev"; "--edit" ];
+      };
+      {
+        key = 'N';
+        description = "Move the working copy to the next child ";
+        cmd = Cmd [ "next" ];
+      };
+      {
+        key = 'n';
+        description = "Edit the next child change";
+        cmd = Cmd [ "next"; "--edit" ];
+      };
+      { key = 'i'; cmd = Cmd [ "new" ]; description = "Make a new empty change" };
+      {
+        key = 'c';
+        description = "Describe this change and move on (same as `describe` then `new`) ";
+        cmd = Prompt ("commit msg", [ "commit"; "-m" ]);
+      };
       {
         key = 's';
+        description = "Squash/unsquash (has subcommands)";
         cmd =
           SubCmd
             [
-              { key = 's'; cmd = Cmd [ "squash" ] };
-              { key = 'i'; cmd = Cmd_I [ "squash"; "-i" ] };
+              {
+                key = 'S';
+                cmd = Cmd_I [ "unsquash"; "-i" ];
+                description = "Interactivaly unsquash";
+              };
+              { key = 's'; description = "Squash into parent"; cmd = Cmd [ "squash" ] };
+              {
+                key = 'i';
+                description = "Interactively choose what to squash into parent";
+                cmd = Cmd_I [ "squash"; "-i" ];
+              };
             ];
       };
       {
         key = 'm';
+        description = "Move changes to another revision";
         cmd =
           SubCmd
             [
               {
                 key = 'm';
+                description = "Move all changes to another revision";
                 cmd = Prompt ("Move revesion content to:", [ "move"; "-f"; "@"; "-t" ]);
               };
               {
                 key = 'i';
+                description = "Interacitvely select changes to move to another revision";
                 cmd =
-                  Prompt_I ("Move revesion content to:", [ "move"; "-i"; "-f"; "@"; "-t" ]);
+                  Prompt_I ("Move revision content to:", [ "move"; "-i"; "-f"; "@"; "-t" ]);
               };
             ];
       };
-      { cmd = Prompt ("revision", [ "edit" ]); key = 'e' };
-      { cmd = Prompt ("description", [ "describe"; "-m" ]); key = 'd' };
-      { cmd = Cmd_I [ "resolve" ]; key = 'R' };
+      {
+        key = 'e';
+        cmd = Prompt ("revision", [ "edit" ]);
+        description = "Edit a particular revision";
+      };
+      {
+        key = 'd';
+        cmd = Prompt ("description", [ "describe"; "-m" ]);
+        description = "Describe this revision";
+      };
+      {
+        key = 'R';
+        cmd = Cmd_I [ "resolve" ];
+        description = "Resolve conflicts at this revision";
+      };
       {
         key = 'r';
+        description = "Rebase revision ";
         cmd =
           SubCmd
             [
               {
-                key = 'm';
+                key = 'r';
+                description = "Rebase single revision";
                 cmd =
                   Prompt ("destination for revision rebase", [ "rebase"; "-r"; "@"; "-d" ]);
               };
               {
+                key = 's';
+                description = "Rebase revision and its decendents";
+                cmd =
+                  Prompt
+                    ("destination for decendent rebase", [ "rebase"; "-s"; "@"; "-d" ]);
+              };
+              {
                 key = 'b';
+                description = "Rebase revision and all other revissions on its branch";
                 cmd =
                   Prompt ("destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ]);
               };
             ];
       };
     ]
+  ;;
+
+  let rec render_commands ?(sub_level = 0) commands =
+    let indent = String.init (sub_level / 2) (fun _ -> ' ') in
+    let line key desc =
+      I.hcat
+        [ I.string A.empty indent; I.char (A.fg A.lightblue) key 1 1; I.strf " %s" desc ]
+    in
+    commands
+    |> List.concat_map @@ fun command ->
+       match command with
+       | { key; description; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ } ->
+         [ line key description ]
+       | { key; description; cmd = SubCmd subs } ->
+         line key description :: render_commands ~sub_level:(sub_level + 1) subs
   ;;
 
   let rec command_input ?(is_sub = false) keymap key =
@@ -104,12 +182,17 @@ module Make (Vars : Global_vars.Vars) = struct
             change_view (`Prompt (str, `Cmd_I args));
             raise Handled
           | SubCmd sub_map ->
-            `Mode (command_input ~is_sub:true sub_map) |> Lwd.set ui_state.input)
+            ui_state.show_popup
+            $= Some
+                 ( render_commands sub_map |> I.vcat |> Ui.atom,
+                   Printf.sprintf " %s " cmd.description );
+            ui_state.input $= `Mode (command_input ~is_sub:true sub_map))
         else ());
       `Unhandled
     with
     | Handled ->
-      if is_sub then Lwd.set ui_state.input `Normal;
+      if is_sub then ui_state.input $= `Normal;
+      ui_state.show_popup $= None;
       `Handled
   ;;
 end

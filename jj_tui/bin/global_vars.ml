@@ -1,17 +1,19 @@
 open Notty
 open Nottui
 
-type cmd_args=string list
+type cmd_args = string list
+
 type ui_state_t = {
   view :
     [ `Main
     | `Cmd_I of cmd_args
     | `RunCmd of cmd_args
-    | `Prompt of string * ([`Cmd of cmd_args |`Cmd_I of cmd_args])
+    | `Prompt of string * [ `Cmd of cmd_args | `Cmd_I of cmd_args ]
     ]
       Lwd.var;
   input : [ `Normal | `Mode of char -> Ui.may_handle ] Lwd.var;
-  command_log: string list Lwd.var;
+  show_popup : (ui * string) option Lwd.var;
+  command_log : string list Lwd.var;
   jj_tree : I.t Lwd.var;
   jj_show : I.t Lwd.var;
 }
@@ -37,7 +39,8 @@ module Vars : Vars = struct
       jj_tree = Lwd.var I.empty;
       jj_show = Lwd.var I.empty;
       input = Lwd.var `Normal;
-      command_log= Lwd.var []
+      show_popup = Lwd.var None;
+      command_log = Lwd.var [];
     }
   ;;
 
