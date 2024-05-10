@@ -12,6 +12,8 @@ module Make (Vars : Global_vars.Vars) = struct
     | Cmd of cmd_args
     | Cmd_I of cmd_args
     | Prompt of string * cmd_args
+
+    | PromptThen of string *(string-> ( command_variant))
     | Prompt_I of string * cmd_args
     | SubCmd of command list
     | Fun of (unit -> unit)
@@ -34,11 +36,11 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     commands
     |> List.concat_map @@ fun command ->
-       match command with
-       | { key; description; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ } ->
-         [ line key description ]
-       | { key; description; cmd = SubCmd subs } ->
-         line key description :: render_commands ~sub_level:(sub_level + 1) subs
+         match command with
+         | { key; description; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _| PromptThen _ } ->
+           [ line key description ]
+         | { key; description; cmd = SubCmd subs} ->
+           line key description :: render_commands ~sub_level:(sub_level + 1) subs
   ;;
 
   let commands_list_ui commands = commands |> render_commands |> I.vcat |> Ui.atom
@@ -97,6 +99,11 @@ module Make (Vars : Global_vars.Vars) = struct
         key = 'c';
         description = "Describe this change and move on (same as `describe` then `new`) ";
         cmd = Prompt ("commit msg", [ "commit"; "-m" ]);
+      };
+      {
+        key = 'S';
+        description = "Split the current commit interacively";
+        cmd = Cmd_I ( [ "split";  "-i"]);
       };
       {
         key = 's';
@@ -187,10 +194,39 @@ module Make (Vars : Global_vars.Vars) = struct
               };
             ];
       };
+      {
+        key = 'b';
+        description = "Branch commands";
+        cmd =           SubCmd
+            [
+              {
+                key = 'c';
+                description = "Create new branches";
+                cmd =
+                  Prompt ("Branch names to create", [ "branch"; "create";  ]);
+              };
+              {
+                key = 'd';
+                description = "Delete branches";
+                cmd =
+                  Prompt
+                    ("Branch names to delete", [  "branch"; "delete";   ]);
+              };
+              {
+                key = 'r';
+                description = "Rename branch";
+                cmd =
+                  PromptThen
+                    ("Branch to rename",
+                     (fun curr_name-> Prompt ("New branch name", ["branch";"rename";curr_name] )));
+              };
+            ];
+
+      };
     ]
   ;;
 
-  let rec command_input ?(is_sub = false) keymap key =
+  let rec handleCommand description cmd=
     let noOut args =
       let _ = jj args in
       ()
@@ -209,19 +245,17 @@ module Make (Vars : Global_vars.Vars) = struct
                   ()
                   (* v_cmd_out $= jj (args @ [ str ]); *)
                 | `Cmd_I _ as cmd ->
-                  Lwd.set ui_state.view cmd)
+                  Lwd.set ui_state.view cmd
+                |`Fun (func )->
+                  func str;
+                  
+                )
              | `Closed ->
                () )
     in
     let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd_I args) in
-    (* Use exceptions so we can break out of the list*)
-    try
-      keymap
-      |> List.iter (fun cmd ->
-        if cmd.key == key
-        then (
-          match cmd.cmd with
+              match cmd with
           | Cmd_I args ->
             ui_state.show_popup $= None;
             send_cmd args;
@@ -234,6 +268,11 @@ module Make (Vars : Global_vars.Vars) = struct
             ui_state.show_popup $= None;
             prompt str (`Cmd args);
             raise Handled
+          | PromptThen (label,next) ->
+            ui_state.show_popup $= None;
+            (*We run a prompt that then runs our next command when finished*)
+            prompt label @@`Fun (fun x-> next x|>command_no_input description);
+            raise Handled
           | Prompt_I (str, args) ->
             ui_state.show_popup $= None;
             prompt str (`Cmd_I args);
@@ -244,14 +283,34 @@ module Make (Vars : Global_vars.Vars) = struct
             raise Handled
           | SubCmd sub_map ->
             ui_state.show_popup
-            $= Some (commands_list_ui sub_map, Printf.sprintf " %s " cmd.description);
+            $= Some (commands_list_ui sub_map, Printf.sprintf " %s " description);
             ui_state.input $= `Mode (command_input ~is_sub:true sub_map);
-            raise Handled)
+            raise Handled
+
+
+  and  command_input ?(is_sub = false) keymap key =
+    (* Use exceptions so we can break out of the list*)
+    try
+      keymap
+      |> List.iter (fun cmd ->
+        if cmd.key == key
+        then (
+        handleCommand cmd.description cmd.cmd
+        )
         else ());
       `Unhandled
     with
     | Handled ->
       if is_sub then ui_state.input $= `Normal;
       `Handled
+  and command_no_input description cmd =
+    (* Use exceptions so we can break out of the list*)
+    try
+      handleCommand description cmd;
+      ()
+    with
+    | Handled ->
+      ()
   ;;
 end
+
