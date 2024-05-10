@@ -1,12 +1,13 @@
 open Notty
 open Nottui
 
+type cmd_args=string list
 type ui_state_t = {
   view :
     [ `Main
-    | `Cmd of string list
-    | `RunCmd of string list
-    | `Prompt of string * string list
+    | `Cmd_I of cmd_args
+    | `RunCmd of cmd_args
+    | `Prompt of string * ([`Cmd of cmd_args |`Cmd_I of cmd_args])
     ]
       Lwd.var;
   input : [ `Normal | `Mode of char -> Ui.may_handle ] Lwd.var;

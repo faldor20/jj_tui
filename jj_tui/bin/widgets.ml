@@ -23,6 +23,7 @@ let make_with_ends start mid ending width =
 let make_top width = make_with_ends tlPipe sidePipe trPipe width
 let make_bot width = make_with_ends blPipe sidePipe brPipe width
 
+
 (** This is for shifting something away from the edge it is pushed against *)
 let pad_edge x_pad y_pad grav ui =
   let y_pad =
@@ -46,6 +47,7 @@ let pad_edge x_pad y_pad grav ui =
 let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") input =
   let width = Ui.layout_width input |> make_even in
   let height = Ui.layout_height input in
+
   let edit =
     Ui.zcat
       [
@@ -76,6 +78,33 @@ let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") inp
   v_body
 ;;
 
+let grid xxs = xxs |> List.map I.hcat |> I.vcat
+
+(** image outline creator*)
+let outline attr i =
+  let (w, h) = I.(width i, height i) in
+  let chr x = I.uchar attr (Uchar.of_int x) 1 1
+  and hbar  = I.uchar attr (Uchar.of_int 0x2500) w 1
+  and vbar  = I.uchar attr (Uchar.of_int 0x2502) 1 h in
+  let (a, b, c, d) = (chr 0x256d, chr 0x256e, chr 0x256f, chr 0x2570) in
+  grid [ [a; hbar; b]; [vbar; i; vbar]; [d; hbar; c] ]
+
+(** image outline creator*)
+let label_outline ~label attr i =
+  let (w, h) = I.(width i, height i) in
+  let chr x = I.uchar attr (Uchar.of_int x) 1 1
+  and hbar  = I.uchar attr (Uchar.of_int 0x2500) w 1 in
+  let hbar_top  = [hbar;(I.string attr label)]|>I.zcat
+  and vbar  = I.uchar attr (Uchar.of_int 0x2502) 1 h in
+  let (a, b, c, d) = (chr 0x256d, chr 0x256e, chr 0x256f, chr 0x2570) in
+  grid [ [a; hbar_top; b]; [vbar; i; vbar]; [d; hbar; c] ]
+
+(** ui outline creator*)
+let ui_outline ?(pad = neutral_grav) ?(pad_w = 4) ?(pad_h = 2) ?(attr=A.empty) ?(label="") ui =
+  let (w,h)=Ui.(layout_width ui,layout_height ui) in
+  let outline=label_outline ~label attr (I.char A.empty ' ' (w+pad_w) (h+pad_h))|>Ui.atom in
+  Ui.zcat [outline; ui|> Ui.resize ~pad |> pad_edge (pad_w / 2) (pad_h / 2) pad]
+
 (*========Prompt=======*)
 let prompt onExit name =
   let prompt_input = Lwd.var ("", 0) in
@@ -91,7 +120,7 @@ let prompt onExit name =
       ]
   in
   prompt_field
-  |> border_box ~pad:Gravity.default ~label:name
+  |> ui_outline ~pad:Gravity.default ~label:name
   |> Ui.event_filter (fun event ->
     match event with
     | `Key (`Escape, _) ->

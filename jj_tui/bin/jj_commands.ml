@@ -5,9 +5,10 @@ module Make (Vars : Global_vars.Vars) = struct
   type cmd_args = string list
 
   type command_variant =
-    | No_Output of cmd_args
     | Cmd of cmd_args
+    | Cmd_I of cmd_args
     | Prompt of string * cmd_args
+    | Prompt_I of string * cmd_args
     | SubCmd of command list
 
   and command = {
@@ -21,20 +22,20 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let commandMapping =
     [
-      { cmd = No_Output [ "prev" ]; key = 'P' };
-      { cmd = No_Output [ "prev"; "--edit" ]; key = 'p' };
-      { cmd = No_Output [ "next" ]; key = 'N' };
-      { cmd = No_Output [ "next"; "--edit" ]; key = 'n' };
-      { cmd = No_Output [ "new" ]; key = 'h' };
+      { cmd = Cmd [ "prev" ]; key = 'P' };
+      { cmd = Cmd [ "prev"; "--edit" ]; key = 'p' };
+      { cmd = Cmd [ "next" ]; key = 'N' };
+      { cmd = Cmd [ "next"; "--edit" ]; key = 'n' };
+      { cmd = Cmd [ "new" ]; key = 'h' };
       { cmd = Prompt ("commit msg", [ "commit"; "-m" ]); key = 'c' };
-      { cmd = Cmd [ "unsquash"; "-i" ]; key = 'S' };
+      { cmd = Cmd_I [ "unsquash"; "-i" ]; key = 'S' };
       {
         key = 's';
         cmd =
           SubCmd
             [
-              { key = 's'; cmd = No_Output [ "squash" ] };
-              { key = 'i'; cmd = Cmd [ "squash"; "-i" ] };
+              { key = 's'; cmd = Cmd [ "squash" ] };
+              { key = 'i'; cmd = Cmd_I [ "squash"; "-i" ] };
             ];
       };
       {
@@ -49,13 +50,13 @@ module Make (Vars : Global_vars.Vars) = struct
               {
                 key = 'i';
                 cmd =
-                  Prompt ("Move revesion content to:", [ "move"; "-i"; "-f"; "@"; "-t" ]);
+                  Prompt_I ("Move revesion content to:", [ "move"; "-i"; "-f"; "@"; "-t" ]);
               };
             ];
       };
       { cmd = Prompt ("revision", [ "edit" ]); key = 'e' };
       { cmd = Prompt ("description", [ "describe"; "-m" ]); key = 'd' };
-      { cmd = Cmd [ "resolve" ]; key = 'R' };
+      { cmd = Cmd_I [ "resolve" ]; key = 'R' };
       {
         key = 'r';
         cmd =
@@ -82,7 +83,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ()
     in
     let change_view view = Lwd.set ui_state.view view in
-    let send_cmd args = change_view (`Cmd args) in
+    let send_cmd args = change_view (`Cmd_I args) in
     (* Use exceptions so we can break out of the list*)
     try
       keymap
@@ -90,14 +91,17 @@ module Make (Vars : Global_vars.Vars) = struct
         if cmd.key == key
         then (
           match cmd.cmd with
-          | Cmd args ->
+          | Cmd_I args ->
             send_cmd args;
             raise Handled
-          | No_Output args ->
+          | Cmd args ->
             noOut args;
             raise Handled
           | Prompt (str, args) ->
-            change_view (`Prompt (str, args));
+            change_view (`Prompt (str, `Cmd args));
+            raise Handled
+          | Prompt_I (str, args) ->
+            change_view (`Prompt (str, `Cmd_I args));
             raise Handled
           | SubCmd sub_map ->
             `Mode (command_input ~is_sub:true sub_map) |> Lwd.set ui_state.input)

@@ -124,7 +124,7 @@ module Make (Vars : Global_vars.Vars) = struct
     on_change ();
     let$* running = Lwd.get ui_state.view in
     match running with
-    | `Cmd cmd ->
+    | `Cmd_I cmd ->
       (*We have this extra step to paint the terminal empty for one step*)
       Lwd.set ui_state.view @@ `RunCmd cmd;
       full_term_sized_background
@@ -159,8 +159,12 @@ module Make (Vars : Global_vars.Vars) = struct
              Widgets.prompt
                (function
                  | `Finished str ->
-                   v_cmd_out $= jj (cmd @ [ str ]);
-                   post_change `Main
+                   (match cmd with
+                    | `Cmd args ->
+                      v_cmd_out $= jj (args @ [ str ]);
+                      post_change `Main
+                    | `Cmd_I _ as cmd ->
+                      Lwd.set ui_state.view cmd)
                  | `Closed ->
                    post_change `Main)
                name
