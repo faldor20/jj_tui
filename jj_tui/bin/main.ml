@@ -1,23 +1,23 @@
 open Eio.Std
+open Lwd_infix
 module W = Nottui_widgets
-
 module Vars = Global_vars.Vars
-module Jj_ui=Jj_ui.Make(Vars)
+module Jj_ui = Jj_ui.Make (Vars)
 
 let ui_loop ~quit ~term root =
   print_endline "starting loop";
   let renderer = Nottui.Renderer.make () in
-  (* let root = *)
-  (* let$ root = root in *)
-  (* root *)
-  (* |> Nottui.Ui.event_filter (fun x -> *)
-  (* match x with *)
-  (* | `Key (`Escape, []) -> *)
-  (* Lwd.set quit true; *)
-  (* `Handled *)
-  (* | _ -> *)
-  (* `Unhandled) *)
-  (* in *)
+  let root =
+    let$ root = root in
+    root
+    |> Nottui.Ui.event_filter (fun x ->
+      match x with
+      | `Key (`Delete, []) ->
+        Lwd.set quit true;
+        `Handled
+      | _ ->
+        `Unhandled)
+  in
   let rec loop () =
     if not (Lwd.peek quit)
     then (
@@ -45,6 +45,7 @@ let start_ui env =
   Vars.eio_env := Some env;
   ui_loop ~quit:Vars.quit ~term (Jj_ui.mainUi env)
 ;;
+
 
 let start () = Eio_main.run @@ fun env -> Fiber.all [ (fun _ -> start_ui env) ];;
 

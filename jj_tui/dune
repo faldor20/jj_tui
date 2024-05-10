@@ -1,0 +1,3 @@
+(library
+ (name widgets)
+ (libraries nottui))
