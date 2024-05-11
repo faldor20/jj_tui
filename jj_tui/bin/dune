@@ -1,6 +1,5 @@
 (executable
  (public_name jj_tui)
  (name main)
-  (flags (:standard -cclib -static-pie  ))
  (libraries jj_tui lwd nottui base stdio eio_main eio-process )
  )

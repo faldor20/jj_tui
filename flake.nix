@@ -1,78 +1,118 @@
 {
-  description = "Example JavaScript development environment for Zero to Nix";
+  description = "An actor-model multi-core scheduler for OCaml 5";
 
-  # Flake inputs
   inputs = {
+    nixpkgs.url = "nixpkgs-unstable";
 
-    # nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs.url = "nixpkgs-unstable"; # also valid: "nixpkgs"
-
-    # roc={
-    #   url="github:roc-lang/roc";
-    # inputs.nixpkgs.follows="nixpkgs";
-
+    # bytestring = {
+    #   url = "github:riot-ml/bytestring";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    #   inputs.minttea.follows = "minttea";
+    #   inputs.rio.follows = "rio";
     # };
 
+    # castore = {
+    #   url = "github:suri-framework/castore";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
+
+    # config = {
+    #   url = "github:ocaml-sys/config.ml";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    #   inputs.minttea.follows = "minttea";
+    # };
+
+    # gluon = {
+    #   url = "github:riot-ml/gluon";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    #   inputs.bytestring.follows = "bytestring";
+    #   inputs.config.follows = "config";
+    #   inputs.minttea.follows = "minttea";
+    #   inputs.rio.follows = "rio";
+    # };
+
+    # minttea = {
+    #   url = "github:leostera/minttea";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
+
+    # rio = {
+    #   url = "github:riot-ml/rio";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
+
+    # telemetry = {
+    #   url = "github:leostera/telemetry";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
-  # Flake outputs
-  outputs = { self, nixpkgs, ... }@inputs:
-    let
-      # Systems supported
-      allSystems = [
-        "x86_64-linux" # 64-bit Intel/AMD Linux
-      ];
 
-      # Helper to provide system-specific attributes
-      forAllSystems = f:
-        nixpkgs.lib.genAttrs allSystems (system:
-          f {
-            pkgs = import nixpkgs { inherit system; };
-
-          });
-    in {
-      # Development environment output
-      devShells = forAllSystems ({ pkgs }: {
-        default =
-
-          pkgs.mkShell {
-            packages = with pkgs; [
-
-              opam
-              git
-              gnumake
-              m4
-              bubblewrap
-              bash
-              coreutils
-              ((pkgs.openssl.override { static = true; }))
-              pkgs.pkg-config
-              pkgsMusl.gmp
-              stdenv.cc.cc.lib
-              jujutsu
-              glibc.static
-              musl.dev
-              musl
-              pkgsMusl.gcc
-              pkgs.dune_3
-              pkgsMusl.ocaml
-            ];
-            shellHook = 
-
-            let
-             libPath = pkgs.lib.makeLibraryPath [
-               pkgs.pkgsMusl.stdenv.cc.cc.lib
-               pkgs.pkgsMusl.gmp
-               pkgs.pkgsMusl.musl
-             ];
-            in ''
-              export CC=${pkgs.pkgsMusl.musl.stdenv.cc}
-            #   # yolo
-            #   export CFLAGS="$CFLAGS -I${pkgs.pkgsMusl.stdenv.cc.cc.lib}/include -I${pkgs.pkgsMusl.gmp}/include"
-            #   export LIBS="$LIBS -L${pkgs.pkgsMusl.stdenv.cc.cc.lib}/lib -L${pkgs.pkgsMusl.gmp}/lib"
-            '';
+  outputs = inputs@{ self, flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems =
+        [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
+      perSystem = { config, self', inputs', pkgs, system, ... }:
+        let
+          inherit (pkgs) ocamlPackages mkShell lib;
+          inherit (ocamlPackages) buildDunePackage;
+          version = "0.0.9+dev";
+        in {
+          devShells = {
+            default = mkShell.override { stdenv = pkgs.clang17Stdenv; } {
+              buildInputs = with ocamlPackages; [
+                dune_3
+                ocaml
+                utop
+                ocamlformat
+              ];
+              inputsFrom = [ self'.packages.default ];
+              packages = builtins.attrValues {
+                inherit (pkgs) clang_17 clang-tools_17 pkg-config;
+                inherit (ocamlPackages) ocaml-lsp ocamlformat-rpc-lib;
+              };
+            };
           };
+          packages = {
+            # randomconv = buildDunePackage {
+            #   version = "0.2.0";
+            #   pname = "randomconv";
+            #   src = builtins.fetchGit {
+            #     url = "git@github.com:hannesm/randomconv.git";
+            #     rev = "b2ce656d09738d676351f5a1c18aff0ff37a7dcc";
+            #     ref = "refs/tags/${version}";
+            #   };
+            # };
 
-      });
-
+            default = let
+              pkg = buildDunePackage {
+                inherit version;
+                preBuild=" ";
+                pname = "jj_tui";
+                propagatedBuildInputs = with ocamlPackages;
+                  [
+                    # inputs'.bytestring.packages.default
+                    # inputs'.castore.packages.default
+                    # inputs'.config.packages.default
+                    # inputs'.gluon.packages.default
+                    # inputs'.rio.packages.default
+                    # (mdx.override {
+                    #   inherit logs;
+                    # })
+                    # mirage-crypto
+                    # mirage-crypto-rng
+                    # mtime
+                    # odoc
+                    # ptime
+                    # self'.packages.randomconv
+                    # inputs'.telemetry.packages.default
+                    # tls
+                    # uri
+                    # x509
+                  ];
+                src = ./.;
+              };
+            in pkg;
+          };
+        };
     };
 }
