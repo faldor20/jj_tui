@@ -1,0 +1,11 @@
+* TODO list for jj
+** Better management of working copy
+*** Don't update working copy when moving between prev and next
+- Would this mean if i did then update the working copy it would overwrite whatever the current selected commit is with the working copy?
+
+*** Don't update working copy when running standard jj and jj status
+	- This is just pointless work, the working copy should be updated
+*** Update the working copy when re-selecting the window  
+ -also run status ofcourse
+** Make better use uf `jj log -r '@|@-' -T 'template'` style commands
+** Make window the shows current file status and window that shows branches
