@@ -1,0 +1,14 @@
+_build
+*.install
+*.native
+*.byte
+.merlin
+
+tmp
+*~
+\.\#*
+\#*#
+
+*.json
+gmon.out
+rondom

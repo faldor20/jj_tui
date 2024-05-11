@@ -1,6 +1,6 @@
 (library
  (name jj_tui)
  (inline_tests)
- (libraries stdio  notty nottui angstrom)
+ (libraries stdio  notty nottui angstrom bigstringaf)
  (preprocess
   (pps ppx_expect)))

@@ -445,13 +445,13 @@ let state_to_verbose_result = function
     Ok v
   | Fail (unconsumed, marks, msg) ->
     let remaining_big_string =
-      Core.Bigstring.sub unconsumed.buf ~pos:unconsumed.off ~len:unconsumed.len
+      Bigstringaf.sub unconsumed.buf ~off:unconsumed.off ~len:unconsumed.len
     in
     let combined_msg =
       "failed '"
       ^ fail_to_string marks msg
       ^ "' with unconsumed:"
-      ^ Core.Bigstring.to_string remaining_big_string
+      ^ Bigstringaf.to_string remaining_big_string
       |> String.escaped
     in
     Error combined_msg

@@ -11,9 +11,7 @@ doc: "https://url/to/documentation"
 bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
-  "dune" {>= "3.9"}
-  "eio-process"
-  "notty"
+  "dune" {>= "3.12"}
   "stdio"
   "nottui"
   "lwd"
@@ -39,3 +37,5 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/username/reponame.git"
+
+x-opam-monorepo-opam-provided: ["lwd"]

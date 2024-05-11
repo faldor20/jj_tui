@@ -1,0 +1,22 @@
+(include_subdirs unqualified)
+
+(library
+  (public_name notty)
+  (synopsis "Declaring terminals")
+  (libraries uutf)
+  (wrapped false)
+  (modules notty notty_grapheme_cluster notty_uucp notty_uucp_data)
+  (private_modules notty_grapheme_cluster notty_uucp notty_uucp_data))
+
+(library
+  (public_name notty.top)
+  (synopsis "Notty toplevel support")
+  (name notty_top)
+  (wrapped false)
+  (modules notty_top)
+  (preprocess (action (run %{bin:cppo} -V OCAML:%{ocaml_version} %{input-file})))
+  (libraries notty compiler-libs.toplevel))
+
+(install
+  (section lib)
+  (files (notty_top_init.ml as top/notty_top_init.ml)))

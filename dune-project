@@ -1,4 +1,4 @@
-(lang dune 3.9)
+(lang dune 3.12)
 
 (name jj_tui)
 
@@ -19,7 +19,8 @@
  (name jj_tui)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune eio-process notty stdio nottui lwd base eio_main angstrom ppx_expect ppx_jane)
+ (depends 
+ ocaml dune   stdio nottui lwd base eio_main angstrom ppx_expect ppx_jane)
  (tags
   (topics "to describe" your project)))
 
