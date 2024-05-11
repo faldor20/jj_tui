@@ -90,7 +90,7 @@ module Text = struct
 
   let is_empty t = width t = 0
 
-  let graphemes str =
+  let graphemes ?(should_throw=false) str =
     let module Uuseg = Notty_grapheme_cluster in
     let seg = Uuseg.create () in
     let rec f (is, w as acc) i evt =
@@ -100,8 +100,12 @@ module Text = struct
       | `Boundary     ->
           let is = match w with 0 -> is | 1 -> i::is | _ -> i::(-1)::is in
           f (is, 0) i `Await in
-    let acc = Uutf.String.fold_utf_8 (fun acc i -> function
-      | `Malformed err -> err_malformed err str
+    let acc = Uutf.String.fold_utf_8(fun acc i -> function
+      | `Malformed err -> 
+        if should_throw then  
+          err_malformed err str
+        else
+          f acc i (`Uchar (Uchar.of_int 0xffd ))
       | `Uchar _ as u  -> f acc i u
       ) ([0], 0) str in
     f acc (String.length str) `End |> fst |> List.rev |> Array.of_list (*XXX*)

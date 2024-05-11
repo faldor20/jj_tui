@@ -19,6 +19,7 @@ type ui_state_t = {
   command_log : string list Lwd.var;
   jj_tree : I.t Lwd.var;
   jj_show : I.t Lwd.var;
+  jj_branches : I.t Lwd.var;
 }
 
 (** Global variables for the ui*)
@@ -41,6 +42,7 @@ module Vars : Vars = struct
       view = Lwd.var `Main;
       jj_tree = Lwd.var I.empty;
       jj_show = Lwd.var I.empty;
+      jj_branches = Lwd.var I.empty;
       input = Lwd.var `Normal;
       show_popup = Lwd.var None;
       show_prompt = Lwd.var None;

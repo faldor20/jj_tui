@@ -32,7 +32,6 @@ module Make (Vars : Global_vars.Vars) = struct
     Notty.I.void term_width term_height |> Nottui.Ui.atom
   ;;
 
-
   (* let vQuit = Lwd.var false *)
 
   let _quitButton =
@@ -46,7 +45,6 @@ module Make (Vars : Global_vars.Vars) = struct
   let ( << ) f g x = f (g x)
 
   (* let ( let<- ) v f = Lwd.map ~f (Lwd.get v) *)
-
 
   let post_change new_view =
     on_change ();
@@ -63,19 +61,19 @@ module Make (Vars : Global_vars.Vars) = struct
         handle
     in
     ui
-    |> Ui.keyboard_area@@ fun event ->
+    |> Ui.keyboard_area @@ fun event ->
        match event with
-       | (`ASCII 'q', _) ->
+       | `ASCII 'q', _ ->
          Vars.quit $= true;
          `Handled
-       | (`ASCII key, _) ->
+       | `ASCII key, _ ->
          (match handler key with
           | `Handled ->
             on_change ();
             `Handled
           | `Unhandled ->
             `Unhandled)
-       | (`Escape, _) ->
+       | `Escape, _ ->
          (*TODO: I could refactor this and the rest of the mode handling so that when the popup is up and in focus it handles all key inputs *)
          (match input_state with
           | `Mode _ ->
@@ -111,7 +109,7 @@ module Make (Vars : Global_vars.Vars) = struct
     ui
     |> Ui.keyboard_area (fun event ->
       match event with
-      |(`ASCII ' ', _) ->
+      | `ASCII ' ', _ ->
         post_change `Main;
         `Handled
       | _ ->
@@ -133,23 +131,28 @@ module Make (Vars : Global_vars.Vars) = struct
       full_term_sized_background
     | `RunCmd cmd ->
       interactive_process env ("jj" :: cmd)
-    | (`Main )  ->
+    | `Main ->
       let v_cmd_out = Lwd.var "" in
-      let scrollState = Lwd.var W.default_scroll_state in
       let$* pane =
         W.h_pane
           (W.vbox
              [
-               ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom);
-               W.string "━━━━━━━━━━━━━━━━━━" |> Lwd.pure;
-               ui_state.command_log
-               |> Lwd.get
-               |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist);
+             
+               Widgets.scrollable(ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
+               |>$ Ui.resize ~sh:3;
+               Widgets.h_rule
+               |> Lwd.pure;
+               Widgets.scrollable (ui_state.jj_branches $-> Ui.atom) |>$ Ui.resize ~sh:1;
+               Widgets.h_rule
+               |> Lwd.pure;
+               Widgets.scrollable
+                 (ui_state.command_log
+                  |> Lwd.get
+                  |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
+               |>$ Ui.resize ~sh:1;
                v_cmd_out $-> W.string;
              ])
-          (W.vscroll_area
-             ~change:(fun _action state -> scrollState $= state)
-             ~state:(Lwd.get scrollState)
+          (Widgets.scrollable
              ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
         |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
         |> Widgets.popup ~show_popup_var:ui_state.show_popup
