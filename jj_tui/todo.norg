@@ -7,5 +7,13 @@
 	- This is just pointless work, the working copy should be updated
 *** Update the working copy when re-selecting the window  
  -also run status ofcourse
+
+*** Overhaul
+	- Remove n and p as standard way to navigate
+	- adjust the graph rendering or use my own list  to be able to navigate through commits  without moving the actual working copy.
+	-- I could do that by having a selection ontop of the graph that is independant to the working copy
+	-- I could adjust the graph so that the checked out working copy is seperate from the actual working copy
+
 ** Make better use uf `jj log -r '@|@-' -T 'template'` style commands
 ** Make window the shows current file status and window that shows branches
+

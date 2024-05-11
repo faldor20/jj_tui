@@ -8,7 +8,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   type cmd_args = string list
 
-    (**`Prompt`:Allows running one command and then running another using the input of the first*)
+  (**`Prompt`:Allows running one command and then running another using the input of the first*)
   type command_variant =
     | Cmd of cmd_args
     | Cmd_I of cmd_args
@@ -188,13 +188,46 @@ module Make (Vars : Global_vars.Vars) = struct
                 description = "Rebase revision and its decendents";
                 cmd =
                   Prompt
-                    ("destination for decendent rebase", [ "rebase"; "-s"; "@"; "-d" ]);
+                    ("Destination for decendent rebase", [ "rebase"; "-s"; "@"; "-d" ]);
               };
               {
                 key = 'b';
                 description = "Rebase revision and all other revissions on its branch";
                 cmd =
-                  Prompt ("destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ]);
+                  Prompt ("Destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ]);
+              };
+            ];
+      };
+      {
+        key = 'g';
+        description = "Git commands";
+        cmd =
+          SubCmd
+            [
+              { key = 'p'; description = "git push branch"; cmd = Cmd [ "git"; "push" ] };
+              { key = 'f'; description = "git fetch"; cmd = Cmd [ "git"; "fetch" ] };
+            ];
+      };
+      {
+        key = 'z';
+        description =
+          "Parallelize commits. Takes 2 commits and makes them have the same parent and \
+           child. Run `jj parallelize --help for more explanation` ";
+        cmd =
+          PromptThen
+            ( "list commits to parallelize",
+              fun x -> Cmd ([ "paralellize" ] @ (x |> String.split_on_char ' ')) );
+      };
+      {
+        key = 'a';
+        description = "Abandon this change(removes just this change and rebases parents)";
+        cmd =
+          SubCmd
+            [
+              {
+                key = 'a';
+                description = "Yes i want to abandon the change";
+                cmd = Cmd [ "abandon" ];
               };
             ];
       };
@@ -207,7 +240,11 @@ module Make (Vars : Global_vars.Vars) = struct
               {
                 key = 'c';
                 description = "Create new branches";
-                cmd = Prompt ("Branch names to create", [ "branch"; "create" ]);
+                cmd =
+                  PromptThen
+                    ( "Branch names to create",
+                      fun x ->
+                        Cmd ([ "branch"; "create" ] @ (x |> String.split_on_char ' ')) );
               };
               {
                 key = 'd';
@@ -231,12 +268,12 @@ module Make (Vars : Global_vars.Vars) = struct
               {
                 key = 't';
                 description = "track given remote branch";
-                cmd = Prompt ("Branch to track 'branch@remote'", [ "branch"; "track"; ]);
+                cmd = Prompt ("Branch to track 'branch@remote'", [ "branch"; "track" ]);
               };
               {
                 key = 'u';
                 description = "untrack given remote branch";
-                cmd = Prompt ("Branch to untrack 'branch@remote'", [ "branch"; "untrack";  ]);
+                cmd = Prompt ("Branch to untrack 'branch@remote'", [ "branch"; "untrack" ]);
               };
             ];
       };
@@ -246,6 +283,7 @@ module Make (Vars : Global_vars.Vars) = struct
   let rec handleCommand description cmd =
     let noOut args =
       let _ = jj args in
+      Global_funcs.on_change ();
       ()
     in
     let prompt str cmd =

@@ -35,14 +35,15 @@
         default =
 
           pkgs.mkShell {
-            packages = with pkgs; [ pkgs.pkg-config gmp stdenv.cc.cc.lib jujutsu ];
+            packages = with pkgs; [ pkgs.pkgsStatic.pkg-config pkgs.pkgsStatic.gmp pkgsStatic.stdenv.cc.cc.lib jujutsu musl pkgs.pkgsStatic.dune ];
             shellHook = let
               libPath =
-                pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib pkgs.gmp ];
+                pkgs.lib.makeLibraryPath [ pkgs.pkgsStatic.stdenv.cc.cc.lib pkgs.pkgsStatic.gmp pkgs.pkgsStatic.musl ];
             in ''
+              export CC=${pkgs.pkgsStatic.musl.stdenv.cc}
               # yolo
-              export CFLAGS="$CFLAGS -I${pkgs.stdenv.cc.cc.lib}/include -I${pkgs.gmp}/include"
-              export LIBS="$LIBS -L${pkgs.stdenv.cc.cc.lib}/lib -L${pkgs.gmp}/lib"
+              export CFLAGS="$CFLAGS -I${pkgs.pkgsStatic.stdenv.cc.cc.lib}/include -I${pkgs.pkgsStatic.gmp}/include"
+              export LIBS="$LIBS -L${pkgs.pkgsStatic.stdenv.cc.cc.lib}/lib -L${pkgs.pkgsStatic.gmp}/lib"
             '';
           };
 
