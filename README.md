@@ -5,6 +5,11 @@ A WIP TUI for the new version control system Jujutsu
 Press `h` to show the help.
 
 Please provide any suggestions. I'm new to jujutsu so I'm sure people have workflows I couldn't even dream of.  
+## Dependencies
+The jujutsu CLI.
+I haven't tested on windows or Mac.
+I believe it won't work outside Unix so Windows users will currently have to use wsl. 
+
 # Dev
 Can be built with nix `nix build .#jj_tui` or open a nix shell with `nix develop`
 For non-nix the project can be buit with dune or opam. 
