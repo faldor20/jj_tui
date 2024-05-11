@@ -1,118 +1,55 @@
 {
-  description = "An actor-model multi-core scheduler for OCaml 5";
-
   inputs = {
-    nixpkgs.url = "nixpkgs-unstable";
-
-    # bytestring = {
-    #   url = "github:riot-ml/bytestring";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    #   inputs.minttea.follows = "minttea";
-    #   inputs.rio.follows = "rio";
-    # };
-
-    # castore = {
-    #   url = "github:suri-framework/castore";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-
-    # config = {
-    #   url = "github:ocaml-sys/config.ml";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    #   inputs.minttea.follows = "minttea";
-    # };
-
-    # gluon = {
-    #   url = "github:riot-ml/gluon";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    #   inputs.bytestring.follows = "bytestring";
-    #   inputs.config.follows = "config";
-    #   inputs.minttea.follows = "minttea";
-    #   inputs.rio.follows = "rio";
-    # };
-
-    # minttea = {
-    #   url = "github:leostera/minttea";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-
-    # rio = {
-    #   url = "github:riot-ml/rio";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-
-    # telemetry = {
-    #   url = "github:leostera/telemetry";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
+    opam-nix.url = "github:tweag/opam-nix";
+    flake-utils.url = "github:numtide/flake-utils";
+    nixpkgs.follows = "opam-nix/nixpkgs";
   };
-
-  outputs = inputs@{ self, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      systems =
-        [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-      perSystem = { config, self', inputs', pkgs, system, ... }:
-        let
-          inherit (pkgs) ocamlPackages mkShell lib;
-          inherit (ocamlPackages) buildDunePackage;
-          version = "0.0.9+dev";
-        in {
-          devShells = {
-            default = mkShell.override { stdenv = pkgs.clang17Stdenv; } {
-              buildInputs = with ocamlPackages; [
-                dune_3
-                ocaml
-                utop
-                ocamlformat
-              ];
-              inputsFrom = [ self'.packages.default ];
-              packages = builtins.attrValues {
-                inherit (pkgs) clang_17 clang-tools_17 pkg-config;
-                inherit (ocamlPackages) ocaml-lsp ocamlformat-rpc-lib;
-              };
-            };
-          };
-          packages = {
-            # randomconv = buildDunePackage {
-            #   version = "0.2.0";
-            #   pname = "randomconv";
-            #   src = builtins.fetchGit {
-            #     url = "git@github.com:hannesm/randomconv.git";
-            #     rev = "b2ce656d09738d676351f5a1c18aff0ff37a7dcc";
-            #     ref = "refs/tags/${version}";
-            #   };
-            # };
-
-            default = let
-              pkg = buildDunePackage {
-                inherit version;
-                preBuild=" ";
-                pname = "jj_tui";
-                propagatedBuildInputs = with ocamlPackages;
-                  [
-                    # inputs'.bytestring.packages.default
-                    # inputs'.castore.packages.default
-                    # inputs'.config.packages.default
-                    # inputs'.gluon.packages.default
-                    # inputs'.rio.packages.default
-                    # (mdx.override {
-                    #   inherit logs;
-                    # })
-                    # mirage-crypto
-                    # mirage-crypto-rng
-                    # mtime
-                    # odoc
-                    # ptime
-                    # self'.packages.randomconv
-                    # inputs'.telemetry.packages.default
-                    # tls
-                    # uri
-                    # x509
-                  ];
-                src = ./.;
-              };
-            in pkg;
-          };
+  outputs = { self, flake-utils, opam-nix, nixpkgs }@inputs:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system}.pkgsMusl;
+        on = opam-nix.lib.${system};
+        localPackagesQuery = builtins.mapAttrs (_: pkgs.lib.last)
+          (on.listRepo (on.makeOpamRepo ./.));
+        devPackagesQuery = {
+          # You can add "development" packages here. They will get added to the devShell automatically.
+          ocaml-lsp-server = "*";
+          ocamlformat = "*";
         };
-    };
+        query = devPackagesQuery // {
+          ## You can force versions of certain packages here, e.g:
+          ## - force the ocaml compiler to be taken from opam-repository:
+          # ocaml-base-compiler = "5.1.0";
+          ## - or force the compiler to be taken from nixpkgs and be a certain version:
+          # ocaml-system = "5.1.0";
+          ## - or force ocamlfind to be a certain version:
+          # ocamlfind = "1.9.2";
+        };
+        scope = on.buildOpamProject' { } ./. query;
+        overlay = final: prev:
+          {
+            # You can add overrides here
+          };
+        scope' = scope.overrideScope' overlay;
+        # Packages from devPackagesQuery
+        devPackages = builtins.attrValues
+          (pkgs.lib.getAttrs (builtins.attrNames devPackagesQuery) scope');
+        # Packages in this workspace
+        packages =
+          pkgs.lib.getAttrs (builtins.attrNames localPackagesQuery) scope';
+      in {
+        legacyPackages = scope';
+
+        # inherit packages;
+
+        ## If you want to have a "default" package which will be built with just `nix build`, do this instead of `inherit packages;`:
+        packages = packages // { default = packages.jj_tui; };
+
+        devShells.default = pkgs.mkShell {
+          inputsFrom = builtins.attrValues packages;
+          buildInputs = devPackages ++ [
+            # You can add packages from nixpkgs here
+          ];
+        };
+      });
 }
