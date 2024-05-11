@@ -1,8 +1,0 @@
-lib: [
-  "_build/install/default/lib/jj_tui/META"
-  "_build/install/default/lib/jj_tui/dune-package"
-  "_build/install/default/lib/jj_tui/opam"
-]
-bin: [
-  "_build/install/default/bin/jj_tui"
-]

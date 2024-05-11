@@ -1,6 +1,6 @@
 (library
  (name jj_tui)
  (inline_tests)
- (libraries core stdio core_unix.command_unix notty nottui angstrom)
+ (libraries stdio  notty nottui angstrom)
  (preprocess
   (pps ppx_expect)))

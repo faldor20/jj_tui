@@ -1,6 +1,0 @@
-# Tell github that .ml and .mli files are OCaml
-*.ml linguist-language=OCaml
-*.mli linguist-language=OCaml
-
-# Disable syntax detection for cram tests
-*.t linguist-language=Text

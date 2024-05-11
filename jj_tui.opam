@@ -12,6 +12,15 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.9"}
+  "eio-project"
+  "notty"
+  "stdio"
+  "nottui"
+  "lwd"
+  "base"
+  "eio_main"
+  "angstrom"
+  "ppx_expect"
   "odoc" {with-doc}
 ]
 build: [
