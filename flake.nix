@@ -7,7 +7,7 @@
   outputs = { self, flake-utils, opam-nix, nixpkgs }@inputs:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system}.pkgsMusl;
+        pkgs = nixpkgs.legacyPackages.${system};
         on = opam-nix.lib.${system};
         localPackagesQuery = builtins.mapAttrs (_: pkgs.lib.last)
           (on.listRepo (on.makeOpamRepo ./.));
@@ -25,7 +25,10 @@
           ## - or force ocamlfind to be a certain version:
           # ocamlfind = "1.9.2";
         };
-        scope = on.buildOpamProject' { } ./. query;
+        scope = on.buildOpamProject' {
+
+        pkgs=pkgs.pkgsStatic;
+         } ./. query;
         overlay = final: prev:
           {
             # You can add overrides here
