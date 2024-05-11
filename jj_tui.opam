@@ -20,6 +20,9 @@ depends: [
   "angstrom"
   "ppx_expect"
   "ppx_jane"
+  "lwd"
+  "eio-process"
+  "notty"
   "odoc" {with-doc}
 ]
 build: [
@@ -39,3 +42,9 @@ build: [
 dev-repo: "git+https://github.com/username/reponame.git"
 
 x-opam-monorepo-opam-provided: ["lwd"]
+
+#This is needed because eio-process doesn't exict
+pin-depends:[
+["eio-process.dev" "git+https://github.com/mbarbin/eio-process"]
+]
+

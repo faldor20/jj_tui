@@ -1,8 +1,0 @@
-(executable
- (name main)
- (flags :standard -w +a-4-40-41-42-44-45-48-66 -warn-error +a -open Base)
- (libraries base unix)
- (instrumentation
-  (backend bisect_ppx))
- (preprocess
-  (pps ppx_sexp_value ppx_js_style -check-doc-comments)))

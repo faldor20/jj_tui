@@ -2,4 +2,4 @@
  (name jj_tui)
  (libraries jj_tui)
  (preprocess
-  (pps ppx_jane ppx_expect)))
+  (pps ppx_expect)))

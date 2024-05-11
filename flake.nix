@@ -1,58 +1,143 @@
 {
+  description = "Example JavaScript development environment for Zero to Nix";
+
+  # Flake inputs
   inputs = {
-    opam-nix.url = "github:tweag/opam-nix";
-    flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.follows = "opam-nix/nixpkgs";
+
+    nixpkgs.url = "nixpkgs-unstable"; # also valid: "nixpkgs"
+
   };
-  outputs = { self, flake-utils, opam-nix, nixpkgs }@inputs:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        on = opam-nix.lib.${system};
-        localPackagesQuery = builtins.mapAttrs (_: pkgs.lib.last)
-          (on.listRepo (on.makeOpamRepo ./.));
-        devPackagesQuery = {
-          # You can add "development" packages here. They will get added to the devShell automatically.
-          ocaml-lsp-server = "*";
-          ocamlformat = "*";
-        };
-        query = devPackagesQuery // {
-          ## You can force versions of certain packages here, e.g:
-          ## - force the ocaml compiler to be taken from opam-repository:
-          # ocaml-base-compiler = "5.1.0";
-          ## - or force the compiler to be taken from nixpkgs and be a certain version:
-          # ocaml-system = "5.1.0";
-          ## - or force ocamlfind to be a certain version:
-          # ocamlfind = "1.9.2";
-        };
-        scope = on.buildOpamProject' {
+  # Flake outputs
+  outputs = { self, nixpkgs, ... }@inputs:
+    let
+      # Systems supported
+      allSystems =
+        [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
 
-        pkgs=pkgs.pkgsStatic;
-         } ./. query;
-        overlay = final: prev:
-          {
-            # You can add overrides here
+      # Helper to provide system-specific attributes
+      forAllSystems = f:
+        nixpkgs.lib.genAttrs allSystems (system:
+          f (let pkgs = import nixpkgs { inherit system; };
+          in {
+            pkgs = pkgs;
+            # OCaml packages available on nixpkgs
+            ocamlPackages =
+              nixpkgs.legacyPackages.${system}.ocamlPackages; # Legacy packages that have not been converted to flakes
+            ocamlPackagesStatic =
+              nixpkgs.legacyPackages.${system}.pkgsMusl.ocamlPackages; # Legacy packages that have not been converted to flakes
+          }));
+
+    in {
+      packages = forAllSystems ({ pkgs, ocamlPackages,ocamlPackagesStatic}:
+        let
+          eio-process = ocamlPackages.buildDunePackage {
+            pname = "eio-process";
+            version = "0.1.0";
+            duneVersion = "3";
+            src = pkgs.fetchFromGitHub {
+
+              owner = "mbarbin";
+              repo = "eio-process";
+              rev = "482ba341884dc8711f93ec9cc6d7c941099e0faa";
+              sha256 = "sha256-/Y2U+1y+nDMBrRfDAYif0WJp0vPWmvbSMt39wAB/rS8=";
+            };
+            nativeBuildInputs = with pkgs;
+              [
+                # gmp
+                # stdenv.cc.cc.lib
+                # dune_3
+                # clang
+                # ocaml
+                # opam
+
+              ];
+
+            buildInputs = with ocamlPackages; [
+              base
+              eio
+              parsexp
+              ppx_compare
+              ppx_enumerate
+              ppx_hash
+              ppx_here
+              ppx_let
+              ppx_sexp_conv
+              ppx_sexp_value
+            ];
+
+            strictDeps = true;
+
+            preBuild = ''
+              #make home which is needed for opam
+                # export HOME=$(pwd)/build-home
+                # mkdir -p $HOME
+
+                # opam init .
+
+                # opam install . opam-monorepo
+                # opam monorepo pull
+            '';
           };
-        scope' = scope.overrideScope' overlay;
-        # Packages from devPackagesQuery
-        devPackages = builtins.attrValues
-          (pkgs.lib.getAttrs (builtins.attrNames devPackagesQuery) scope');
-        # Packages in this workspace
-        packages =
-          pkgs.lib.getAttrs (builtins.attrNames localPackagesQuery) scope';
-      in {
-        legacyPackages = scope';
+          jj_tui= pkgs: ocamlPackages:
+ocamlPackages.buildDunePackage {
+            pname = "jj_tui";
+            version = "0.1.0";
+            duneVersion = "3";
+            src = ./.;
 
-        # inherit packages;
+            buildInputs = [
+              eio-process
+              ocamlPackages.parsexp
+              ocamlPackages.eio_main
+              ocamlPackages.stdio
+              ocamlPackages.nottui
+              ocamlPackages.lwd
+              ocamlPackages.base
+              ocamlPackages.angstrom
+              ocamlPackages.ppx_expect
+              # ocamlPackages.parsexp
 
-        ## If you want to have a "default" package which will be built with just `nix build`, do this instead of `inherit packages;`:
-        packages = packages // { default = packages.jj_tui; };
+              # Ocaml package dependencies needed to build go here.
+            ];
+            env={
+            DUNE_PROFILE="static";
+              
+            };
 
-        devShells.default = pkgs.mkShell {
-          inputsFrom = builtins.attrValues packages;
-          buildInputs = devPackages ++ [
-            # You can add packages from nixpkgs here
-          ];
-        };
+            strictDeps = true;
+
+            preBuild = ''
+              #make home which is needed for opam
+                # export HOME=$(pwd)/build-home
+                # mkdir -p $HOME
+
+            export DUNE_PROFILE=static
+                # opam init .
+
+                # opam install . opam-monorepo
+                # opam monorepo pull
+            '';
+          };
+
+        in {
+          default =jj_tui pkgs ocamlPackages;       # Development environment output
+          pkgsMusl.default=jj_tui pkgs.pkgsMusl ocamlPackagesStatic;       # Development environment output
+        });
+      devShells = forAllSystems ({ pkgs, ... }: {
+        default =
+
+          pkgs.mkShell {
+            packages = with pkgs; [
+              gmp
+              stdenv.cc.cc.lib
+              dune_3
+              ocaml
+              opam
+              fish
+            ];
+          };
+
       });
+
+    };
 }
