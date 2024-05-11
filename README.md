@@ -1,5 +1,6 @@
 # Jujutsu TUI
 A WIP TUI for the new version control system Jujutsu 
+![screenshot](./screenshot.jpg)
 
 Press `h` to show the help.
 
