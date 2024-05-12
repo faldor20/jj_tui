@@ -53,8 +53,6 @@
               ocamlPackages.parsexp
               ocamlPackages.eio_main
               ocamlPackages.stdio
-              ocamlPackages.nottui
-              ocamlPackages.lwd
               ocamlPackages.base
               ocamlPackages.angstrom
               ocamlPackages.ppx_expect

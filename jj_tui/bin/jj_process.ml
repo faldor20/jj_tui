@@ -93,7 +93,7 @@ module Make (Vars : Global_vars.Vars) = struct
       |> String.trim
     in
     let current, prev =
-      output |> Jj_tui.AnsiReverse.parse_descriptions |> Result.get_ok
+      output |> Jj_tui.OutputParsing.parse_descriptions |> Result.get_ok
     in
     current |> String.concat "", prev |> String.concat ""
   ;;

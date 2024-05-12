@@ -1,5 +1,6 @@
-(test
- (name jj_tui)
+(library
+ (name jj_tui_test)
  (libraries jj_tui)
+ (inline_tests)
  (preprocess
   (pps ppx_expect)))
