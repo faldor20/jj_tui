@@ -8,29 +8,18 @@
 
   };
   # Flake outputs
-  outputs = { self, nixpkgs, ... }@inputs:
-    let
-      # Systems supported
-      allSystems =
+  outputs = { self, nixpkgs, flake-parts, ... }@inputs:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems =
         [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin" ];
-
-      # Helper to provide system-specific attributes
-      forAllSystems = f:
-        nixpkgs.lib.genAttrs allSystems (system:
-          f (let pkgs = import nixpkgs { inherit system; };
-          in {
-            pkgs = pkgs;
-            # OCaml packages available on nixpkgs
-            ocamlPackages =
-              nixpkgs.legacyPackages.${system}.ocamlPackages; # Legacy packages that have not been converted to flakes
-            ocamlPackagesStatic =
-              nixpkgs.legacyPackages.${system}.pkgsMusl.ocamlPackages; # Legacy packages that have not been converted to flakes
-          }));
-
-    in {
-      packages = forAllSystems ({ pkgs, ocamlPackages,ocamlPackagesStatic}:
+      perSystem = { config, self', inputs', pkgs, system, ... }:
         let
-          eio-process = ocamlPackages.buildDunePackage {
+          # OCaml packages available on nixpkgs
+          inherit (pkgs) ocamlPackages mkShell lib;
+          inherit (ocamlPackages) buildDunePackage;
+          ocamlPkgssStatic =
+            pkgs.pkgsMusl.ocamlPackages; # Legacy packages that have not been converted to flakes
+          eio-process = buildDunePackage {
             pname = "eio-process";
             version = "0.1.0";
             duneVersion = "3";
@@ -41,16 +30,6 @@
               rev = "482ba341884dc8711f93ec9cc6d7c941099e0faa";
               sha256 = "sha256-/Y2U+1y+nDMBrRfDAYif0WJp0vPWmvbSMt39wAB/rS8=";
             };
-            nativeBuildInputs = with pkgs;
-              [
-                # gmp
-                # stdenv.cc.cc.lib
-                # dune_3
-                # clang
-                # ocaml
-                # opam
-
-              ];
 
             buildInputs = with ocamlPackages; [
               base
@@ -66,26 +45,10 @@
             ];
 
             strictDeps = true;
-
-            preBuild = ''
-              #make home which is needed for opam
-                # export HOME=$(pwd)/build-home
-                # mkdir -p $HOME
-
-                # opam init .
-
-                # opam install . opam-monorepo
-                # opam monorepo pull
-            '';
           };
-          jj_tui= pkgs: ocamlPackages:
-ocamlPackages.buildDunePackage {
-            pname = "jj_tui";
-            version = "0.1.0";
-            duneVersion = "3";
-            src = ./.;
+          jj_tui_build_pkgs =
 
-            buildInputs = [
+            [
               eio-process
               ocamlPackages.parsexp
               ocamlPackages.eio_main
@@ -99,45 +62,49 @@ ocamlPackages.buildDunePackage {
 
               # Ocaml package dependencies needed to build go here.
             ];
-            env={
-            DUNE_PROFILE="static";
-              
+          jj_tui = pkgs: ocamlPackages:
+            ocamlPackages.buildDunePackage {
+              pname = "jj_tui";
+              version = "0.1.0";
+              duneVersion = "3";
+              src = ./.;
+
+              buildInputs = jj_tui_build_pkgs;
+              env = {
+                DUNE_PROFILE = "static";
+
+              };
+
+              strictDeps = true;
+
+              preBuild = ''
+                export DUNE_PROFILE=static
+              '';
             };
 
-            strictDeps = true;
-
-            preBuild = ''
-              #make home which is needed for opam
-                # export HOME=$(pwd)/build-home
-                # mkdir -p $HOME
-
-            export DUNE_PROFILE=static
-                # opam init .
-
-                # opam install . opam-monorepo
-                # opam monorepo pull
-            '';
-          };
-
         in {
-          default =jj_tui pkgs ocamlPackages;       # Development environment output
-          pkgsMusl.default=jj_tui pkgs.pkgsMusl ocamlPackagesStatic;       # Development environment output
-        });
-      devShells = forAllSystems ({ pkgs, ... }: {
-        default =
-
-          pkgs.mkShell {
-            packages = with pkgs; [
-              gmp
-              stdenv.cc.cc.lib
-              dune_3
-              ocaml
-              opam
-              fish
-            ];
+          packages = {
+            default =
+              jj_tui pkgs ocamlPackages; # Development environment output
+            pkgsMusl.default = jj_tui pkgs.pkgsMusl
+              pkgs.pkgsMusl.ocamlPackages; # Development environment output
+          };
+          devShells = {
+            default = mkShell.override { stdenv = pkgs.gccStdenv; } {
+              buildInputs = with ocamlPackages; [
+                dune_3
+                ocaml
+                utop
+                ocamlformat
+              ];
+              inputsFrom = [ self'.packages.default ];
+              packages = builtins.attrValues {
+                inherit (pkgs) gcc pkg-config;
+                inherit (ocamlPackages) ocaml-lsp ocamlformat-rpc-lib;
+              };
+            };
           };
 
-      });
-
+        };
     };
 }
