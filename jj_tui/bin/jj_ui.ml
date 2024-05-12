@@ -2,6 +2,7 @@ open Notty
 open Nottui
 open Lwd_infix
 open Global_funcs
+open Jj_tui
 module W = Nottui_widgets
 
 module Ui = struct
@@ -137,14 +138,11 @@ module Make (Vars : Global_vars.Vars) = struct
         W.h_pane
           (W.vbox
              [
-             
-               Widgets.scrollable(ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
+               Widgets.scrollable (ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
                |>$ Ui.resize ~sh:3;
-               Widgets.h_rule
-               |> Lwd.pure;
+               Widgets.h_rule |> Lwd.pure;
                Widgets.scrollable (ui_state.jj_branches $-> Ui.atom) |>$ Ui.resize ~sh:1;
-               Widgets.h_rule
-               |> Lwd.pure;
+               Widgets.h_rule |> Lwd.pure;
                Widgets.scrollable
                  (ui_state.command_log
                   |> Lwd.get

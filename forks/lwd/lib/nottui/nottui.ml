@@ -181,7 +181,7 @@ struct
 
   type event = [ `Key of key | `Mouse of mouse | `Paste of Unescape.paste ]
 
-  type layout_spec = { w : int; h : int; sw : int; sh : int }
+  type layout_spec = { w : int; h : int; sw : int; sh : int ; mw : int; mh : int}
 
   let pp_layout_spec ppf { w; h; sw; sh } =
     Format.fprintf ppf "{ w = %d; h = %d; sw = %d; sh = %d }" w h sw sh
@@ -196,6 +196,7 @@ struct
 
   type t = {
     w : int; sw : int;
+    mw : int; mh : int;
     h : int; sh : int;
     mutable desc : desc;
     focus : Focus.status;
@@ -223,7 +224,7 @@ struct
 
 
   let layout_spec t : layout_spec =
-    { w = t.w; h = t.h; sw = t.sw; sh = t.sh }
+    { w = t.w; h = t.h; sw = t.sw; sh = t.sh ; mw=t.mw; mh=t.mh }
   let layout_width t = t.w
   let layout_stretch_width t = t.sw
   let layout_height t = t.h
@@ -233,12 +234,14 @@ struct
     { vx = Interval.zero; vy = Interval.zero; image = I.empty }
 
   let empty : t =
-    { w = 0; sw = 0; h = 0; sh = 0; flags = flags_none;
+    { w = 0; sw = 0; h = 0; sh = 0; mw= 10000; mh=10000; flags = flags_none;
       focus = Focus.empty; desc = Atom I.empty;
       sensor_cache = None; cache }
 
   let atom img : t =
     { w = I.width img; sw = 0;
+    mw=10000;
+    mh=10000;
       h = I.height img; sh = 0;
       focus = Focus.empty; flags = flags_none;
       desc = Atom img;
@@ -285,12 +288,12 @@ struct
     | Some g, None | None, Some g -> Gravity.(pair g g)
     | Some pad, Some crop -> Gravity.(pair pad crop)
 
-  let resize ?w ?h ?sw ?sh ?pad ?crop ?(bg=A.empty) t : t =
+  let resize ?w ?h ?sw ?sh ?mw ?mh ?pad ?crop ?(bg=A.empty) t : t =
     let g = prepare_gravity (pad, crop) in
-    match (w, t.w), (h, t.h), (sw, t.sw), (sh, t.sh) with
+    match (w, t.w), (h, t.h), (sw, t.sw), (sh, t.sh), (mw,t.mw) ,(mh,t.mh) with
     | (Some w, _ | None, w), (Some h, _ | None, h),
-      (Some sw, _ | None, sw), (Some sh, _ | None, sh) ->
-      {t with w; h; sw; sh; desc = Resize (t, g, bg)}
+      (Some sw, _ | None, sw), (Some sh, _ | None, sh), (Some mw, _ | None, mw),(Some mh, _ | None, mh) ->
+      {t with w; h; sw; sh; mw; mh; desc = Resize (t, g, bg)}
 
   let resize_to ({w; h; sw; sh} : layout_spec) ?pad ?crop ?(bg=A.empty) t : t =
     let g = prepare_gravity (pad, crop) in
@@ -306,6 +309,8 @@ struct
   let join_x a b = {
     w = (a.w + b.w);   sw = (a.sw + b.sw);
     h = (maxi a.h b.h); sh = (maxi a.sh b.sh);
+    mw=a.mh+b.mh;
+    mh=maxi a.mh b.mh;
     flags = a.flags lor b.flags;
     focus = Focus.merge a.focus b.focus; desc = X (a, b);
     sensor_cache = None; cache
@@ -314,6 +319,8 @@ struct
   let join_y a b = {
     w = (maxi a.w b.w); sw = (maxi a.sw b.sw);
     h = (a.h + b.h);   sh = (a.sh + b.sh);
+    mw=maxi a.mw b.mw;
+    mh=a.mh+b.mh;
     flags = a.flags lor b.flags;
     focus = Focus.merge a.focus b.focus; desc = Y (a, b);
     sensor_cache = None; cache;
@@ -322,6 +329,8 @@ struct
   let join_z a b = {
     w = (maxi a.w b.w); sw = (maxi a.sw b.sw);
     h = (maxi a.h b.h); sh = (maxi a.sh b.sh);
+    mw=maxi a.mw b.mw;
+    mh=maxi a.mh b.mh;
     flags = a.flags lor b.flags;
     focus = Focus.merge a.focus b.focus; desc = Z (a, b);
     sensor_cache = None; cache;
@@ -407,17 +416,48 @@ struct
     in
     aux ui
 
-  let split ~a ~sa ~b ~sb total =
+(* this generates the share of a space between two ui elements *)
+  let split ~mA:aMax ~mB:bMax ~a ~sa ~b ~sb total =
+    (*total stretch value*)
     let stretch = sa + sb in
+    (*the free space the two elements have*)
     let flex = total - a - b in
-    if stretch > 0 && flex > 0 then
+    (*if we have a stretch value and space to stretch into*)
+    let canStretch=stretch > 0 && flex > 0 in
+    if  canStretch then
       let ratio =
         if sa > sb then
           flex * sa / stretch
         else
           flex - flex * sb / stretch
+
+      
+
       in
-      (a + ratio, b + flex - ratio)
+      (* this is way to complex but basically:
+      1. streach a, if we hit max give the leftover to b
+      2. streach b give the leftover to a
+      3. check if a is overstretched
+      *)
+      let aRatio,bRatio= ref ratio, ref (flex-ratio) in
+      let aMaxed =ref false in
+      if !aRatio>aMax then 
+      (
+      bRatio:=!bRatio+(ratio-aMax); 
+      aRatio:=aMax ;
+      aMaxed:=true);
+     if !bRatio>bMax  then
+     begin
+       if !aMaxed then
+         bRatio:=bMax
+       else
+        aRatio:=!aRatio+(!bRatio-bMax);
+        end;
+      if !aRatio>aMax then 
+        aRatio:=aMax ;
+
+      (a+ !aRatio,b+ !bRatio)
+
     else
       (a, b)
 
@@ -435,7 +475,7 @@ struct
   let has_transient_sensor flags = flags land flag_transient_sensor <> 0
   let has_permanent_sensor flags = flags land flag_permanent_sensor <> 0
 
-  let rec update_sensors ox oy sw sh ui =
+  let rec update_sensors ox oy sw sh mw mh ui =
     if has_transient_sensor ui.flags || (
         has_permanent_sensor ui.flags &&
         match ui.sensor_cache with
@@ -451,34 +491,34 @@ struct
       | Atom _ -> ()
       | Size_sensor (t, _) | Mouse_handler (t, _)
       | Focus_area (t, _) | Event_filter (t, _) ->
-        update_sensors ox oy sw sh t
+        update_sensors ox oy sw sh  mw mh  t
       | Transient_sensor (t, sensor) ->
         ui.desc <- t.desc;
         let sensor = sensor ~x:ox ~y:oy ~w:sw ~h:sh in
-        update_sensors ox oy sw sh t;
+        update_sensors ox oy sw sh  mw mh  t;
         sensor ()
       | Permanent_sensor (t, sensor) ->
         let sensor = sensor ~x:ox ~y:oy ~w:sw ~h:sh in
-        update_sensors ox oy sw sh t;
+        update_sensors ox oy sw sh mw mh t;
         sensor ()
       | Resize (t, g, _) ->
         let open Gravity in
         let dx, rw = pack ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
         let dy, rh = pack ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
-        update_sensors (ox + dx) (oy + dy) rw rh t
+        update_sensors (ox + dx) (oy + dy) rw rh  mw mh t
       | Shift_area (t, sx, sy) ->
-        update_sensors (ox - sx) (oy - sy) sw sh t
+        update_sensors (ox - sx) (oy - sy) sw sh  mw mh  t
       | X (a, b) ->
-        let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw sw in
-        update_sensors ox oy aw sh a;
-        update_sensors (ox + aw) oy bw sh b
+        let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mw ~mB:b.mw sw in
+        update_sensors ox oy aw sh  mw mh  a;
+        update_sensors (ox + aw) oy bw sh  mw mh b
       | Y (a, b) ->
-        let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh sh in
-        update_sensors ox oy sw ah a;
-        update_sensors ox (oy + ah) sw bh b
+        let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh ~mA:a.mh ~mB:b.mh sh in
+        update_sensors ox oy sw ah mw mh a;
+        update_sensors ox (oy + ah) sw bh mw mh  b
       | Z (a, b) ->
-        update_sensors ox oy sw sh a;
-        update_sensors ox oy sw sh b
+        update_sensors ox oy sw sh mw mh a;
+        update_sensors ox oy sw sh mw mh  b
     )
 
   let update_focus ui =
@@ -489,7 +529,8 @@ struct
   let update t size ui =
     t.size <- size;
     t.view <- ui;
-    update_sensors 0 0 (fst size) (snd size) ui;
+    (* TODO:I think i need to do something here*)
+    update_sensors 0 0 (fst size) (snd size) 10000 10000  ui;
     update_focus ui
 
   let dispatch_mouse st x y btn w h t =
@@ -503,12 +544,12 @@ struct
       match t.desc with
       | Atom _ -> false
       | X (a, b) ->
-        let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw sw in
+        let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mh ~mB:b.mh sw in
         if x - ox < aw
         then aux ox oy aw sh a
         else aux (ox + aw) oy bw sh b
       | Y (a, b) ->
-        let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh sh in
+        let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh ~mA:a.mh ~mB:b.mh sh in
         if y - oy < ah
         then aux ox oy sw ah a
         else aux ox (oy + ah) sw bh b
@@ -611,7 +652,7 @@ struct
           let image = resize_canvas sw sh (I.crop ~l:sx ~t:sy cache.image) in
           { vx; vy; image }
         | X (a, b) ->
-          let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw sw in
+          let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mw ~mB:b.mw sw in
           let ca = render_node vx1 vy1 vx2 vy2 aw sh a in
           let cb = render_node (vx1 - aw) vy1 (vx2 - aw) vy2 bw sh b in
           let vx = Interval.make
@@ -623,7 +664,7 @@ struct
           and image = resize_canvas sw sh (I.(<|>) ca.image cb.image) in
           { vx; vy; image }
         | Y (a, b) ->
-          let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh sh in
+          let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh ~mA:a.mh ~mB:b.mh sh in
           let ca = render_node vx1 vy1 vx2 vy2 sw ah a in
           let cb = render_node vx1 (vy1 - ah) vx2 (vy2 - ah) sw bh b in
           let vx = Interval.make

@@ -110,7 +110,7 @@ sig
 
   (** {1 Layout specifications} *)
 
-  type layout_spec = { w : int; h : int; sw : int; sh : int; }
+  type layout_spec = { w : int; h : int; sw : int; sh : int ; mw : int; mh : int}
   (** The type of layout specifications.
 
       For each axis, layout is specified as a pair of integers:
@@ -245,8 +245,8 @@ sig
   (** {1 Composite images} *)
 
   val resize :
-    ?w:int -> ?h:int -> ?sw:int -> ?sh:int ->
-    ?pad:Gravity.t -> ?crop:Gravity.t -> ?bg:attr -> t -> t
+    ?w:int -> ?h:int -> ?sw:int -> ?sh:int ->  ?mw:int ->
+?mh:int ->    ?pad:Gravity.t -> ?crop:Gravity.t -> ?bg:attr -> t -> t
   (** Override the layout specification of an image with provided [w], [h],
       [sw] or [sh].
 

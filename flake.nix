@@ -57,6 +57,10 @@
               ocamlPackages.angstrom
               ocamlPackages.ppx_expect
               # ocamlPackages.parsexp
+              #notty packages
+              ocamlPackages.uutf
+
+
 
               # Ocaml package dependencies needed to build go here.
             ];
@@ -70,7 +74,6 @@
               buildInputs = jj_tui_build_pkgs;
               env = {
                 DUNE_PROFILE = "static";
-
               };
 
               strictDeps = true;
@@ -84,7 +87,7 @@
           packages = {
             default =
               jj_tui pkgs ocamlPackages; # Development environment output
-            pkgsMusl.default = jj_tui pkgs.pkgsMusl
+            static = jj_tui pkgs.pkgsMusl
               pkgs.pkgsMusl.ocamlPackages; # Development environment output
           };
           devShells = {

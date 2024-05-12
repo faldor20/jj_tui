@@ -76,6 +76,37 @@ let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") inp
   v_body
 ;;
 
+let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") input =
+  let width = Ui.layout_width input |> make_even in
+  let height = Ui.layout_height input in
+  let edit =
+    Ui.zcat
+      [
+        I.char A.empty ' ' (width + pad_h) (height + pad_v) |> Ui.atom;
+        input |> Ui.resize ~pad |> pad_edge (pad_h / 2) (pad_v / 2) pad;
+      ]
+  in
+  let p = I.uchar A.empty upPipe 1 1 in
+  let v_border =
+    I.vcat (List.init (edit |> Ui.layout_height) (fun _ -> p))
+    |> Ui.atom
+    |> Ui.resize ~pad:neutral_grav
+  in
+  let h_body = Ui.hcat [ v_border; edit; v_border ] in
+  let width = Ui.layout_width h_body in
+  let v_body =
+    Ui.vcat
+      [
+        make_top width |> Ui.atom;
+        W.string label |> Ui.resize ~pad |> pad_edge 1 0 pad;
+        h_body;
+        make_bot width |> Ui.atom;
+      ]
+  in
+  v_body
+;;
+
+
 let grid xxs = xxs |> List.map I.hcat |> I.vcat
 
 (** image outline creator*)
@@ -273,9 +304,12 @@ let prompt_example =
 ;;
 
 (** horizontal rule, has no width by default but is very very wide so it should fill any space*)
-let h_rule=
-               W.string
-                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"|>Ui.resize ~w:0 ~sw:100
+let h_rule =
+  W.string
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  |> Ui.resize ~w:0 ~sw:100
+;;
+
 let scrollable ui =
   let scrollState = Lwd.var W.default_scroll_state in
   W.vscroll_area

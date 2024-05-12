@@ -3,8 +3,10 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
   open Notty
+  open Jj_tui
   module W = Nottui_widgets
   open Nottui
+  open! Jj_tui.Util
 
   type cmd_args = string list
 
@@ -47,7 +49,13 @@ module Make (Vars : Global_vars.Vars) = struct
          line key description :: render_commands ~sub_level:(sub_level + 1) subs
   ;;
 
-  let commands_list_ui commands = commands |> render_commands |> I.vcat |> Ui.atom
+  let commands_list_ui commands =
+    commands
+    |> render_commands
+    |> I.vcat
+    |> Ui.atom
+    |> Lwd.pure
+  ;;
 
   let rec commandMapping =
     [
