@@ -47,4 +47,3 @@ x-opam-monorepo-opam-provided: ["lwd"]
 pin-depends:[
 ["eio-process.dev" "git+https://github.com/mbarbin/eio-process"]
 ]
-
