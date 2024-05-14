@@ -23,3 +23,2079 @@
 │ ◉  [1m[38;5;5mto[0m[38;5;8moppyyl[39m [38;5;3meli.jambu@gmail.com[39m [38;5;6m2024-05-11 03:29:14[39m [1m[38;5;4m6f[0m[38;5;8md850b1[39m
 ├─╯  test
 ◉  [1m[38;5;5mzz[0m[38;5;8mzzzzzz[39m [38;5;2mroot()[39m [1m[38;5;4m00[0m[38;5;8m000000[39m
+@nix { "action": "setPhase", "phase": "unpackPhase" }
+Running phase: unpackPhase
+unpacking source archive /nix/store/kah5g157dnmglndkc0j1kkxl1iycsjam-ocaml-5.1.1.tar.xz
+source root is ocaml-5.1.1
+setting SOURCE_DATE_EPOCH to timestamp 1701962920 of file ocaml-5.1.1/yacc/wstr.c
+@nix { "action": "setPhase", "phase": "patchPhase" }
+Running phase: patchPhase
+@nix { "action": "setPhase", "phase": "updateAutotoolsGnuConfigScriptsPhase" }
+Running phase: updateAutotoolsGnuConfigScriptsPhase
+Updating Autotools / GNU config script to a newer upstream version: ./build-aux/config.sub
+Updating Autotools / GNU config script to a newer upstream version: ./build-aux/config.guess
+@nix { "action": "setPhase", "phase": "configurePhase" }
+Running phase: configurePhase
+fixing libtool script ./build-aux/ltmain.sh
+./configure
+patching script interpreter paths in ./configure
+./configure: interpreter directive changed from "#! /bin/sh" to "/nix/store/dy2z01kpnxn7dn2kgfdxs4fm8xy9mb89-bash-5.2p26/bin/sh"
+configure flags: --disable-static -prefix /nix/store/z4b329h38p9wgwn3i1zy91jzvxmyprdm-ocaml-5.1.1 --host=x86_64-unknown-linux-gnu --target=x86_64-unknown-linux-musl
+configure: Configuring OCaml version 5.1.1
+checking build system type... x86_64-pc-linux-gnu
+checking host system type... x86_64-unknown-linux-gnu
+checking target system type... x86_64-unknown-linux-musl
+checking for x86_64-unknown-linux-gnu-ld... ld
+checking how to print strings... printf
+checking for x86_64-unknown-linux-gnu-gcc... gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether the compiler supports GNU C... yes
+checking whether gcc accepts -g... yes
+checking for gcc option to enable C11 features... none needed
+checking for a sed that does not truncate output... /nix/store/ard747zf4fkkkqa0pwj3fxp9fhnyfm7p-gnused-4.9/bin/sed
+checking for grep that handles long lines and -e... /nix/store/gbrv0fn9a07kmdw2rg22iybdymylw4qc-gnugrep-3.11/bin/grep
+checking for egrep... /nix/store/gbrv0fn9a07kmdw2rg22iybdymylw4qc-gnugrep-3.11/bin/grep -E
+checking for fgrep... /nix/store/gbrv0fn9a07kmdw2rg22iybdymylw4qc-gnugrep-3.11/bin/grep -F
+checking for ld used by gcc... ld
+checking if the linker (ld) is GNU ld... yes
+checking for BSD- or MS-compatible name lister (nm)... nm
+checking the name lister (nm) interface... BSD nm
+checking whether ln -s works... yes
+checking the maximum length of command line arguments... 1572864
+checking how to convert x86_64-pc-linux-gnu file names to x86_64-unknown-linux-gnu format... func_convert_file_noop
+checking how to convert x86_64-pc-linux-gnu file names to toolchain format... func_convert_file_noop
+checking for ld option to reload object files... -r
+checking for x86_64-unknown-linux-gnu-objdump... objdump
+checking how to recognize dependent libraries... (cached) pass_all
+checking for x86_64-unknown-linux-gnu-dlltool... no
+checking for dlltool... no
+checking how to associate runtime and link libraries... printf %s\n
+checking for x86_64-unknown-linux-gnu-ar... ar
+checking for archiver @FILE support... @
+checking for x86_64-unknown-linux-gnu-strip... strip
+checking for x86_64-unknown-linux-gnu-ranlib... ranlib
+checking for gawk... gawk
+checking command to parse nm output from gcc object... ok
+checking for sysroot... no
+checking for a working dd... /nix/store/asqa3kfq3maclk7cqqhrjvp7vriw6ahy-coreutils-9.5/bin/dd
+checking how to truncate binary pipes... /nix/store/asqa3kfq3maclk7cqqhrjvp7vriw6ahy-coreutils-9.5/bin/dd bs=4096 count=1
+checking for x86_64-unknown-linux-gnu-mt... no
+checking for mt... no
+checking if : is a manifest tool... no
+checking for stdio.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for strings.h... yes
+checking for sys/stat.h... yes
+checking for sys/types.h... yes
+checking for unistd.h... yes
+checking for dlfcn.h... yes
+checking for objdir... .libs
+checking if gcc supports -fno-rtti -fno-exceptions... no
+checking for gcc option to produce PIC... -fPIC -DPIC
+checking if gcc PIC flag -fPIC -DPIC works... yes
+checking if gcc static flag -static works... no
+checking if gcc supports -c -o file.o... yes
+checking if gcc supports -c -o file.o... (cached) yes
+checking whether the gcc linker (ld -m elf_x86_64) supports shared libraries... yes
+checking whether -lc should be explicitly linked in... no
+checking dynamic linker characteristics... GNU/Linux ld.so
+checking how to hardcode library paths into programs... immediate
+checking whether stripping libraries is possible... yes
+checking if libtool supports shared libraries... yes
+checking whether to build shared libraries... yes
+checking whether to build static libraries... no
+checking how to run the C preprocessor... gcc -E
+checking C compiler vendor... gcc-13-2
+checking whether host executables can be run in the build... yes
+checking whether #! works in shell scripts... yes
+checking for flexdll sources... checking for flexlink... no
+checking for flexdll.h... no
+checking for a BSD-compatible install... /nix/store/asqa3kfq3maclk7cqqhrjvp7vriw6ahy-coreutils-9.5/bin/install -c
+checking for library containing cos... -lm
+checking for math.h... yes
+checking for unistd.h... (cached) yes
+checking for stdint.h... (cached) yes
+checking for pthread_np.h... no
+checking for dirent.h... yes
+checking for sys/select.h... yes
+checking for stdatomic.h... yes
+checking for sys/mman.h... yes
+checking for off_t... yes
+checking size of int... 4
+checking size of long... 8
+checking size of long *... 8
+checking size of short... 2
+checking size of long long... 8
+configure: Target is a 64 bits architecture
+checking whether byte ordering is bigendian... no
+checking alignment of double... 8
+checking alignment of long... 8
+checking alignment of long long... 8
+checking whether the C compiler supports _Atomic types... yes
+checking whether the C compiler supports -fno-tree-vrp... yes
+checking whether the C compiler supports __attribute__((aligned(n)))... yes
+checking whether the C compiler supports __attribute__((optimize("tree-vectorize")))... yes
+checking for x86_64-unknown-linux-gnu-ld... no
+checking for ld... ld
+checking for rlwrap... no
+configure: checking semantics of signal handlers
+checking for sigaction... yes
+checking for sigprocmask... yes
+configure: POSIX signal handling found.
+checking for expm1... yes
+checking for log1p... yes
+checking for hypot... yes
+checking for fma... yes
+checking for exp2... yes
+checking for log2... yes
+checking for cbrt... yes
+checking for acosh... yes
+checking for asinh... yes
+checking for atanh... yes
+checking for erf... yes
+checking for erfc... yes
+checking for trunc... yes
+checking for round... yes
+checking for copysign... yes
+checking whether round works... yes
+checking whether fma works... yes
+checking for gcc options needed to detect all undeclared functions... none needed
+checking for unistd.h... (cached) yes
+checking whether getentropy is declared... yes
+checking for getrusage... yes
+checking for times... yes
+checking for secure_getenv... yes
+checking for issetugid... no
+checking for library containing clock_gettime... none required
+checking for socket... yes
+checking for socketpair... yes
+checking for bind... yes
+checking for listen... yes
+checking for accept... yes
+checking for connect... yes
+checking for socklen_t... yes
+checking for inet_aton... yes
+checking for struct sockaddr_in6... yes
+checking for getaddrinfo... yes
+checking for getnameinfo... yes
+checking for inet_pton... yes
+checking for inet_ntop... yes
+checking for rewinddir... yes
+checking for lockf... yes
+checking for mkfifo... yes
+checking for getcwd... yes
+checking whether system is declared... yes
+checking for sys/types.h... (cached) yes
+checking for utime.h... yes
+checking for utime... yes
+checking for utimes... yes
+checking for fchmod... yes
+checking for fchown... yes
+checking for truncate... yes
+checking for ftruncate... yes
+checking for select... yes
+checking for fd_set... yes
+checking for nanosleep... yes
+checking for symlink... yes
+checking for readlink... yes
+checking for lstat... yes
+checking for realpath... yes
+checking for waitpid... yes
+checking for wait4... yes
+checking for getgroups... yes
+checking for setgroups... yes
+checking for initgroups... yes
+checking for termios.h... yes
+checking for tcgetattr... yes
+checking for tcsetattr... yes
+checking for tcsendbreak... yes
+checking for tcflush... yes
+checking for tcflow... yes
+checking for setitimer... yes
+checking for gethostname... yes
+checking for sys/utsname.h... yes
+checking for uname... yes
+checking for gettimeofday... yes
+checking for mktime... yes
+checking for setsid... yes
+checking for putenv... yes
+checking for setenv... yes
+checking for unsetenv... yes
+checking for locale.h... yes
+checking for newlocale... yes
+checking for freelocale... yes
+checking for uselocale... yes
+checking for xlocale.h... no
+checking for strtod_l... yes
+checking for dlopen... yes
+configure: Dynamic loading of shared libraries is supported.
+checking for sys/mman.h... (cached) yes
+checking for mmap... yes
+checking for munmap... yes
+checking for pwrite... yes
+checking whether the C compiler supports -fdebug-prefix-map... yes
+checking for struct stat.st_atim.tv_nsec... yes
+configure: stat supports nanosecond precision
+checking how many arguments gethostbyname_r() takes... six
+checking how many arguments gethostbyaddr_r() takes... eight
+checking for mkstemp... yes
+checking for nice... yes
+checking for dup3... yes
+checking for pipe2... yes
+checking for accept4... yes
+checking for getauxval... yes
+checking for sys/shm.h... yes
+checking for shmat... yes
+checking for execvpe... yes
+checking for spawn.h... yes
+checking for posix_spawn... yes
+checking for posix_spawnp... yes
+checking for ffs... yes
+checking for _BitScanForward... no
+checking arguments for pthread_getaffinity_np... gnu
+checking for x86_64-unknown-linux-gnu-pkg-config... no
+checking for pkg-config... no
+checking for ZSTD_createCCtx in -lzstd... no
+configure: WARNING: zstd library not found
+configure: WARNING: compressed compilation artefacts not supported
+configure: replay debugger supported
+checking whether gcc is Clang... no
+checking whether pthreads work with "-pthread" and "-lpthread"... yes
+checking for joinable pthread attribute... PTHREAD_CREATE_JOINABLE
+checking whether more special flags are required for pthreads... no
+checking for PTHREAD_PRIO_INHERIT... yes
+checking for sigwait... yes
+configure: the threads library is supported
+checking whether the assembler supports --debug-prefix-map... yes
+checking whether the assembler supports CFI directives... yes
+configure: not using frame pointers
+checking whether mmap supports huge pages... yes
+checking whether mmap supports MAP_STACK... yes
+configure: creating ./config.status
+config.status: creating Makefile.build_config
+config.status: creating Makefile.config
+config.status: creating stdlib/sys.ml
+config.status: creating manual/src/version.tex
+config.status: creating manual/src/html_processing/src/common.ml
+config.status: creating ocamltest/ocamltest_config.ml
+config.status: creating utils/config.generated.ml
+config.status: creating compilerlibs/META
+config.status: creating otherlibs/dynlink/META
+config.status: creating otherlibs/runtime_events/META
+config.status: creating stdlib/META
+config.status: creating otherlibs/unix/META
+config.status: creating otherlibs/str/META
+config.status: creating otherlibs/systhreads/META
+config.status: creating ocamldoc/META
+config.status: creating runtime/caml/m.h
+config.status: creating runtime/caml/s.h
+config.status: creating runtime/caml/version.h
+config.status: executing libtool commands
+@nix { "action": "setPhase", "phase": "buildPhase" }
+Running phase: buildPhase
+build flags: -j4 SHELL=/nix/store/dy2z01kpnxn7dn2kgfdxs4fm8xy9mb89-bash-5.2p26/bin/bash nixpkgs_world_bootstrap_world_opt
+  CC runtime/sak.o
+  MKEXE runtime/sak
+make world
+make[1]: Entering directory '/build/ocaml-5.1.1'
+make runtime-all
+make[2]: Entering directory '/build/ocaml-5.1.1'
+  GEN runtime/ld.conf
+  GEN runtime/caml/opnames.h
+  GEN runtime/caml/jumptbl.h
+  GEN runtime/build_config.h
+  GEN runtime/primitives
+  CC runtime/addrmap.b.o
+  CC runtime/afl.b.o
+  CC runtime/alloc.b.o
+  CC runtime/array.b.o
+  CC runtime/backtrace.b.o
+  CC runtime/bigarray.b.o
+  CC runtime/callback.b.o
+  CC runtime/codefrag.b.o
+  CC runtime/compare.b.o
+  CC runtime/custom.b.o
+  CC runtime/debugger.b.o
+  CC runtime/domain.b.o
+  CC runtime/dynlink.b.o
+  CC runtime/extern.b.o
+  CC runtime/fiber.b.o
+  CC runtime/finalise.b.o
+  CC runtime/floats.b.o
+  CC runtime/gc_ctrl.b.o
+  CC runtime/gc_stats.b.o
+  CC runtime/globroots.b.o
+  CC runtime/hash.b.o
+  CC runtime/intern.b.o
+  CC runtime/ints.b.o
+  CC runtime/io.b.o
+  CC runtime/lexing.b.o
+  CC runtime/lf_skiplist.b.o
+  CC runtime/main.b.o
+  CC runtime/major_gc.b.o
+  CC runtime/md5.b.o
+  CC runtime/memory.b.o
+  CC runtime/memprof.b.o
+  CC runtime/meta.b.o
+  CC runtime/minor_gc.b.o
+  CC runtime/misc.b.o
+  CC runtime/obj.b.o
+  CC runtime/parsing.b.o
+  CC runtime/platform.b.o
+  CC runtime/printexc.b.o
+  CC runtime/prng.b.o
+  CC runtime/roots.b.o
+  CC runtime/runtime_events.b.o
+  CC runtime/shared_heap.b.o
+  CC runtime/signals.b.o
+  CC runtime/skiplist.b.o
+  CC runtime/startup_aux.b.o
+  CC runtime/str.b.o
+  CC runtime/sync.b.o
+  CC runtime/sys.b.o
+  CC runtime/unix.b.o
+  CC runtime/weak.b.o
+  CC runtime/backtrace_byt.b.o
+  CC runtime/fail_byt.b.o
+  CC runtime/fix_code.b.o
+  CC runtime/interp.b.o
+  CC runtime/startup_byt.b.o
+  CC runtime/zstd.b.o
+  CC runtime/addrmap.bd.o
+  CC runtime/afl.bd.o
+  CC runtime/alloc.bd.o
+  CC runtime/array.bd.o
+  CC runtime/backtrace.bd.o
+  CC runtime/bigarray.bd.o
+  CC runtime/callback.bd.o
+  CC runtime/codefrag.bd.o
+  CC runtime/compare.bd.o
+  CC runtime/custom.bd.o
+  CC runtime/debugger.bd.o
+  CC runtime/domain.bd.o
+  CC runtime/dynlink.bd.o
+  CC runtime/extern.bd.o
+  CC runtime/fiber.bd.o
+  CC runtime/finalise.bd.o
+  CC runtime/floats.bd.o
+  CC runtime/gc_ctrl.bd.o
+  CC runtime/gc_stats.bd.o
+  CC runtime/globroots.bd.o
+  CC runtime/hash.bd.o
+  CC runtime/intern.bd.o
+  CC runtime/ints.bd.o
+  CC runtime/io.bd.o
+  CC runtime/lexing.bd.o
+  CC runtime/lf_skiplist.bd.o
+  CC runtime/main.bd.o
+  CC runtime/major_gc.bd.o
+  CC runtime/md5.bd.o
+  CC runtime/memory.bd.o
+  CC runtime/memprof.bd.o
+  CC runtime/meta.bd.o
+  CC runtime/minor_gc.bd.o
+  CC runtime/misc.bd.o
+  CC runtime/obj.bd.o
+  CC runtime/parsing.bd.o
+  CC runtime/platform.bd.o
+  CC runtime/printexc.bd.o
+  CC runtime/prng.bd.o
+  CC runtime/roots.bd.o
+  CC runtime/runtime_events.bd.o
+  CC runtime/shared_heap.bd.o
+  CC runtime/signals.bd.o
+  CC runtime/skiplist.bd.o
+  CC runtime/startup_aux.bd.o
+  CC runtime/str.bd.o
+  CC runtime/sync.bd.o
+  CC runtime/sys.bd.o
+  CC runtime/unix.bd.o
+  CC runtime/weak.bd.o
+  CC runtime/backtrace_byt.bd.o
+  CC runtime/fail_byt.bd.o
+  CC runtime/fix_code.bd.o
+  CC runtime/interp.bd.o
+  CC runtime/startup_byt.bd.o
+  CC runtime/zstd.bd.o
+  CC runtime/instrtrace.bd.o
+  CC runtime/addrmap.bi.o
+  CC runtime/afl.bi.o
+  CC runtime/alloc.bi.o
+  CC runtime/array.bi.o
+  CC runtime/backtrace.bi.o
+  CC runtime/bigarray.bi.o
+  CC runtime/callback.bi.o
+  CC runtime/codefrag.bi.o
+  CC runtime/compare.bi.o
+  CC runtime/custom.bi.o
+  CC runtime/debugger.bi.o
+  CC runtime/domain.bi.o
+  CC runtime/dynlink.bi.o
+  CC runtime/extern.bi.o
+  CC runtime/fiber.bi.o
+  CC runtime/finalise.bi.o
+  CC runtime/floats.bi.o
+  CC runtime/gc_ctrl.bi.o
+  CC runtime/gc_stats.bi.o
+  CC runtime/globroots.bi.o
+  CC runtime/hash.bi.o
+  CC runtime/intern.bi.o
+  CC runtime/ints.bi.o
+  CC runtime/io.bi.o
+  CC runtime/lexing.bi.o
+  CC runtime/lf_skiplist.bi.o
+  CC runtime/main.bi.o
+  CC runtime/major_gc.bi.o
+  CC runtime/md5.bi.o
+  CC runtime/memory.bi.o
+  CC runtime/memprof.bi.o
+  CC runtime/meta.bi.o
+  CC runtime/minor_gc.bi.o
+  CC runtime/misc.bi.o
+  CC runtime/obj.bi.o
+  CC runtime/parsing.bi.o
+  CC runtime/platform.bi.o
+  CC runtime/printexc.bi.o
+  CC runtime/prng.bi.o
+  CC runtime/roots.bi.o
+  CC runtime/runtime_events.bi.o
+  CC runtime/shared_heap.bi.o
+  CC runtime/signals.bi.o
+  CC runtime/skiplist.bi.o
+  CC runtime/startup_aux.bi.o
+  CC runtime/str.bi.o
+  CC runtime/sync.bi.o
+  CC runtime/sys.bi.o
+  CC runtime/unix.bi.o
+  CC runtime/weak.bi.o
+  CC runtime/backtrace_byt.bi.o
+  CC runtime/fail_byt.bi.o
+  CC runtime/fix_code.bi.o
+  CC runtime/interp.bi.o
+  CC runtime/startup_byt.bi.o
+  CC runtime/zstd.bi.o
+  CC runtime/addrmap.bpic.o
+  CC runtime/afl.bpic.o
+  CC runtime/alloc.bpic.o
+  CC runtime/array.bpic.o
+  CC runtime/backtrace.bpic.o
+  CC runtime/bigarray.bpic.o
+  CC runtime/callback.bpic.o
+  CC runtime/codefrag.bpic.o
+  CC runtime/compare.bpic.o
+  CC runtime/custom.bpic.o
+  CC runtime/debugger.bpic.o
+  CC runtime/domain.bpic.o
+  CC runtime/dynlink.bpic.o
+  CC runtime/extern.bpic.o
+  CC runtime/fiber.bpic.o
+  CC runtime/finalise.bpic.o
+  CC runtime/floats.bpic.o
+  CC runtime/gc_ctrl.bpic.o
+  CC runtime/gc_stats.bpic.o
+  CC runtime/globroots.bpic.o
+  CC runtime/hash.bpic.o
+  CC runtime/intern.bpic.o
+  CC runtime/ints.bpic.o
+  CC runtime/io.bpic.o
+  CC runtime/lexing.bpic.o
+  CC runtime/lf_skiplist.bpic.o
+  CC runtime/main.bpic.o
+  CC runtime/major_gc.bpic.o
+  CC runtime/md5.bpic.o
+  CC runtime/memory.bpic.o
+  CC runtime/memprof.bpic.o
+  CC runtime/meta.bpic.o
+  CC runtime/minor_gc.bpic.o
+  CC runtime/misc.bpic.o
+  CC runtime/obj.bpic.o
+  CC runtime/parsing.bpic.o
+  CC runtime/platform.bpic.o
+  CC runtime/printexc.bpic.o
+  CC runtime/prng.bpic.o
+  CC runtime/roots.bpic.o
+  CC runtime/runtime_events.bpic.o
+  CC runtime/shared_heap.bpic.o
+  CC runtime/signals.bpic.o
+  CC runtime/skiplist.bpic.o
+  CC runtime/startup_aux.bpic.o
+  CC runtime/str.bpic.o
+  CC runtime/sync.bpic.o
+  CC runtime/sys.bpic.o
+  CC runtime/unix.bpic.o
+  CC runtime/weak.bpic.o
+  CC runtime/backtrace_byt.bpic.o
+  CC runtime/fail_byt.bpic.o
+  CC runtime/fix_code.bpic.o
+  CC runtime/interp.bpic.o
+  CC runtime/startup_byt.bpic.o
+  CC runtime/zstd.bpic.o
+  GEN runtime/prims.c
+  MKLIB runtime/libcamlrun.a
+  MKLIB runtime/libcamlrund.a
+  MKLIB runtime/libcamlruni.a
+  CC runtime/prims.o
+  MKEXE runtime/ocamlrun
+  MKEXE runtime/ocamlrund
+  MKEXE runtime/ocamlruni
+  MKLIB runtime/libcamlrun_pic.a
+  MKDLL runtime/libcamlrun_shared.so
+make[2]: Leaving directory '/build/ocaml-5.1.1'
+make -C stdlib \
+  OCAMLRUN='$(ROOTDIR)/runtime/ocamlrun' \
+  CAMLC='$(BOOT_OCAMLC) -use-prims ../runtime/primitives' all
+make[2]: Entering directory '/build/ocaml-5.1.1/stdlib'
+  OCAMLC camlinternalFormatBasics.cmi
+  GEN camlheader
+  GEN target_camlheader
+  GEN camlheader_ur
+  GEN camlheaderd
+  GEN target_camlheaderd
+  GEN camlheaderi
+  GEN target_camlheaderi
+  OCAMLC camlinternalFormatBasics.cmo
+  OCAMLC stdlib.cmi
+  OCAMLC stdlib.cmo
+  OCAMLC stdlib__Either.cmi
+  OCAMLC stdlib__Sys.cmi
+  OCAMLC stdlib__Nativeint.cmi
+  OCAMLC stdlib__Int32.cmi
+  OCAMLC stdlib__Type.cmi
+  OCAMLC stdlib__Atomic.cmi
+  OCAMLC camlinternalLazy.cmi
+  OCAMLC stdlib__Seq.cmi
+  OCAMLC stdlib__Bool.cmi
+  OCAMLC stdlib__Char.cmi
+  OCAMLC stdlib__Uchar.cmi
+  OCAMLC stdlib__Int.cmi
+  OCAMLC stdlib__Unit.cmi
+  OCAMLC stdlib__Marshal.cmi
+  OCAMLC stdlib__Array.cmi
+  OCAMLC stdlib__Float.cmi
+  OCAMLC stdlib__Int32.cmo
+  OCAMLC stdlib__Int64.cmi
+  OCAMLC stdlib__Nativeint.cmo
+  OCAMLC stdlib__Lexing.cmi
+  OCAMLC stdlib__Set.cmi
+  OCAMLC stdlib__Map.cmi
+  OCAMLC stdlib__Stack.cmi
+  OCAMLC stdlib__Queue.cmi
+  OCAMLC stdlib__Buffer.cmi
+  OCAMLC stdlib__Mutex.cmi
+  OCAMLC stdlib__Semaphore.cmi
+  OCAMLC stdlib__Domain.cmi
+  OCAMLC camlinternalFormat.cmi
+  OCAMLC stdlib__Printf.cmi
+  OCAMLC stdlib__Arg.cmi
+  OCAMLC stdlib__Fun.cmi
+  OCAMLC stdlib__Digest.cmi
+  OCAMLC stdlib__Complex.cmi
+  OCAMLC stdlib__Random.cmi
+  OCAMLC stdlib__Hashtbl.cmi
+  OCAMLC stdlib__Format.cmi
+  OCAMLC stdlib__Scanf.cmi
+  OCAMLC stdlib__Callback.cmi
+  OCAMLC stdlib__Filename.cmi
+  OCAMLC stdlib__Complex.cmo
+  OCAMLC stdlib__ArrayLabels.cmi
+  OCAMLC stdlib__ListLabels.cmi
+  OCAMLC stdlib__BytesLabels.cmi
+  OCAMLC stdlib__StringLabels.cmi
+  OCAMLC stdlib__MoreLabels.cmi
+  OCAMLC stdlib__In_channel.cmi
+  OCAMLC stdlib__Out_channel.cmi
+  OCAMLC std_exit.cmi
+  OCAMLC stdlib__Either.cmo
+  OCAMLC stdlib__Sys.cmo
+  OCAMLC stdlib__Obj.cmi
+  OCAMLC stdlib__Atomic.cmo
+  OCAMLC stdlib__Lazy.cmi
+  OCAMLC stdlib__Option.cmi
+  OCAMLC stdlib__Result.cmi
+  OCAMLC stdlib__Bool.cmo
+  OCAMLC stdlib__Char.cmo
+  OCAMLC stdlib__Uchar.cmo
+  OCAMLC stdlib__List.cmi
+  OCAMLC stdlib__Int.cmo
+  OCAMLC stdlib__Bytes.cmi
+  OCAMLC stdlib__String.cmi
+  OCAMLC stdlib__Unit.cmo
+  OCAMLC stdlib__Array.cmo
+  OCAMLC stdlib__Float.cmo
+  OCAMLC stdlib__Int64.cmo
+  OCAMLC stdlib__Parsing.cmi
+  OCAMLC stdlib__Set.cmo
+  OCAMLC stdlib__Map.cmo
+  OCAMLC stdlib__Stack.cmo
+  OCAMLC stdlib__Queue.cmo
+  OCAMLC stdlib__Buffer.cmo
+  OCAMLC stdlib__Mutex.cmo
+  OCAMLC stdlib__Condition.cmi
+  OCAMLC camlinternalFormat.cmo
+  OCAMLC stdlib__Printf.cmo
+  OCAMLC stdlib__Arg.cmo
+  OCAMLC stdlib__Printexc.cmi
+  OCAMLC stdlib__Digest.cmo
+  OCAMLC stdlib__Bigarray.cmi
+  OCAMLC stdlib__Hashtbl.cmo
+  OCAMLC stdlib__Weak.cmi
+  OCAMLC stdlib__Format.cmo
+  OCAMLC stdlib__Scanf.cmo
+  OCAMLC stdlib__Callback.cmo
+  OCAMLC camlinternalOO.cmi
+  OCAMLC camlinternalMod.cmi
+  OCAMLC stdlib__Ephemeron.cmi
+  OCAMLC stdlib__Filename.cmo
+  OCAMLC stdlib__ArrayLabels.cmo
+  OCAMLC stdlib__ListLabels.cmo
+  OCAMLC stdlib__BytesLabels.cmo
+  OCAMLC stdlib__StringLabels.cmo
+  OCAMLC stdlib__MoreLabels.cmo
+  OCAMLC stdlib__StdLabels.cmi
+  OCAMLC stdlib__In_channel.cmo
+  OCAMLC stdlib__Out_channel.cmo
+  OCAMLC stdlib__Effect.cmi
+  OCAMLC std_exit.cmo
+  OCAMLC stdlib__Obj.cmo
+  OCAMLC stdlib__Type.cmo
+  OCAMLC camlinternalLazy.cmo
+  OCAMLC stdlib__Lazy.cmo
+  OCAMLC stdlib__Seq.cmo
+  OCAMLC stdlib__Option.cmo
+  OCAMLC stdlib__Result.cmo
+  OCAMLC stdlib__List.cmo
+  OCAMLC stdlib__Bytes.cmo
+  OCAMLC stdlib__String.cmo
+  OCAMLC stdlib__Marshal.cmo
+  OCAMLC stdlib__Lexing.cmo
+  OCAMLC stdlib__Parsing.cmo
+  OCAMLC stdlib__Condition.cmo
+  OCAMLC stdlib__Semaphore.cmo
+  OCAMLC stdlib__Domain.cmo
+  OCAMLC stdlib__Printexc.cmo
+  OCAMLC stdlib__Fun.cmo
+  OCAMLC stdlib__Gc.cmi
+  OCAMLC stdlib__Bigarray.cmo
+  OCAMLC stdlib__Random.cmo
+  OCAMLC stdlib__Weak.cmo
+  OCAMLC camlinternalOO.cmo
+  OCAMLC stdlib__Oo.cmi
+  OCAMLC camlinternalMod.cmo
+  OCAMLC stdlib__Ephemeron.cmo
+  OCAMLC stdlib__StdLabels.cmo
+  OCAMLC stdlib__Effect.cmo
+  OCAMLC stdlib__Gc.cmo
+  OCAMLC stdlib__Oo.cmo
+  LINKC stdlib.cma
+make[2]: Leaving directory '/build/ocaml-5.1.1/stdlib'
+rm -f boot/ocamlrun
+cp runtime/ocamlrun boot/ocamlrun
+cd boot; rm -f stdlib.cma std_exit.cmo *.cmi camlheader
+cd stdlib; cp stdlib.cma std_exit.cmo *.cmi camlheader ../boot
+cd boot; ln -sf ../runtime/libcamlrun.a .
+make all
+make[2]: Entering directory '/build/ocaml-5.1.1'
+cd stdlib; ln -sf ../runtime/libcamlrun.a .
+make ocamlc
+make[3]: Entering directory '/build/ocaml-5.1.1'
+  OCAMLC utils/warnings.cmi
+  OCAMLC parsing/longident.cmi
+  OCAMLC utils/build_path_prefix_map.cmi
+  OCAMLC utils/identifiable.cmi
+  OCAMLC utils/load_path.cmi
+  OCAMLC middle_end/flambda/allocated_const.cmi
+  OCAMLC file_formats/cmxs_format.cmi
+  GEN utils/config_main.ml
+cp utils/config.mli utils/config_main.mli
+  GEN utils/config_boot.ml
+cp utils/config.mli utils/config_boot.mli
+  GEN utils/config.ml
+  OCAMLC utils/config.cmi
+  OCAMLC utils/build_path_prefix_map.cmo
+  OCAMLC utils/arg_helper.cmi
+  OCAMLC utils/local_store.cmi
+  OCAMLC utils/profile.cmi
+  OCAMLC utils/terminfo.cmi
+  OCAMLC utils/ccomp.cmi
+  OCAMLC utils/strongly_connected_components.cmi
+  OCAMLC utils/targetint.cmi
+  OCAMLC utils/int_replace_polymorphic_compare.cmi
+  GEN utils/domainstate.ml
+  GEN utils/domainstate.mli
+  OCAMLC utils/binutils.cmi
+  OCAMLC utils/lazy_backtrack.cmi
+  OCAMLC utils/compression.cmi
+  GEN parsing/camlinternalMenhirLib.ml
+  GEN parsing/camlinternalMenhirLib.mli
+  OCAMLLEX parsing/lexer.ml
+  OCAMLC lambda/switch.cmi
+  GEN lambda/runtimedef.ml
+  OCAMLC lambda/runtimedef.cmi
+  OCAMLLEX tools/make_opcodes.ml
+  OCAMLC tools/make_opcodes.cmi
+  OCAMLC bytecomp/bytesections.cmi
+  OCAMLC bytecomp/dll.cmi
+  OCAMLC driver/main_args.cmi
+  OCAMLC driver/makedepend.cmi
+  OCAMLC bytecomp/bytelibrarian.cmi
+  OCAMLC driver/errors.cmi
+  OCAMLC driver/maindriver.cmi
+  OCAMLC driver/main.cmi
+  OCAMLC parsing/location.cmi
+  OCAMLC utils/misc.cmi
+  OCAMLC typing/ident.cmi
+  OCAMLC middle_end/linkage_name.cmi
+  OCAMLC middle_end/flambda/base_types/tag.cmi
+  OCAMLC middle_end/flambda/base_types/static_exception.cmi
+  OCAMLC utils/numbers.cmi
+  OCAMLC utils/config_main.cmi
+  OCAMLC utils/config_boot.cmi
+  OCAMLC utils/config.cmo
+  OCAMLC utils/misc.cmo
+  OCAMLC utils/identifiable.cmo
+  OCAMLC utils/arg_helper.cmo
+  OCAMLC utils/local_store.cmo
+  OCAMLC utils/load_path.cmo
+  OCAMLC utils/clflags.cmi
+  OCAMLC utils/profile.cmo
+  OCAMLC utils/terminfo.cmo
+  OCAMLC utils/ccomp.cmo
+  OCAMLC utils/warnings.cmo
+  OCAMLC utils/consistbl.cmi
+  OCAMLC utils/strongly_connected_components.cmo
+  OCAMLC utils/targetint.cmo
+  OCAMLC utils/int_replace_polymorphic_compare.cmo
+  OCAMLC utils/domainstate.cmi
+  OCAMLC utils/binutils.cmo
+  OCAMLC utils/lazy_backtrack.cmo
+  OCAMLC utils/diffing.cmi
+  OCAMLC utils/compression.cmo
+  OCAMLC parsing/location.cmo
+  OCAMLC parsing/longident.cmo
+  OCAMLC parsing/syntaxerr.cmi
+  OCAMLC parsing/camlinternalMenhirLib.cmi
+  OCAMLC typing/ident.cmo
+  OCAMLC lambda/switch.cmo
+  OCAMLC lambda/runtimedef.cmo
+  OCAMLC tools/make_opcodes.cmo
+  OCAMLC bytecomp/bytesections.cmo
+  OCAMLC bytecomp/dll.cmo
+  OCAMLC driver/compenv.cmi
+  OCAMLC driver/errors.cmo
+  OCAMLC driver/main.cmo
+  OCAMLC parsing/asttypes.cmi
+  OCAMLC typing/annot.cmi
+  OCAMLC file_formats/cmo_format.cmi
+  OCAMLC typing/path.cmi
+  OCAMLC middle_end/compilation_unit.cmi
+  OCAMLC utils/config_main.cmo
+  OCAMLC utils/config_boot.cmo
+  OCAMLC utils/numbers.cmo
+  OCAMLC utils/clflags.cmo
+  OCAMLC utils/consistbl.cmo
+  OCAMLC utils/domainstate.cmo
+  OCAMLC utils/diffing.cmo
+  OCAMLC utils/diffing_with_keys.cmi
+  OCAMLC parsing/syntaxerr.cmo
+  OCAMLC parsing/camlinternalMenhirLib.cmo
+  OCAMLC typing/path.cmo
+  LINKC tools/make_opcodes
+  OCAMLC driver/compenv.cmo
+  OCAMLC driver/main_args.cmo
+  OCAMLC parsing/parsetree.cmi
+  OCAMLC typing/shape.cmi
+  OCAMLC lambda/debuginfo.cmi
+  OCAMLC middle_end/flambda/base_types/set_of_closures_id.cmi
+  OCAMLC middle_end/flambda/base_types/export_id.cmi
+  OCAMLC middle_end/backend_var.cmi
+  OCAMLC utils/diffing_with_keys.cmo
+  OCAMLC parsing/docstrings.cmi
+  OCAMLC parsing/pprintast.cmi
+  OCAMLC parsing/parse.cmi
+  OCAMLC parsing/printast.cmi
+  OCAMLC parsing/ast_mapper.cmi
+  OCAMLC parsing/ast_iterator.cmi
+  OCAMLC parsing/attr_helper.cmi
+  OCAMLC parsing/builtin_attributes.cmi
+  OCAMLC parsing/ast_invariants.cmi
+  OCAMLC parsing/depend.cmi
+  OCAMLC typing/shape.cmo
+  OCAMLC lambda/debuginfo.cmo
+  GEN bytecomp/opcodes.ml
+  OCAMLC driver/pparse.cmi
+  OCAMLC typing/type_immediacy.cmi
+  OCAMLC middle_end/flambda/base_types/set_of_closures_origin.cmi
+  OCAMLC parsing/docstrings.cmo
+  OCAMLC parsing/ast_helper.cmi
+  OCAMLC parsing/pprintast.cmo
+  OCAMLC parsing/printast.cmo
+  OCAMLC parsing/ast_mapper.cmo
+  OCAMLC parsing/ast_iterator.cmo
+  OCAMLC parsing/attr_helper.cmo
+  OCAMLC parsing/builtin_attributes.cmo
+  OCAMLC parsing/ast_invariants.cmo
+  OCAMLC parsing/depend.cmo
+  OCAMLC typing/type_immediacy.cmo
+  GEN bytecomp/opcodes.mli
+  OCAMLC driver/pparse.cmo
+  OCAMLC typing/outcometree.cmi
+  OCAMLC parsing/ast_helper.cmo
+  GEN parsing/parser.ml
+  GEN parsing/parser.mli
+  OCAMLC typing/oprint.cmi
+  OCAMLC bytecomp/opcodes.cmi
+  OCAMLC typing/primitive.cmi
+  OCAMLC parsing/parser.cmi
+  OCAMLC typing/oprint.cmo
+  OCAMLC bytecomp/opcodes.cmo
+  OCAMLC typing/types.cmi
+  OCAMLC parsing/parser.cmo
+  OCAMLC parsing/lexer.cmi
+  OCAMLC typing/primitive.cmo
+  OCAMLC typing/types.cmo
+  OCAMLC typing/btype.cmi
+  OCAMLC typing/predef.cmi
+  OCAMLC typing/datarepr.cmi
+  OCAMLC typing/errortrace.cmi
+  OCAMLC typing/signature_group.cmi
+  OCAMLC driver/makedepend.cmo
+  OCAMLC typing/subst.cmi
+  OCAMLC file_formats/cmi_format.cmi
+  OCAMLC parsing/lexer.cmo
+  OCAMLC parsing/parse.cmo
+  OCAMLC typing/btype.cmo
+  OCAMLC typing/subst.cmo
+  OCAMLC typing/predef.cmo
+  OCAMLC typing/datarepr.cmo
+  OCAMLC file_formats/cmi_format.cmo
+  OCAMLC typing/persistent_env.cmi
+  OCAMLC typing/errortrace.cmo
+  OCAMLC typing/signature_group.cmo
+  OCAMLC typing/env.cmi
+  OCAMLC typing/persistent_env.cmo
+  OCAMLC lambda/lambda.cmi
+  OCAMLC typing/env.cmo
+  OCAMLC typing/typedtree.cmi
+  OCAMLC typing/ctype.cmi
+  OCAMLC typing/printtyp.cmi
+  OCAMLC typing/mtype.cmi
+  OCAMLC typing/envaux.cmi
+  OCAMLC typing/includecore.cmi
+  OCAMLC typing/tast_iterator.cmi
+  OCAMLC typing/tast_mapper.cmi
+  OCAMLC typing/stypes.cmi
+  OCAMLC file_formats/cmt_format.cmi
+  OCAMLC typing/untypeast.cmi
+  OCAMLC typing/includemod.cmi
+  OCAMLC typing/typetexp.cmi
+  OCAMLC typing/printpat.cmi
+  OCAMLC typing/patterns.cmi
+  OCAMLC typing/parmatch.cmi
+  OCAMLC typing/typedecl_properties.cmi
+  OCAMLC typing/typedecl_unboxed.cmi
+  OCAMLC typing/typeopt.cmi
+  OCAMLC typing/rec_check.cmi
+  OCAMLC typing/typecore.cmi
+  OCAMLC typing/typeclass.cmi
+  OCAMLC lambda/lambda.cmo
+  OCAMLC lambda/printlambda.cmi
+  OCAMLC lambda/matching.cmi
+  OCAMLC lambda/translobj.cmi
+  OCAMLC lambda/translattribute.cmi
+  OCAMLC lambda/translprim.cmi
+  OCAMLC lambda/translcore.cmi
+  OCAMLC lambda/translclass.cmi
+  OCAMLC lambda/translmod.cmi
+  OCAMLC lambda/tmc.cmi
+  OCAMLC lambda/simplif.cmi
+  OCAMLC bytecomp/instruct.cmi
+  OCAMLC bytecomp/symtable.cmi
+  OCAMLC driver/compmisc.cmi
+  OCAMLC driver/compile_common.cmi
+  OCAMLC bytecomp/instruct.cmo
+  OCAMLC bytecomp/bytegen.cmi
+  OCAMLC bytecomp/printinstr.cmi
+  OCAMLC bytecomp/emitcode.cmi
+  OCAMLC bytecomp/bytelink.cmi
+  OCAMLC bytecomp/bytepackager.cmi
+  OCAMLC driver/compile.cmi
+  OCAMLC middle_end/internal_variable_names.cmi
+  OCAMLC middle_end/clambda_primitives.cmi
+  OCAMLC typing/typedtree.cmo
+  OCAMLC typing/printtyped.cmi
+  OCAMLC typing/ctype.cmo
+  OCAMLC typing/printtyp.cmo
+  OCAMLC typing/includeclass.cmi
+  OCAMLC typing/mtype.cmo
+  OCAMLC typing/envaux.cmo
+  OCAMLC typing/includecore.cmo
+  OCAMLC typing/tast_iterator.cmo
+  OCAMLC typing/tast_mapper.cmo
+  OCAMLC typing/stypes.cmo
+  OCAMLC file_formats/cmt_format.cmo
+  OCAMLC typing/cmt2annot.cmi
+  OCAMLC typing/untypeast.cmo
+  OCAMLC typing/includemod.cmo
+  OCAMLC typing/includemod_errorprinter.cmi
+  OCAMLC typing/typetexp.cmo
+  OCAMLC typing/printpat.cmo
+  OCAMLC typing/patterns.cmo
+  OCAMLC typing/parmatch.cmo
+  OCAMLC typing/typedecl_properties.cmo
+  OCAMLC typing/typedecl_variance.cmi
+  OCAMLC typing/typedecl_unboxed.cmo
+  OCAMLC typing/typedecl_immediacy.cmi
+  OCAMLC typing/typedecl_separability.cmi
+  OCAMLC typing/typeopt.cmo
+  OCAMLC typing/rec_check.cmo
+  OCAMLC lambda/printlambda.cmo
+  OCAMLC lambda/matching.cmo
+  OCAMLC lambda/translobj.cmo
+  OCAMLC lambda/translattribute.cmo
+  OCAMLC lambda/translprim.cmo
+  OCAMLC lambda/translcore.cmo
+  OCAMLC lambda/translclass.cmo
+  OCAMLC lambda/translmod.cmo
+  OCAMLC lambda/tmc.cmo
+  OCAMLC lambda/simplif.cmo
+  OCAMLC bytecomp/meta.cmi
+  OCAMLC bytecomp/bytegen.cmo
+  OCAMLC bytecomp/printinstr.cmo
+  OCAMLC bytecomp/emitcode.cmo
+  OCAMLC bytecomp/bytelink.cmo
+  OCAMLC bytecomp/bytelibrarian.cmo
+  OCAMLC driver/compile.cmo
+  OCAMLC driver/maindriver.cmo
+  OCAMLC middle_end/variable.cmi
+  OCAMLC middle_end/clambda.cmi
+  OCAMLC typing/printtyped.cmo
+  OCAMLC typing/includeclass.cmo
+  OCAMLC typing/cmt2annot.cmo
+  OCAMLC typing/includemod_errorprinter.cmo
+  OCAMLC typing/typedecl_variance.cmo
+  OCAMLC typing/typedecl_immediacy.cmo
+  OCAMLC typing/typedecl_separability.cmo
+  OCAMLC typing/typedecl.cmi
+  OCAMLC bytecomp/meta.cmo
+  OCAMLC bytecomp/symtable.cmo
+  OCAMLC middle_end/flambda/base_types/closure_element.cmi
+  OCAMLC middle_end/symbol.cmi
+  OCAMLC middle_end/flambda/parameter.cmi
+  OCAMLC middle_end/flambda/base_types/mutable_variable.cmi
+  OCAMLC middle_end/flambda/base_types/closure_id.cmi
+  OCAMLC typing/typedecl.cmo
+  OCAMLC typing/typecore.cmo
+  OCAMLC typing/typeclass.cmo
+  OCAMLC typing/typemod.cmi
+  OCAMLC middle_end/flambda/base_types/var_within_closure.cmi
+  OCAMLC middle_end/flambda/base_types/closure_origin.cmi
+  OCAMLC typing/typemod.cmo
+  OCAMLC driver/compmisc.cmo
+  OCAMLC driver/compile_common.cmo
+  OCAMLC bytecomp/bytepackager.cmo
+  OCAMLC middle_end/flambda/projection.cmi
+  LINKC compilerlibs/ocamlbytecomp.cma
+  OCAMLC middle_end/flambda/flambda.cmi
+  OCAMLC middle_end/flambda/freshening.cmi
+  OCAMLC middle_end/flambda/simple_value_approx.cmi
+  OCAMLC middle_end/flambda/export_info.cmi
+  OCAMLC file_formats/cmx_format.cmi
+  LINKC compilerlibs/ocamlcommon.cma
+  LINKC ocamlc
+make[3]: Leaving directory '/build/ocaml-5.1.1'
+make ocamllex ocamltools library
+make[3]: Entering directory '/build/ocaml-5.1.1'
+  CC yacc/closure.o
+  CC yacc/error.o
+  CC yacc/lalr.o
+  CC yacc/lr0.o
+  CC yacc/main.o
+  CC yacc/mkpar.o
+  CC yacc/output.o
+  CC yacc/reader.o
+  CC yacc/skeleton.o
+  CC yacc/symtab.o
+  CC yacc/verbose.o
+  CC yacc/warshall.o
+make -C stdlib all
+make[4]: Entering directory '/build/ocaml-5.1.1/stdlib'
+  OCAMLC camlinternalFormatBasics.cmi
+  OCAMLC camlinternalFormatBasics.cmo
+  OCAMLC stdlib.cmi
+  OCAMLC stdlib.cmo
+  OCAMLC stdlib__Either.cmi
+  OCAMLC stdlib__Sys.cmi
+  OCAMLC stdlib__Nativeint.cmi
+  OCAMLC stdlib__Int32.cmi
+  OCAMLC stdlib__Type.cmi
+  OCAMLC stdlib__Atomic.cmi
+  OCAMLC camlinternalLazy.cmi
+  OCAMLC stdlib__Seq.cmi
+  OCAMLC stdlib__Bool.cmi
+  OCAMLC stdlib__Char.cmi
+  OCAMLC stdlib__Uchar.cmi
+  OCAMLC stdlib__Int.cmi
+  OCAMLC stdlib__Unit.cmi
+  OCAMLC stdlib__Marshal.cmi
+  OCAMLC stdlib__Array.cmi
+  OCAMLC stdlib__Float.cmi
+  OCAMLC stdlib__Int32.cmo
+  OCAMLC stdlib__Int64.cmi
+  OCAMLC stdlib__Nativeint.cmo
+  OCAMLC stdlib__Lexing.cmi
+  OCAMLC stdlib__Set.cmi
+  OCAMLC stdlib__Map.cmi
+  OCAMLC stdlib__Stack.cmi
+  OCAMLC stdlib__Queue.cmi
+  MKEXE yacc/ocamlyacc
+  OCAMLC stdlib__Buffer.cmi
+  OCAMLC stdlib__Mutex.cmi
+  OCAMLC stdlib__Semaphore.cmi
+  OCAMLC stdlib__Domain.cmi
+  OCAMLC stdlib__Arg.cmi
+  OCAMLC stdlib__Fun.cmi
+  OCAMLC stdlib__Digest.cmi
+  OCAMLC stdlib__Complex.cmi
+make lex-all
+make[4]: Entering directory '/build/ocaml-5.1.1'
+  OCAMLC stdlib__Random.cmi
+  OCAMLC stdlib__Hashtbl.cmi
+  OCAMLC stdlib__Format.cmi
+  OCAMLC stdlib__Scanf.cmi
+  OCAMLC stdlib__Callback.cmi
+  OCAMLC lex/cset.cmi
+  OCAMLYACC lex/parser.ml
+  OCAMLC stdlib__Filename.cmi
+  OCAMLLEX lex/lexer.ml
+  OCAMLC lex/table.cmi
+  OCAMLC lex/main.cmi
+  OCAMLC stdlib__Complex.cmo
+  OCAMLC lex/cset.cmo
+  OCAMLC stdlib__ArrayLabels.cmi
+  OCAMLC lex/syntax.cmi
+  OCAMLC lex/table.cmo
+  OCAMLC stdlib__ListLabels.cmi
+  OCAMLC lex/lexgen.cmi
+  OCAMLC lex/syntax.cmo
+  OCAMLC lex/parser.cmi
+  OCAMLC stdlib__BytesLabels.cmi
+  OCAMLC stdlib__StringLabels.cmi
+  OCAMLC lex/parser.cmo
+  OCAMLC lex/lexer.cmi
+  OCAMLC lex/lexgen.cmo
+  OCAMLC stdlib__MoreLabels.cmi
+  OCAMLC lex/compact.cmi
+  OCAMLC stdlib__In_channel.cmi
+  OCAMLC stdlib__Out_channel.cmi
+  OCAMLC std_exit.cmi
+  OCAMLC stdlib__Either.cmo
+  OCAMLC lex/common.cmi
+  OCAMLC stdlib__Sys.cmo
+  OCAMLC stdlib__Obj.cmi
+  OCAMLC lex/lexer.cmo
+  OCAMLC stdlib__Atomic.cmo
+  OCAMLC lex/compact.cmo
+  OCAMLC stdlib__Lazy.cmi
+  OCAMLC stdlib__Option.cmi
+  OCAMLC lex/common.cmo
+  OCAMLC stdlib__Result.cmi
+  OCAMLC stdlib__Bool.cmo
+  OCAMLC lex/output.cmi
+  OCAMLC stdlib__Char.cmo
+  OCAMLC stdlib__Uchar.cmo
+  OCAMLC lex/outputbis.cmi
+  OCAMLC stdlib__List.cmi
+  OCAMLC stdlib__Int.cmo
+  OCAMLC lex/output.cmo
+  OCAMLC stdlib__Bytes.cmi
+  OCAMLC lex/outputbis.cmo
+  OCAMLC stdlib__String.cmi
+  OCAMLC stdlib__Unit.cmo
+  OCAMLC stdlib__Array.cmo
+  OCAMLC stdlib__Float.cmo
+  OCAMLC lex/main.cmo
+  OCAMLC stdlib__Int64.cmo
+  OCAMLC stdlib__Lexing.cmo
+  OCAMLC stdlib__Parsing.cmi
+  OCAMLC stdlib__Set.cmo
+  OCAMLC stdlib__Map.cmo
+  OCAMLC stdlib__Stack.cmo
+  OCAMLC stdlib__Queue.cmo
+  OCAMLC stdlib__Buffer.cmo
+  LINKC lex/ocamllex
+make[4]: Leaving directory '/build/ocaml-5.1.1'
+  OCAMLC stdlib__Mutex.cmo
+make tools-all
+make[4]: Entering directory '/build/ocaml-5.1.1'
+  OCAMLC stdlib__Condition.cmi
+  OCAMLC camlinternalFormat.cmi
+  OCAMLC stdlib__Printf.cmi
+  OCAMLC stdlib__Printexc.cmi
+  OCAMLC stdlib__Digest.cmo
+  OCAMLC tools/ocamldep.cmi
+  OCAMLC middle_end/backend_intf.cmi
+  OCAMLC stdlib__Bigarray.cmi
+  OCAMLC middle_end/flambda/inlining_cost.cmi
+  OCAMLC stdlib__Hashtbl.cmo
+  OCAMLC middle_end/internal_variable_names.cmo
+  OCAMLC middle_end/linkage_name.cmo
+  OCAMLC stdlib__Weak.cmi
+  OCAMLC middle_end/compilation_unit.cmo
+  OCAMLC stdlib__Format.cmo
+  OCAMLC stdlib__Scanf.cmo
+  OCAMLC middle_end/variable.cmo
+  OCAMLC middle_end/flambda/base_types/closure_element.cmo
+  OCAMLC stdlib__Callback.cmo
+  OCAMLC middle_end/flambda/base_types/closure_id.cmo
+  OCAMLC middle_end/symbol.cmo
+  OCAMLC middle_end/backend_var.cmo
+  OCAMLC middle_end/clambda_primitives.cmo
+  OCAMLC camlinternalOO.cmi
+  OCAMLC camlinternalMod.cmi
+  OCAMLC stdlib__Ephemeron.cmi
+  OCAMLC middle_end/printclambda_primitives.cmi
+  OCAMLC middle_end/clambda.cmo
+  OCAMLC stdlib__Filename.cmo
+  OCAMLC middle_end/printclambda.cmi
+  OCAMLC stdlib__ArrayLabels.cmo
+  OCAMLC stdlib__ListLabels.cmo
+  OCAMLC middle_end/semantics_of_primitives.cmi
+  OCAMLC stdlib__BytesLabels.cmo
+  OCAMLC middle_end/convert_primitives.cmi
+  OCAMLC middle_end/flambda/base_types/id_types.cmi
+  OCAMLC stdlib__StringLabels.cmo
+  OCAMLC middle_end/flambda/base_types/tag.cmo
+  OCAMLC stdlib__MoreLabels.cmo
+  OCAMLC middle_end/flambda/base_types/mutable_variable.cmo
+  OCAMLC middle_end/flambda/base_types/set_of_closures_id.cmo
+  OCAMLC stdlib__StdLabels.cmi
+  OCAMLC middle_end/flambda/base_types/set_of_closures_origin.cmo
+  OCAMLC middle_end/flambda/base_types/closure_origin.cmo
+  OCAMLC middle_end/flambda/base_types/var_within_closure.cmo
+  OCAMLC stdlib__In_channel.cmo
+  OCAMLC middle_end/flambda/base_types/static_exception.cmo
+  OCAMLC middle_end/flambda/pass_wrapper.cmi
+  OCAMLC stdlib__Out_channel.cmo
+  OCAMLC middle_end/flambda/allocated_const.cmo
+  OCAMLC middle_end/flambda/parameter.cmo
+  OCAMLC stdlib__Effect.cmi
+  OCAMLC middle_end/flambda/projection.cmo
+  OCAMLC std_exit.cmo
+  OCAMLC middle_end/flambda/flambda.cmo
+  OCAMLC stdlib__Obj.cmo
+  OCAMLC stdlib__Type.cmo
+  OCAMLC middle_end/flambda/flambda_iterators.cmi
+  OCAMLC camlinternalLazy.cmo
+  OCAMLC middle_end/flambda/flambda_utils.cmi
+  OCAMLC stdlib__Lazy.cmo
+  OCAMLC stdlib__Seq.cmo
+  OCAMLC middle_end/flambda/effect_analysis.cmi
+  OCAMLC middle_end/flambda/inlining_cost.cmo
+  OCAMLC stdlib__Option.cmo
+  OCAMLC middle_end/flambda/export_info.cmo
+  OCAMLC stdlib__Result.cmo
+  OCAMLC stdlib__List.cmo
+  OCAMLC middle_end/flambda/export_info_for_pack.cmi
+  OCAMLC stdlib__Bytes.cmo
+  OCAMLC middle_end/compilenv.cmi
+  OCAMLC middle_end/closure/closure.cmi
+  OCAMLC stdlib__String.cmo
+  OCAMLC middle_end/closure/closure_middle_end.cmi
+  OCAMLC middle_end/flambda/import_approx.cmi
+  OCAMLC middle_end/flambda/lift_code.cmi
+  OCAMLC middle_end/flambda/closure_conversion_aux.cmi
+  OCAMLC middle_end/flambda/closure_conversion.cmi
+  OCAMLC middle_end/flambda/initialize_symbol_to_let_symbol.cmi
+  OCAMLC middle_end/flambda/lift_let_to_initialize_symbol.cmi
+  OCAMLC middle_end/flambda/find_recursive_functions.cmi
+  OCAMLC middle_end/flambda/invariant_params.cmi
+  OCAMLC middle_end/flambda/inconstant_idents.cmi
+  OCAMLC middle_end/flambda/alias_analysis.cmi
+  OCAMLC middle_end/flambda/lift_constants.cmi
+  OCAMLC middle_end/flambda/share_constants.cmi
+  OCAMLC middle_end/flambda/simplify_common.cmi
+  OCAMLC middle_end/flambda/remove_unused_arguments.cmi
+  OCAMLC middle_end/flambda/remove_unused_closure_vars.cmi
+  OCAMLC middle_end/flambda/remove_unused_program_constructs.cmi
+  OCAMLC middle_end/flambda/simplify_primitives.cmi
+  OCAMLC stdlib__Marshal.cmo
+  OCAMLC middle_end/flambda/remove_free_vars_equal_to_args.cmi
+  OCAMLC middle_end/flambda/ref_to_variables.cmi
+  OCAMLC stdlib__Parsing.cmo
+  OCAMLC middle_end/flambda/flambda_invariants.cmi
+  OCAMLC middle_end/flambda/traverse_for_exported_symbols.cmi
+  OCAMLC stdlib__Condition.cmo
+  OCAMLC middle_end/flambda/build_export_info.cmi
+  OCAMLC middle_end/flambda/closure_offsets.cmi
+  OCAMLC stdlib__Semaphore.cmo
+  OCAMLC stdlib__Domain.cmo
+  OCAMLC camlinternalFormat.cmo
+  OCAMLC middle_end/flambda/un_anf.cmi
+  OCAMLC stdlib__Printf.cmo
+  OCAMLC middle_end/flambda/flambda_to_clambda.cmi
+  OCAMLC middle_end/flambda/flambda_middle_end.cmi
+  OCAMLC stdlib__Arg.cmo
+  OCAMLC stdlib__Printexc.cmo
+  OCAMLC tools/objinfo.cmi
+  OCAMLC stdlib__Fun.cmo
+  OCAMLC tools/ocamlcmt.cmi
+  OCAMLC tools/ocamlprof.cmi
+  OCAMLC tools/ocamlcp_common.cmi
+  OCAMLC tools/ocamlcp.cmi
+  OCAMLC stdlib__Gc.cmi
+  OCAMLC tools/ocamlmklib.cmi
+  OCAMLC tools/ocamlmktop.cmi
+  OCAMLC stdlib__Bigarray.cmo
+  OCAMLC tools/ocamloptp.cmi
+  OCAMLC stdlib__Random.cmo
+  GEN tools/opnames.ml
+  OCAMLC tools/opnames.cmi
+  OCAMLC tools/dumpobj.cmi
+  OCAMLC tools/primreq.cmi
+  OCAMLC tools/stripdebug.cmi
+  OCAMLC tools/cmpbyt.cmi
+  OCAMLC tools/profiling.cmi
+  OCAMLC tools/ocamldep.cmo
+  OCAMLC middle_end/flambda/inlining_stats_types.cmi
+  OCAMLC middle_end/flambda/simplify_boxed_integer_ops_intf.cmi
+  OCAMLC middle_end/printclambda_primitives.cmo
+  OCAMLC middle_end/printclambda.cmo
+  OCAMLC middle_end/semantics_of_primitives.cmo
+  OCAMLC stdlib__Weak.cmo
+  OCAMLC camlinternalOO.cmo
+  OCAMLC middle_end/convert_primitives.cmo
+  OCAMLC middle_end/flambda/base_types/id_types.cmo
+  OCAMLC stdlib__Oo.cmi
+  OCAMLC middle_end/flambda/base_types/export_id.cmo
+  OCAMLC middle_end/flambda/pass_wrapper.cmo
+  OCAMLC middle_end/flambda/flambda_iterators.cmo
+  OCAMLC middle_end/flambda/flambda_utils.cmo
+  OCAMLC middle_end/flambda/freshening.cmo
+  OCAMLC camlinternalMod.cmo
+  OCAMLC stdlib__Ephemeron.cmo
+  OCAMLC stdlib__StdLabels.cmo
+  OCAMLC middle_end/flambda/effect_analysis.cmo
+  OCAMLC stdlib__Effect.cmo
+  OCAMLC stdlib__Gc.cmo
+  OCAMLC middle_end/flambda/simple_value_approx.cmo
+  OCAMLC stdlib__Oo.cmo
+  OCAMLC middle_end/flambda/export_info_for_pack.cmo
+  OCAMLC middle_end/compilenv.cmo
+  OCAMLC middle_end/closure/closure.cmo
+  OCAMLC middle_end/closure/closure_middle_end.cmo
+  OCAMLC middle_end/flambda/import_approx.cmo
+  OCAMLC middle_end/flambda/lift_code.cmo
+  OCAMLC middle_end/flambda/closure_conversion_aux.cmo
+  LINKC stdlib.cma
+  OCAMLC middle_end/flambda/closure_conversion.cmo
+make[4]: Leaving directory '/build/ocaml-5.1.1/stdlib'
+  OCAMLC middle_end/flambda/initialize_symbol_to_let_symbol.cmo
+  OCAMLC middle_end/flambda/lift_let_to_initialize_symbol.cmo
+  OCAMLC middle_end/flambda/find_recursive_functions.cmo
+  OCAMLC middle_end/flambda/invariant_params.cmo
+  OCAMLC middle_end/flambda/inconstant_idents.cmo
+  OCAMLC middle_end/flambda/alias_analysis.cmo
+  OCAMLC middle_end/flambda/lift_constants.cmo
+  OCAMLC middle_end/flambda/share_constants.cmo
+  OCAMLC middle_end/flambda/simplify_common.cmo
+  OCAMLC middle_end/flambda/remove_unused_arguments.cmo
+  OCAMLC middle_end/flambda/remove_unused_closure_vars.cmo
+  OCAMLC middle_end/flambda/remove_unused_program_constructs.cmo
+  OCAMLC middle_end/flambda/simplify_boxed_integer_ops.cmi
+  OCAMLC middle_end/flambda/inlining_stats_types.cmo
+  OCAMLC middle_end/flambda/inlining_stats.cmi
+  OCAMLC middle_end/flambda/remove_free_vars_equal_to_args.cmo
+  OCAMLC middle_end/flambda/ref_to_variables.cmo
+  OCAMLC middle_end/flambda/flambda_invariants.cmo
+  OCAMLC middle_end/flambda/traverse_for_exported_symbols.cmo
+  OCAMLC middle_end/flambda/closure_offsets.cmo
+  OCAMLC middle_end/flambda/un_anf.cmo
+  OCAMLC middle_end/flambda/flambda_to_clambda.cmo
+  OCAMLC tools/objinfo.cmo
+  OCAMLC tools/ocamlcmt.cmo
+  OCAMLC tools/ocamlprof.cmo
+  OCAMLC tools/ocamlcp_common.cmo
+  OCAMLC tools/ocamlcp.cmo
+  OCAMLC tools/ocamlmklib.cmo
+  OCAMLC tools/ocamlmktop.cmo
+  OCAMLC tools/ocamloptp.cmo
+  OCAMLC tools/opnames.cmo
+  OCAMLC tools/dumpobj.cmo
+  OCAMLC tools/primreq.cmo
+  OCAMLC tools/stripdebug.cmo
+  OCAMLC tools/cmpbyt.cmo
+  OCAMLC tools/profiling.cmo
+  LINKC tools/ocamldep
+  OCAMLC middle_end/flambda/inline_and_simplify_aux.cmi
+  OCAMLC middle_end/flambda/simplify_boxed_integer_ops.cmo
+  OCAMLC middle_end/flambda/simplify_primitives.cmo
+  OCAMLC middle_end/flambda/inlining_stats.cmo
+  LINKC tools/ocamlcmt
+  LINKC tools/ocamlprof
+  LINKC tools/ocamlcp
+  LINKC tools/ocamlmklib
+  LINKC tools/ocamlmktop
+  LINKC tools/ocamloptp
+  LINKC tools/dumpobj
+  LINKC tools/primreq
+  LINKC tools/stripdebug
+  LINKC tools/cmpbyt
+  OCAMLC middle_end/flambda/inlining_decision_intf.cmi
+  OCAMLC middle_end/flambda/inline_and_simplify_aux.cmo
+  OCAMLC middle_end/flambda/extract_projections.cmi
+  OCAMLC middle_end/flambda/augment_specialised_args.cmi
+  OCAMLC middle_end/flambda/unbox_free_vars_of_closures.cmi
+  OCAMLC middle_end/flambda/unbox_specialised_args.cmi
+  OCAMLC middle_end/flambda/unbox_closures.cmi
+  OCAMLC middle_end/flambda/inlining_transforms.cmi
+  OCAMLC middle_end/flambda/inlining_decision.cmi
+  OCAMLC middle_end/flambda/inline_and_simplify.cmi
+  OCAMLC middle_end/flambda/build_export_info.cmo
+  OCAMLC middle_end/flambda/extract_projections.cmo
+  OCAMLC middle_end/flambda/augment_specialised_args.cmo
+  OCAMLC middle_end/flambda/unbox_free_vars_of_closures.cmo
+  OCAMLC middle_end/flambda/unbox_specialised_args.cmo
+  OCAMLC middle_end/flambda/unbox_closures.cmo
+  OCAMLC middle_end/flambda/inlining_transforms.cmo
+  OCAMLC middle_end/flambda/inlining_decision.cmo
+  OCAMLC middle_end/flambda/inline_and_simplify.cmo
+  OCAMLC middle_end/flambda/flambda_middle_end.cmo
+  LINKC compilerlibs/ocamlmiddleend.cma
+  LINKC tools/ocamlobjinfo
+make[4]: Leaving directory '/build/ocaml-5.1.1'
+make[3]: Leaving directory '/build/ocaml-5.1.1'
+make ocaml
+make[3]: Entering directory '/build/ocaml-5.1.1'
+  OCAMLC toplevel/expunge.cmi
+  OCAMLC toplevel/genprintval.cmi
+  OCAMLC toplevel/trace.cmi
+  OCAMLC toplevel/toploop.cmi
+  OCAMLC toplevel/topprinters.cmi
+  OCAMLC toplevel/topdirs.cmi
+  OCAMLC toplevel/topmain.cmi
+  OCAMLC toplevel/genprintval.cmo
+  OCAMLC toplevel/topprinters.cmo
+  OCAMLC toplevel/topstart.cmi
+  OCAMLC toplevel/expunge.cmo
+  OCAMLC toplevel/topcommon.cmi
+cp toplevel/trace.cmi toplevel/trace.mli toplevel/byte
+cp toplevel/topmain.cmi toplevel/topmain.mli toplevel/byte
+  OCAMLC toplevel/topstart.cmo
+  LINKC expunge
+  OCAMLC toplevel/topeval.cmi
+  OCAMLC toplevel/topcommon.cmo
+cp toplevel/topeval.cmi toplevel/topeval.mli toplevel/byte
+  OCAMLC toplevel/toploop.cmo
+  OCAMLC toplevel/topdirs.cmo
+  OCAMLC toplevel/byte/topmain.cmo
+  OCAMLC toplevel/byte/topeval.cmo
+  OCAMLC toplevel/byte/trace.cmo
+  LINKC compilerlibs/ocamltoplevel.cma
+  LINKC ocaml.tmp
+  GEN ocaml
+rm ocaml.tmp
+make[3]: Leaving directory '/build/ocaml-5.1.1'
+make otherlibraries ocamldebugger ocamldoc \
+         
+make[3]: Entering directory '/build/ocaml-5.1.1'
+make lex-all
+make[4]: Entering directory '/build/ocaml-5.1.1'
+make[4]: Nothing to be done for 'lex-all'.
+make[4]: Leaving directory '/build/ocaml-5.1.1'
+make tools-all
+make[4]: Entering directory '/build/ocaml-5.1.1'
+make[4]: Nothing to be done for 'tools-all'.
+make[4]: Leaving directory '/build/ocaml-5.1.1'
+make -C otherlibs all
+make[4]: Entering directory '/build/ocaml-5.1.1/otherlibs'
+for lib in dynlink runtime_events unix str systhreads; do (make -C $lib all) || exit $?; done
+make[5]: Entering directory '/build/ocaml-5.1.1/otherlibs/dynlink'
+  GEN dynlink_compilerlibs/Makefile
+cp ../../utils/binutils.ml dynlink_compilerlibs/binutils.ml
+cp ../../utils/config.ml dynlink_compilerlibs/config.ml
+cp ../../utils/build_path_prefix_map.ml dynlink_compilerlibs/build_path_prefix_map.ml
+cp ../../utils/misc.ml dynlink_compilerlibs/misc.ml
+cp ../../utils/identifiable.ml dynlink_compilerlibs/identifiable.ml
+cp ../../utils/numbers.ml dynlink_compilerlibs/numbers.ml
+cp ../../utils/arg_helper.ml dynlink_compilerlibs/arg_helper.ml
+cp ../../utils/local_store.ml dynlink_compilerlibs/local_store.ml
+cp ../../utils/load_path.ml dynlink_compilerlibs/load_path.ml
+cp ../../utils/clflags.ml dynlink_compilerlibs/clflags.ml
+cp ../../utils/profile.ml dynlink_compilerlibs/profile.ml
+cp ../../utils/consistbl.ml dynlink_compilerlibs/consistbl.ml
+cp ../../utils/terminfo.ml dynlink_compilerlibs/terminfo.ml
+cp ../../utils/warnings.ml dynlink_compilerlibs/warnings.ml
+cp ../../utils/int_replace_polymorphic_compare.ml dynlink_compilerlibs/int_replace_polymorphic_compare.ml
+cp ../../utils/lazy_backtrack.ml dynlink_compilerlibs/lazy_backtrack.ml
+cp ../../utils/compression.ml dynlink_compilerlibs/compression.ml
+cp ../../parsing/location.ml dynlink_compilerlibs/location.ml
+cp ../../parsing/longident.ml dynlink_compilerlibs/longident.ml
+cp ../../parsing/docstrings.ml dynlink_compilerlibs/docstrings.ml
+cp ../../parsing/syntaxerr.ml dynlink_compilerlibs/syntaxerr.ml
+cp ../../parsing/ast_helper.ml dynlink_compilerlibs/ast_helper.ml
+cp ../../parsing/ast_mapper.ml dynlink_compilerlibs/ast_mapper.ml
+cp ../../parsing/attr_helper.ml dynlink_compilerlibs/attr_helper.ml
+cp ../../parsing/builtin_attributes.ml dynlink_compilerlibs/builtin_attributes.ml
+cp ../../typing/ident.ml dynlink_compilerlibs/ident.ml
+cp ../../typing/path.ml dynlink_compilerlibs/path.ml
+cp ../../typing/primitive.ml dynlink_compilerlibs/primitive.ml
+cp ../../typing/type_immediacy.ml dynlink_compilerlibs/type_immediacy.ml
+cp ../../typing/shape.ml dynlink_compilerlibs/shape.ml
+cp ../../typing/types.ml dynlink_compilerlibs/types.ml
+cp ../../typing/btype.ml dynlink_compilerlibs/btype.ml
+cp ../../typing/subst.ml dynlink_compilerlibs/subst.ml
+cp ../../typing/predef.ml dynlink_compilerlibs/predef.ml
+cp ../../typing/datarepr.ml dynlink_compilerlibs/datarepr.ml
+cp ../../file_formats/cmi_format.ml dynlink_compilerlibs/cmi_format.ml
+cp ../../typing/persistent_env.ml dynlink_compilerlibs/persistent_env.ml
+cp ../../typing/env.ml dynlink_compilerlibs/env.ml
+cp ../../lambda/debuginfo.ml dynlink_compilerlibs/debuginfo.ml
+cp ../../lambda/lambda.ml dynlink_compilerlibs/lambda.ml
+cp ../../lambda/runtimedef.ml dynlink_compilerlibs/runtimedef.ml
+cp ../../bytecomp/instruct.ml dynlink_compilerlibs/instruct.ml
+cp ../../bytecomp/opcodes.ml dynlink_compilerlibs/opcodes.ml
+cp ../../bytecomp/bytesections.ml dynlink_compilerlibs/bytesections.ml
+cp ../../bytecomp/dll.ml dynlink_compilerlibs/dll.ml
+cp ../../bytecomp/meta.ml dynlink_compilerlibs/meta.ml
+cp ../../bytecomp/symtable.ml dynlink_compilerlibs/symtable.ml
+cp ../../parsing/asttypes.mli dynlink_compilerlibs/asttypes.ml
+cp ../../parsing/parsetree.mli dynlink_compilerlibs/parsetree.ml
+cp ../../typing/outcometree.mli dynlink_compilerlibs/outcometree.ml
+cp ../../file_formats/cmo_format.mli dynlink_compilerlibs/cmo_format.ml
+cp ../../file_formats/cmxs_format.mli dynlink_compilerlibs/cmxs_format.ml
+cp ../../utils/binutils.mli dynlink_compilerlibs/binutils.mli
+cp ../../utils/config.mli dynlink_compilerlibs/config.mli
+cp ../../utils/build_path_prefix_map.mli dynlink_compilerlibs/build_path_prefix_map.mli
+cp ../../utils/misc.mli dynlink_compilerlibs/misc.mli
+cp ../../utils/identifiable.mli dynlink_compilerlibs/identifiable.mli
+cp ../../utils/numbers.mli dynlink_compilerlibs/numbers.mli
+cp ../../utils/arg_helper.mli dynlink_compilerlibs/arg_helper.mli
+cp ../../utils/local_store.mli dynlink_compilerlibs/local_store.mli
+cp ../../utils/load_path.mli dynlink_compilerlibs/load_path.mli
+cp ../../utils/clflags.mli dynlink_compilerlibs/clflags.mli
+cp ../../utils/profile.mli dynlink_compilerlibs/profile.mli
+cp ../../utils/consistbl.mli dynlink_compilerlibs/consistbl.mli
+cp ../../utils/terminfo.mli dynlink_compilerlibs/terminfo.mli
+cp ../../utils/warnings.mli dynlink_compilerlibs/warnings.mli
+cp ../../utils/int_replace_polymorphic_compare.mli dynlink_compilerlibs/int_replace_polymorphic_compare.mli
+cp ../../utils/lazy_backtrack.mli dynlink_compilerlibs/lazy_backtrack.mli
+cp ../../utils/compression.mli dynlink_compilerlibs/compression.mli
+cp ../../parsing/location.mli dynlink_compilerlibs/location.mli
+cp ../../parsing/longident.mli dynlink_compilerlibs/longident.mli
+cp ../../parsing/docstrings.mli dynlink_compilerlibs/docstrings.mli
+cp ../../parsing/syntaxerr.mli dynlink_compilerlibs/syntaxerr.mli
+cp ../../parsing/ast_helper.mli dynlink_compilerlibs/ast_helper.mli
+cp ../../parsing/ast_mapper.mli dynlink_compilerlibs/ast_mapper.mli
+cp ../../parsing/attr_helper.mli dynlink_compilerlibs/attr_helper.mli
+cp ../../parsing/builtin_attributes.mli dynlink_compilerlibs/builtin_attributes.mli
+cp ../../typing/ident.mli dynlink_compilerlibs/ident.mli
+cp ../../typing/path.mli dynlink_compilerlibs/path.mli
+cp ../../typing/primitive.mli dynlink_compilerlibs/primitive.mli
+cp ../../typing/type_immediacy.mli dynlink_compilerlibs/type_immediacy.mli
+cp ../../typing/shape.mli dynlink_compilerlibs/shape.mli
+cp ../../typing/types.mli dynlink_compilerlibs/types.mli
+cp ../../typing/btype.mli dynlink_compilerlibs/btype.mli
+cp ../../typing/subst.mli dynlink_compilerlibs/subst.mli
+cp ../../typing/predef.mli dynlink_compilerlibs/predef.mli
+cp ../../typing/datarepr.mli dynlink_compilerlibs/datarepr.mli
+cp ../../file_formats/cmi_format.mli dynlink_compilerlibs/cmi_format.mli
+cp ../../typing/persistent_env.mli dynlink_compilerlibs/persistent_env.mli
+cp ../../typing/env.mli dynlink_compilerlibs/env.mli
+cp ../../lambda/debuginfo.mli dynlink_compilerlibs/debuginfo.mli
+cp ../../lambda/lambda.mli dynlink_compilerlibs/lambda.mli
+cp ../../lambda/runtimedef.mli dynlink_compilerlibs/runtimedef.mli
+cp ../../bytecomp/instruct.mli dynlink_compilerlibs/instruct.mli
+cp ../../bytecomp/opcodes.mli dynlink_compilerlibs/opcodes.mli
+cp ../../bytecomp/bytesections.mli dynlink_compilerlibs/bytesections.mli
+cp ../../bytecomp/dll.mli dynlink_compilerlibs/dll.mli
+cp ../../bytecomp/meta.mli dynlink_compilerlibs/meta.mli
+cp ../../bytecomp/symtable.mli dynlink_compilerlibs/symtable.mli
+cp ../../parsing/asttypes.mli dynlink_compilerlibs/asttypes.mli
+cp ../../parsing/parsetree.mli dynlink_compilerlibs/parsetree.mli
+cp ../../typing/outcometree.mli dynlink_compilerlibs/outcometree.mli
+cp ../../file_formats/cmo_format.mli dynlink_compilerlibs/cmo_format.mli
+cp ../../file_formats/cmxs_format.mli dynlink_compilerlibs/cmxs_format.mli
+  OCAMLDEP dynlink_compilerlibs/.depend
+  OCAMLC dynlink_compilerlibs/binutils.cmi
+  OCAMLC dynlink_compilerlibs/config.cmi
+  OCAMLC dynlink_compilerlibs/build_path_prefix_map.cmi
+  OCAMLC dynlink_compilerlibs/identifiable.cmi
+  OCAMLC dynlink_compilerlibs/arg_helper.cmi
+  OCAMLC dynlink_compilerlibs/local_store.cmi
+  OCAMLC dynlink_compilerlibs/load_path.cmi
+  OCAMLC dynlink_compilerlibs/profile.cmi
+  OCAMLC dynlink_compilerlibs/terminfo.cmi
+  OCAMLC dynlink_compilerlibs/warnings.cmi
+  OCAMLC dynlink_compilerlibs/int_replace_polymorphic_compare.cmi
+  OCAMLC dynlink_compilerlibs/lazy_backtrack.cmi
+  OCAMLC dynlink_compilerlibs/compression.cmi
+  OCAMLC dynlink_compilerlibs/location.cmi
+  OCAMLC dynlink_compilerlibs/longident.cmi
+  OCAMLC dynlink_compilerlibs/runtimedef.cmi
+  OCAMLC dynlink_compilerlibs/opcodes.cmi
+  OCAMLC dynlink_compilerlibs/bytesections.cmi
+  OCAMLC dynlink_compilerlibs/dll.cmi
+  OCAMLC dynlink_compilerlibs/cmxs_format.cmi
+  OCAMLC dynlink_types.cmi
+cp dynlink_platform_intf.ml dynlink_platform_intf.mli
+  OCAMLC dynlink.cmi
+  OCAMLC dynlink_compilerlibs/binutils.cmo
+  OCAMLC dynlink_compilerlibs/config.cmo
+  OCAMLC dynlink_compilerlibs/build_path_prefix_map.cmo
+  OCAMLC dynlink_compilerlibs/misc.cmi
+  OCAMLC dynlink_compilerlibs/numbers.cmi
+  OCAMLC dynlink_compilerlibs/arg_helper.cmo
+  OCAMLC dynlink_compilerlibs/local_store.cmo
+  OCAMLC dynlink_compilerlibs/load_path.cmo
+  OCAMLC dynlink_compilerlibs/clflags.cmi
+  OCAMLC dynlink_compilerlibs/profile.cmo
+  OCAMLC dynlink_compilerlibs/consistbl.cmi
+  OCAMLC dynlink_compilerlibs/terminfo.cmo
+  OCAMLC dynlink_compilerlibs/warnings.cmo
+  OCAMLC dynlink_compilerlibs/int_replace_polymorphic_compare.cmo
+  OCAMLC dynlink_compilerlibs/lazy_backtrack.cmo
+  OCAMLC dynlink_compilerlibs/compression.cmo
+  OCAMLC dynlink_compilerlibs/location.cmo
+  OCAMLC dynlink_compilerlibs/longident.cmo
+  OCAMLC dynlink_compilerlibs/asttypes.cmi
+  OCAMLC dynlink_compilerlibs/syntaxerr.cmi
+  OCAMLC dynlink_compilerlibs/ident.cmi
+  OCAMLC dynlink_compilerlibs/runtimedef.cmo
+  OCAMLC dynlink_compilerlibs/opcodes.cmo
+  OCAMLC dynlink_compilerlibs/bytesections.cmo
+  OCAMLC dynlink_compilerlibs/dll.cmo
+  OCAMLC dynlink_compilerlibs/cmo_format.cmi
+  OCAMLC dynlink_compilerlibs/asttypes.cmo
+  OCAMLC dynlink_compilerlibs/cmo_format.cmo
+  OCAMLC dynlink_compilerlibs/cmxs_format.cmo
+  OCAMLC dynlink_types.cmo
+  OCAMLC dynlink_platform_intf.cmi
+cp dynlink.cmi dynlink.mli byte/
+  OCAMLC dynlink_compilerlibs/misc.cmo
+  OCAMLC dynlink_compilerlibs/identifiable.cmo
+  OCAMLC dynlink_compilerlibs/numbers.cmo
+  OCAMLC dynlink_compilerlibs/clflags.cmo
+  OCAMLC dynlink_compilerlibs/consistbl.cmo
+  OCAMLC dynlink_compilerlibs/parsetree.cmi
+  OCAMLC dynlink_compilerlibs/syntaxerr.cmo
+  OCAMLC dynlink_compilerlibs/ident.cmo
+  OCAMLC dynlink_compilerlibs/path.cmi
+  OCAMLC dynlink_compilerlibs/debuginfo.cmi
+  OCAMLC dynlink_platform_intf.cmo
+  OCAMLC dynlink_common.cmi
+  OCAMLC dynlink_compilerlibs/docstrings.cmi
+  OCAMLC dynlink_compilerlibs/ast_mapper.cmi
+  OCAMLC dynlink_compilerlibs/attr_helper.cmi
+  OCAMLC dynlink_compilerlibs/builtin_attributes.cmi
+  OCAMLC dynlink_compilerlibs/path.cmo
+  OCAMLC dynlink_compilerlibs/type_immediacy.cmi
+  OCAMLC dynlink_compilerlibs/shape.cmi
+  OCAMLC dynlink_compilerlibs/debuginfo.cmo
+  OCAMLC dynlink_compilerlibs/parsetree.cmo
+  OCAMLC dynlink_compilerlibs/docstrings.cmo
+  OCAMLC dynlink_compilerlibs/ast_helper.cmi
+  OCAMLC dynlink_compilerlibs/attr_helper.cmo
+  OCAMLC dynlink_compilerlibs/builtin_attributes.cmo
+  OCAMLC dynlink_compilerlibs/outcometree.cmi
+  OCAMLC dynlink_compilerlibs/type_immediacy.cmo
+  OCAMLC dynlink_compilerlibs/shape.cmo
+  OCAMLC dynlink_compilerlibs/ast_helper.cmo
+  OCAMLC dynlink_compilerlibs/ast_mapper.cmo
+  OCAMLC dynlink_compilerlibs/primitive.cmi
+  OCAMLC dynlink_compilerlibs/outcometree.cmo
+  OCAMLC dynlink_compilerlibs/primitive.cmo
+  OCAMLC dynlink_compilerlibs/types.cmi
+  OCAMLC dynlink_compilerlibs/types.cmo
+  OCAMLC dynlink_compilerlibs/btype.cmi
+  OCAMLC dynlink_compilerlibs/subst.cmi
+  OCAMLC dynlink_compilerlibs/predef.cmi
+  OCAMLC dynlink_compilerlibs/datarepr.cmi
+  OCAMLC dynlink_compilerlibs/cmi_format.cmi
+  OCAMLC dynlink_compilerlibs/btype.cmo
+  OCAMLC dynlink_compilerlibs/subst.cmo
+  OCAMLC dynlink_compilerlibs/predef.cmo
+  OCAMLC dynlink_compilerlibs/datarepr.cmo
+  OCAMLC dynlink_compilerlibs/cmi_format.cmo
+  OCAMLC dynlink_compilerlibs/persistent_env.cmi
+  OCAMLC dynlink_compilerlibs/env.cmi
+  OCAMLC dynlink_compilerlibs/persistent_env.cmo
+  OCAMLC dynlink_compilerlibs/env.cmo
+  OCAMLC dynlink_compilerlibs/lambda.cmi
+  OCAMLC dynlink_compilerlibs/lambda.cmo
+  OCAMLC dynlink_compilerlibs/instruct.cmi
+  OCAMLC dynlink_compilerlibs/symtable.cmi
+  OCAMLC dynlink_compilerlibs/instruct.cmo
+  OCAMLC dynlink_compilerlibs/meta.cmi
+  OCAMLC dynlink_compilerlibs/meta.cmo
+  OCAMLC dynlink_compilerlibs/symtable.cmo
+  OCAMLC byte/dynlink_compilerlibs.cmo
+  OCAMLC dynlink_common.cmo
+  OCAMLC byte/dynlink.cmo
+  LINKC dynlink.cma
+make[5]: Leaving directory '/build/ocaml-5.1.1/otherlibs/dynlink'
+make[5]: Entering directory '/build/ocaml-5.1.1/otherlibs/runtime_events'
+  CC runtime_events_consumer.b.o
+  CC runtime_events_consumer.n.o
+  OCAMLC runtime_events.cmi
+  OCAMLC runtime_events.cmo
+  OCAMLMKLIB runtime_events.cma
+  OCAMLMKLIB libcamlruntime_eventsbyt.a
+make[5]: Leaving directory '/build/ocaml-5.1.1/otherlibs/runtime_events'
+make[5]: Entering directory '/build/ocaml-5.1.1/otherlibs/unix'
+  CC access.b.o
+  CC addrofstr.b.o
+  CC chdir.b.o
+  CC chmod.b.o
+  CC cst2constr.b.o
+  CC cstringv.b.o
+  CC execv.b.o
+  CC execve.b.o
+  CC execvp.b.o
+  CC fsync.b.o
+  CC mkdir.b.o
+  CC exit.b.o
+  CC getaddrinfo.b.o
+  CC getcwd.b.o
+  CC gethost.b.o
+  CC gethostname.b.o
+  CC getnameinfo.b.o
+  CC getproto.b.o
+  CC getserv.b.o
+  CC gmtime.b.o
+  CC mmap_ba.b.o
+  CC putenv.b.o
+  CC rmdir.b.o
+  CC socketaddr.b.o
+  CC strofaddr.b.o
+  CC time.b.o
+  CC unlink.b.o
+  CC accept_unix.b.o
+  CC bind_unix.b.o
+  CC channels_unix.b.o
+  CC close_unix.b.o
+  CC connect_unix.b.o
+  CC dup_unix.b.o
+  CC envir_unix.b.o
+  CC errmsg_unix.b.o
+  CC getpeername_unix.b.o
+  CC getpid_unix.b.o
+  CC getsockname_unix.b.o
+  CC gettimeofday_unix.b.o
+  CC isatty_unix.b.o
+  CC link_unix.b.o
+  CC listen_unix.b.o
+  CC lockf_unix.b.o
+  CC lseek_unix.b.o
+  CC mmap_unix.b.o
+  CC open_unix.b.o
+  CC pipe_unix.b.o
+  CC read_unix.b.o
+  CC readlink_unix.b.o
+  CC realpath_unix.b.o
+  CC rename_unix.b.o
+  CC select_unix.b.o
+  CC sendrecv_unix.b.o
+  CC shutdown_unix.b.o
+  CC sleep_unix.b.o
+  CC socket_unix.b.o
+  CC socketpair_unix.b.o
+  CC sockopt_unix.b.o
+  CC stat_unix.b.o
+  CC symlink_unix.b.o
+  CC times_unix.b.o
+  CC truncate_unix.b.o
+  CC unixsupport_unix.b.o
+  CC utimes_unix.b.o
+  CC write_unix.b.o
+  CC alarm.b.o
+  CC chown.b.o
+  CC chroot.b.o
+  CC closedir.b.o
+  CC dup2.b.o
+  CC fchmod.b.o
+  CC fchown.b.o
+  CC fcntl.b.o
+  CC fork.b.o
+  CC ftruncate.b.o
+  CC getegid.b.o
+  CC geteuid.b.o
+  CC getgid.b.o
+  CC getgr.b.o
+  CC getgroups.b.o
+  CC getlogin.b.o
+  CC getppid.b.o
+  CC getpw.b.o
+  CC getuid.b.o
+  CC initgroups.b.o
+  CC itimer.b.o
+  CC kill.b.o
+  CC mkfifo.b.o
+  CC nice.b.o
+  CC opendir.b.o
+  CC readdir.b.o
+  CC rewinddir.b.o
+  CC setgid.b.o
+  CC setgroups.b.o
+  CC setsid.b.o
+  CC setuid.b.o
+  CC signals.b.o
+  CC spawn.b.o
+  CC termios.b.o
+  CC umask.b.o
+  CC wait.b.o
+  CC access.n.o
+  CC addrofstr.n.o
+  CC chdir.n.o
+  CC chmod.n.o
+  CC cst2constr.n.o
+  CC cstringv.n.o
+  CC execv.n.o
+  CC execve.n.o
+  CC execvp.n.o
+  CC fsync.n.o
+  CC mkdir.n.o
+  CC exit.n.o
+  CC getaddrinfo.n.o
+  CC getcwd.n.o
+  CC gethost.n.o
+  CC gethostname.n.o
+  CC getnameinfo.n.o
+  CC getproto.n.o
+  CC getserv.n.o
+  CC gmtime.n.o
+  CC mmap_ba.n.o
+  CC putenv.n.o
+  CC rmdir.n.o
+  CC socketaddr.n.o
+  CC strofaddr.n.o
+  CC time.n.o
+  CC unlink.n.o
+  CC accept_unix.n.o
+  CC bind_unix.n.o
+  CC channels_unix.n.o
+  CC close_unix.n.o
+  CC connect_unix.n.o
+  CC dup_unix.n.o
+  CC envir_unix.n.o
+  CC errmsg_unix.n.o
+  CC getpeername_unix.n.o
+  CC getpid_unix.n.o
+  CC getsockname_unix.n.o
+  CC gettimeofday_unix.n.o
+  CC isatty_unix.n.o
+  CC link_unix.n.o
+  CC listen_unix.n.o
+  CC lockf_unix.n.o
+  CC lseek_unix.n.o
+  CC mmap_unix.n.o
+  CC open_unix.n.o
+  CC pipe_unix.n.o
+  CC read_unix.n.o
+  CC readlink_unix.n.o
+  CC realpath_unix.n.o
+  CC rename_unix.n.o
+  CC select_unix.n.o
+  CC sendrecv_unix.n.o
+  CC shutdown_unix.n.o
+  CC sleep_unix.n.o
+  CC socket_unix.n.o
+  CC socketpair_unix.n.o
+  CC sockopt_unix.n.o
+  CC stat_unix.n.o
+  CC symlink_unix.n.o
+  CC times_unix.n.o
+  CC truncate_unix.n.o
+  CC unixsupport_unix.n.o
+  CC utimes_unix.n.o
+  CC write_unix.n.o
+  CC alarm.n.o
+  CC chown.n.o
+  CC chroot.n.o
+  CC closedir.n.o
+  CC dup2.n.o
+  CC fchmod.n.o
+  CC fchown.n.o
+  CC fcntl.n.o
+  CC fork.n.o
+  CC ftruncate.n.o
+  CC getegid.n.o
+  CC geteuid.n.o
+  CC getgid.n.o
+  CC getgr.n.o
+  CC getgroups.n.o
+  CC getlogin.n.o
+  CC getppid.n.o
+  CC getpw.n.o
+  CC getuid.n.o
+  CC initgroups.n.o
+  CC itimer.n.o
+  CC kill.n.o
+  CC mkfifo.n.o
+  CC nice.n.o
+  CC opendir.n.o
+  CC readdir.n.o
+  CC rewinddir.n.o
+  CC setgid.n.o
+  CC setgroups.n.o
+  CC setsid.n.o
+  CC setuid.n.o
+  CC signals.n.o
+  CC spawn.n.o
+  CC termios.n.o
+  CC umask.n.o
+  CC wait.n.o
+cp unix_unix.ml unix.ml
+  OCAMLC unix.cmi
+  OCAMLMKLIB libunixbyt.a
+  OCAMLC unix.cmo
+  OCAMLC unixLabels.cmi
+  OCAMLC unixLabels.cmo
+  OCAMLMKLIB unix.cma
+make[5]: Leaving directory '/build/ocaml-5.1.1/otherlibs/unix'
+make[5]: Entering directory '/build/ocaml-5.1.1/otherlibs/str'
+  CC strstubs.b.o
+  CC strstubs.n.o
+  OCAMLC str.cmi
+  OCAMLC str.cmo
+  OCAMLMKLIB libcamlstrbyt.a
+  OCAMLMKLIB str.cma
+make[5]: Leaving directory '/build/ocaml-5.1.1/otherlibs/str'
+make[5]: Entering directory '/build/ocaml-5.1.1/otherlibs/systhreads'
+  CC st_stubs.b.o
+  OCAMLC thread.cmi
+  OCAMLC event.cmi
+  OCAMLC event.cmo
+  OCAMLC thread.cmo
+  OCAMLMKLIB threads.cma
+  OCAMLMKLIB libthreads.a
+make[5]: Leaving directory '/build/ocaml-5.1.1/otherlibs/systhreads'
+make[4]: Leaving directory '/build/ocaml-5.1.1/otherlibs'
+make -C debugger all
+make -C ocamldoc all
+make[4]: Entering directory '/build/ocaml-5.1.1/debugger'
+make[4]: Entering directory '/build/ocaml-5.1.1/ocamldoc'
+  OCAMLC int64ops.cmi
+  OCAMLC odoc_config.cmi
+  OCAMLC primitives.cmi
+  OCAMLC odoc_messages.cmi
+  OCAMLC odoc_types.cmi
+  OCAMLC unix_tools.cmi
+  OCAMLC debugger_config.cmi
+  OCAMLC parameters.cmi
+  OCAMLLEX debugger_lexer.ml
+  OCAMLYACC odoc_text_parser.ml
+  OCAMLLEX odoc_text_lexer.ml
+  OCAMLYACC debugger_parser.mli
+  OCAMLC odoc_name.cmi
+  OCAMLC debugcom.cmi
+  OCAMLC input_handling.cmi
+  OCAMLC question.cmi
+  OCAMLC exec.cmi
+  OCAMLC odoc_parameter.cmi
+  OCAMLC odoc_print.cmi
+  OCAMLC odoc_comments_global.cmi
+  OCAMLC source.cmi
+  OCAMLYACC odoc_parser.ml
+  OCAMLLEX odoc_lexer.ml
+  OCAMLC events.cmi
+  OCAMLC checkpoints.cmi
+  OCAMLLEX odoc_see_lexer.ml
+  OCAMLC odoc_env.cmi
+  OCAMLC odoc_test.cmi
+  OCAMLLEX odoc_ocamlhtml.ml
+  OCAMLC odoc_ocamlhtml.cmi
+  OCAMLC events.cmo
+  OCAMLC odoc_latex_style.cmi
+  OCAMLC odoc.cmi
+  OCAMLC odoc_config.cmo
+  OCAMLC program_loading.cmi
+  OCAMLC odoc_messages.cmo
+  OCAMLC symbols.cmi
+  OCAMLC odoc_global.cmi
+  OCAMLC breakpoints.cmi
+  OCAMLC trap_barrier.cmi
+  OCAMLC odoc_types.cmo
+  OCAMLC history.cmi
+  OCAMLC odoc_misc.cmi
+  OCAMLC show_source.cmi
+  OCAMLC time_travel.cmi
+  OCAMLC program_management.cmi
+  OCAMLC frames.cmi
+  OCAMLC odoc_text_parser.cmi
+  OCAMLC odoc_text.cmi
+  OCAMLC show_information.cmi
+  OCAMLC odoc_parameter.cmo
+  OCAMLC odoc_value.cmi
+  OCAMLC odoc_type.cmi
+  OCAMLC loadprinter.cmi
+  OCAMLC command_line.cmi
+  OCAMLC int64ops.cmo
+  OCAMLC odoc_class.cmi
+  OCAMLC primitives.cmo
+  OCAMLC odoc_print.cmo
+  OCAMLC unix_tools.cmo
+  OCAMLC odoc_comments_global.cmo
+  OCAMLC debugger_config.cmo
+  OCAMLC parameters.cmo
+  OCAMLC parser_aux.cmi
+  OCAMLC odoc_parser.cmi
+  OCAMLC input_handling.cmo
+  OCAMLC debugcom.cmo
+  OCAMLC exec.cmo
+  OCAMLC odoc_env.cmo
+  OCAMLC odoc_ocamlhtml.cmo
+  OCAMLC source.cmo
+  OCAMLC pos.cmi
+  OCAMLC checkpoints.cmo
+  OCAMLC program_loading.cmo
+  OCAMLC symbols.cmo
+  OCAMLC breakpoints.cmo
+  OCAMLC odoc_latex_style.cmo
+  OCAMLC odoc_global.cmo
+  OCAMLC odoc_misc.cmo
+  OCAMLC trap_barrier.cmo
+  OCAMLC odoc_text_parser.cmo
+  OCAMLC history.cmo
+  OCAMLC printval.cmi
+  OCAMLC odoc_text_lexer.cmi
+  OCAMLC show_source.cmo
+  OCAMLC time_travel.cmo
+  OCAMLC odoc_name.cmo
+  OCAMLC odoc_value.cmo
+  OCAMLC program_management.cmo
+  OCAMLC frames.cmo
+  OCAMLC eval.cmi
+  OCAMLC odoc_type.cmo
+  OCAMLC show_information.cmo
+  OCAMLC loadprinter.cmo
+  OCAMLC odoc_extension.cmi
+  OCAMLC main.cmo
+  OCAMLC odoc_exception.cmi
+  OCAMLC debugger_parser.cmi
+  OCAMLC odoc_class.cmo
+  OCAMLC pos.cmo
+  OCAMLC odoc_module.cmi
+  OCAMLC odoc_str.cmi
+  OCAMLC printval.cmo
+  OCAMLC odoc_parser.cmo
+  OCAMLC eval.cmo
+  OCAMLC odoc_lexer.cmi
+  OCAMLC odoc_see_lexer.cmi
+  OCAMLC odoc_merge.cmi
+  OCAMLC odoc_sig.cmi
+  OCAMLC odoc_search.cmi
+  OCAMLC debugger_parser.cmo
+  OCAMLC odoc_scan.cmi
+  OCAMLC odoc_cross.cmi
+  OCAMLC odoc_comments.cmi
+  OCAMLC odoc_dep.cmi
+  OCAMLC odoc_analyse.cmi
+  OCAMLC odoc_info.cmi
+  OCAMLC odoc_text_lexer.cmo
+  OCAMLC odoc_text.cmo
+  OCAMLC odoc_extension.cmo
+  OCAMLC debugger_lexer.cmi
+  OCAMLC odoc_exception.cmo
+  OCAMLC odoc_module.cmo
+  OCAMLC debugger_lexer.cmo
+  OCAMLC question.cmo
+  OCAMLC odoc_str.cmo
+  OCAMLC odoc_lexer.cmo
+  OCAMLC odoc_see_lexer.cmo
+  OCAMLC command_line.cmo
+  OCAMLC odoc_merge.cmo
+  OCAMLC odoc_sig.cmo
+  OCAMLC odoc_ast.cmi
+  OCAMLC odoc_search.cmo
+  OCAMLC odoc_scan.cmo
+  OCAMLC odoc_cross.cmo
+  OCAMLC ocamldebug.cmo
+  OCAMLC ocamldebug_entry.cmo
+  LINKC ocamldebug
+  OCAMLC odoc_comments.cmo
+  OCAMLC odoc_dep.cmo
+make[4]: Leaving directory '/build/ocaml-5.1.1/debugger'
+  OCAMLC odoc_analyse.cmo
+  OCAMLC odoc_info.cmo
+  OCAMLC odoc_texi.cmi
+  OCAMLC odoc_man.cmi
+  OCAMLC odoc_latex.cmi
+  OCAMLC odoc_dag2html.cmi
+  OCAMLC odoc_dot.cmi
+  OCAMLC odoc_dag2html.cmo
+  OCAMLC odoc_to_text.cmi
+  OCAMLC odoc_man.cmo
+  OCAMLC odoc_ast.cmo
+  OCAMLC odoc_html.cmi
+  OCAMLC odoc_to_text.cmo
+  OCAMLC odoc_html.cmo
+  OCAMLC odoc_latex.cmo
+  OCAMLC odoc_texi.cmo
+  OCAMLC odoc_dot.cmo
+  OCAMLC generators/odoc_todo.cmi
+  OCAMLC generators/odoc_literate.cmi
+  LINKC odoc_info.cma
+  OCAMLC odoc_gen.cmi
+  OCAMLC odoc_args.cmi
+  OCAMLC odoc_gen.cmo
+  OCAMLC odoc_args.cmo
+  OCAMLC odoc.cmo
+  OCAMLC generators/odoc_todo.cmo
+  OCAMLC generators/odoc_literate.cmo
+  OCAMLC odoc_test.cmo
+  LINKC ../ocamldoc/ocamldoc
+make[4]: Leaving directory '/build/ocaml-5.1.1/ocamldoc'
+make[3]: Leaving directory '/build/ocaml-5.1.1'
+make othertools
+make[3]: Entering directory '/build/ocaml-5.1.1'
+  OCAMLC tools/ocamltex.cmi
+  OCAMLC tools/ocamltex.cmo
+  LINKC tools/ocamltex
+make[3]: Leaving directory '/build/ocaml-5.1.1'
+make manpages
+make[3]: Entering directory '/build/ocaml-5.1.1'
+make -C api_docgen man
+make[4]: Entering directory '/build/ocaml-5.1.1/api_docgen'
+make -C ocamldoc man
+make[5]: Entering directory '/build/ocaml-5.1.1/api_docgen/ocamldoc'
+mkdir -p build/
+mkdir -p build/libref
+mkdir -p build/compilerlibref
+mkdir -p build/man
+  GEN build/Format_tutorial.mld
+  GEN build/Ocaml_operators.mld
+  OCAMLDOC build/libref/arg.odoc
+  OCAMLDOC build/libref/array.odoc
+  OCAMLDOC build/libref/arrayLabels.odoc
+  OCAMLDOC build/libref/atomic.odoc
+  OCAMLDOC build/libref/bigarray.odoc
+Fatal error: cannot load shared library dllunixbyt
+Reason: dllunixbyt.so: cannot open shared object file: No such file or directory
+Fatal error: cannot load shared library dllunixbyt
+Reason: dllunixbyt.so: cannot open shared object file: No such file or directory
+Fatal error: cannot load shared library dllunixbyt
+Reason: dllunixbyt.so: cannot open shared object file: No such file or directory
+Fatal error: cannot load shared library dllunixbyt
+Reason: dllunixbyt.so: cannot open shared object file: No such file or directory
+make[5]: *** [Makefile:44: build/libref/arg.odoc] Aborted (core dumped)
+make[5]: *** Waiting for unfinished jobs....
+make[5]: *** [Makefile:44: build/libref/atomic.odoc] Aborted (core dumped)
+make[5]: *** [Makefile:44: build/libref/array.odoc] Aborted (core dumped)
+make[5]: *** [Makefile:44: build/libref/arrayLabels.odoc] Aborted (core dumped)
+make[5]: Leaving directory '/build/ocaml-5.1.1/api_docgen/ocamldoc'
+make[4]: *** [Makefile:23: ocamldoc-man] Error 2
+make[4]: Leaving directory '/build/ocaml-5.1.1/api_docgen'
+make[3]: *** [Makefile:1240: manpages] Error 2
+make[3]: Leaving directory '/build/ocaml-5.1.1'
+make[2]: *** [Makefile:351: all] Error 2
+make[2]: Leaving directory '/build/ocaml-5.1.1'
+make[1]: *** [Makefile:370: world] Error 2
+make[1]: Leaving directory '/build/ocaml-5.1.1'
+// make: *** [/nix/store/0rawfy9g1y4c2h4s60sjm6m80cri92n3-Makefile.nixpkgs:14: nixpkgs_world_bootstrap_world_opt] Error 2
