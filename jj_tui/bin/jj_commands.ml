@@ -32,7 +32,12 @@ module Make (Vars : Global_vars.Vars) = struct
     let indent = String.init (sub_level * 2) (fun _ -> ' ') in
     let line key desc =
       I.hcat
-        [ I.string A.empty indent; I.char (A.fg A.lightblue) key 1 1; I.strf " %s" desc ]
+        [
+          I.string A.empty indent;
+          I.char (A.fg A.lightblue) key 1 1;
+          I.strf " ";
+          desc |> String.split_on_char '\n' |> List.map (I.string A.empty) |> I.vcat;
+        ]
     in
     commands
     |> List.concat_map @@ fun command ->
@@ -211,8 +216,8 @@ module Make (Vars : Global_vars.Vars) = struct
       {
         key = 'z';
         description =
-          "Parallelize commits. Takes 2 commits and makes them have the same parent and \
-           child. Run `jj parallelize --help for more explanation` ";
+          "Parallelize commits. Takes 2 commits and makes them have the\n\
+          same parent and child. Run `jj parallelize --help for more explanation` ";
         cmd =
           PromptThen
             ( "list commits to parallelize",

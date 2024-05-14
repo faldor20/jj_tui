@@ -59,36 +59,13 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (**gets the description of the current and previous change. Useful when squashing*)
   let get_messages () =
-    (* let string_from_graph strings = *)
-    (* strings *)
-    (* |> List.map (fun x -> *)
-
-    (* if x |> String.length > 1 *)
-    (* then Base.String.sub x ~pos:3 ~len:((x |> String.length) - 3) *)
-    (* else "" *)
-    (* ) *)
-    (* |> String.concat "\n" *)
-    (* in *)
-    (* let output = jj [ "log"; "-T"; "description" ]|>String.trim in *)
-    (* let thisDesc, rest = *)
-    (* String.split_on_char '\n' output *)
-    (* |> Base.List.drop_while ~f:(fun x -> x |> String.starts_with ~prefix:"@"|>not) *)
-    (* |> Base.List.split_while ~f:(fun x -> x |> String.starts_with ~prefix:"◉" |> not) *)
-    (* in *)
-    (* match rest with *)
-    (* | hd :: tl -> *)
-    (* let tl = *)
-    (* tl |> Base.List.take_while ~f:(fun x -> x |> String.starts_with ~prefix:"│") *)
-    (* in *)
-    (* let prevDesc = hd :: tl in *)
-    (* (thisDesc |> string_from_graph, prevDesc |> string_from_graph) *)
-    (* | [] -> *)
-    (*TODO: give this a better error*)
-    (* ("error","missing commit") *)
     let output =
       jj
         [
-          "log";"--no-graph"; "-T"; {|"::"++current_working_copy++"::\n"++description++"\n::end::\n"|};
+          "log";
+          "--no-graph";
+          "-T";
+          {|"::"++current_working_copy++"::\n"++description++"\n::end::\n"|};
         ]
       |> String.trim
     in
