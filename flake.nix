@@ -56,6 +56,7 @@
               ocamlPackages.base
               ocamlPackages.angstrom
               ocamlPackages.ppx_expect
+              ocamlPackages.uutf
               # ocamlPackages.parsexp
 
               # Ocaml package dependencies needed to build go here.

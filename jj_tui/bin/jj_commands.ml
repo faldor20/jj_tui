@@ -136,28 +136,25 @@ module Make (Vars : Global_vars.Vars) = struct
                       jj [ "squash"; "--quiet"; "-m"; new_msg ] |> ignore);
               };
               {
+                key = 'S';
+                description = "Squash into any commit";
+                cmd =
+                  PromptThen
+                    ( "target revision",
+                      fun str ->
+                        let curr_msg, prev_msg = get_messages () in
+                        let new_msg = prev_msg ^ curr_msg in
+                        Cmd [ "squash"; "--quiet"; "-m"; new_msg; "--into"; str ] );
+              };
+              {
                 key = 'i';
                 description = "Interactively choose what to squash into parent";
                 cmd = Cmd_I [ "squash"; "-i" ];
               };
-            ];
-      };
-      {
-        key = 'm';
-        description = "Move changes to another revision";
-        cmd =
-          SubCmd
-            [
               {
-                key = 'm';
-                description = "Move all changes to another revision";
-                cmd = Prompt ("Move revesion content to:", [ "move"; "-f"; "@"; "-t" ]);
-              };
-              {
-                key = 'i';
-                description = "Interacitvely select changes to move to another revision";
-                cmd =
-                  Prompt_I ("Move revision content to:", [ "move"; "-i"; "-f"; "@"; "-t" ]);
+                key = 'I';
+                description = "Interactively choose what to squash into a commit";
+                cmd = Prompt_I ("target revision", [ "squash"; "-i"; "--into" ]);
               };
             ];
       };
@@ -217,7 +214,7 @@ module Make (Vars : Global_vars.Vars) = struct
         key = 'z';
         description =
           "Parallelize commits. Takes 2 commits and makes them have the\n\
-          same parent and child. Run `jj parallelize --help for more explanation` ";
+           same parent and child. Run `jj parallelize` --help for details";
         cmd =
           PromptThen
             ( "list commits to parallelize",
@@ -304,8 +301,8 @@ module Make (Vars : Global_vars.Vars) = struct
                   Global_funcs.on_change ();
                   ()
                   (* v_cmd_out $= jj (args @ [ str ]); *)
-                | `Cmd_I _ as cmd ->
-                  Lwd.set ui_state.view cmd
+                | `Cmd_I args ->
+                  Lwd.set ui_state.view (`Cmd_I (args @ [ str ]))
                 | `Fun func ->
                   func str)
              | `Closed ->

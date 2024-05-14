@@ -116,6 +116,17 @@ module Make (Vars : Global_vars.Vars) = struct
         `Unhandled)
   ;;
 
+  let renderSizeMonitor ui =
+    let size = Lwd.var (0, 0) in
+    W.vbox
+      [
+        ui
+        |>$ Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then size $= (w, h));
+        (let$ size = Lwd.get size in
+         I.strf "w:%d h:%d" (fst size) (snd size) |> Ui.atom);
+      ]
+  ;;
+
   (* let squashButton = *)
   (* W.button "squash" (fun _ -> Lwd.set ui_state.view (`Cmd [ "jj"; "squash"; "-i" ])) *)
   (* ;; *)
@@ -137,14 +148,11 @@ module Make (Vars : Global_vars.Vars) = struct
         W.h_pane
           (W.vbox
              [
-             
-               Widgets.scrollable(ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
-               |>$ Ui.resize ~sh:3;
-               Widgets.h_rule
-               |> Lwd.pure;
+               Widgets.scrollable (ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
+               |>$ Ui.resize ~sh:3|>renderSizeMonitor;
+               Widgets.h_rule |> Lwd.pure;
                Widgets.scrollable (ui_state.jj_branches $-> Ui.atom) |>$ Ui.resize ~sh:1;
-               Widgets.h_rule
-               |> Lwd.pure;
+               Widgets.h_rule |> Lwd.pure;
                Widgets.scrollable
                  (ui_state.command_log
                   |> Lwd.get
