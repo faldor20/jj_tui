@@ -250,8 +250,39 @@ let w_2 =
            og
            |> Lwd.pure
            |> W.scroll_area
-           |>$ Ui.resize ~w:0 ~sw:1
-           |> Wd.border_box2 ~mw:(og |> Ui.layout_width));
+           |>$ Ui.resize ~sw:1 ~w:0 
+           |> Wd.border_box2 
+           (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *) 
+            );
+          "other end" |> pString |>$ Ui.resize ~sw:1;
+        ];
+      W.hbox
+        [
+          (let og = W.string "1234567890000000000000000000000000234567890000000000000000000000000end" in
+           og
+           |> Lwd.pure
+           |> W.scroll_area
+           |>$ Ui.resize ~sw:1 ~w:10 
+           |> Wd.border_box2 
+           |>$ Ui.resize ~mw:(og|>Ui.layout_width|>(+)6) 
+            );
+          "other end" |> pString |>$ Ui.resize ~sw:1;
+        ];
+      W.hbox
+        [
+          (let og = W.string "123456789000000000000000000000000000000000000000000000000000end" in
+           og
+           |> Lwd.pure
+           |> W.scroll_area
+           |> Wd.border_box3 ~scaling:(`Shrinkable (15,1)) 
+           (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *) 
+            );
+          "shrinkable" |> pString |>$ Ui.resize ~sw:1;
+        ];
+      W.hbox
+        [
+          (let og = W.string "1234567890" in
+           og|>Lwd.pure|>Wd.border_box_scrollable);
           "other end" |> pString |>$ Ui.resize ~sw:1;
         ]
       |> Wd.border_box2;
@@ -268,6 +299,31 @@ let w_3 =
     ]
 ;;
 
+let w_4 =
+  let reaction = Lwd.var true in
+  let result = Lwd.var "" in
+  W.vbox
+    [
+      (let$* _ = Lwd.get reaction in
+       result $= Lwd.peek result ^ "->outer";
+       W.hbox
+         [
+           W.string "hi this is the first level" |> Lwd.pure;
+           (let$ _ = Lwd.get reaction in
+            result $= Lwd.peek result ^ "->inner";
+            W.string " hi this is the second level");
+         ]);
+      (let$ result = Lwd.get result in
+       W.string result);
+    ]
+  |>$ Ui.keyboard_area (function
+    | `Enter, _ ->
+      reaction $= false;
+      `Handled
+    | _ ->
+      `Unhandled)
+;;
+
 let quit = Lwd.var false
 
 let main_ui =
@@ -282,6 +338,8 @@ let main_ui =
      w_2
    | 3 ->
      w_3
+   | 4 ->
+     w_4
    | _ ->
      W.string "not a test" |> Lwd.pure)
   |>$ Ui.event_filter (function
@@ -293,6 +351,9 @@ let main_ui =
       `Handled
     | `Key (`ASCII '3', _) ->
       Lwd.set test_number 3;
+      `Handled
+    | `Key (`ASCII '4', _) ->
+      Lwd.set test_number 4;
       `Handled
     | `Key (`ASCII 'q', _) ->
       quit $= true;

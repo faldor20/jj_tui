@@ -439,14 +439,14 @@ struct
       2. streach b give the leftover to a
       3. check if a is overstretched
       *)
-      let aRatio,bRatio= ref ratio, ref (flex-ratio) in
+      let aRatio,bRatio= ref (a+ratio), ref (b+(flex-ratio)) in
       let aMaxed =ref false in
       if !aRatio>aMax then 
       (
-      bRatio:=!bRatio+(ratio-aMax); 
+      bRatio:=!bRatio+(!aRatio-aMax); 
       aRatio:=aMax ;
       aMaxed:=true);
-     if !bRatio>bMax  then
+     if (!bRatio)>bMax  then
      begin
        if !aMaxed then
          bRatio:=bMax
@@ -456,7 +456,7 @@ struct
       if !aRatio>aMax then 
         aRatio:=aMax ;
 
-      (a+ !aRatio,b+ !bRatio)
+      (!aRatio,!bRatio)
 
     else
       (a, b)
