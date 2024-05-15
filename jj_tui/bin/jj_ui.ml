@@ -2,6 +2,7 @@ open Notty
 open Nottui
 open Lwd_infix
 open Global_funcs
+open Jj_tui.Util
 module W = Nottui_widgets
 
 module Ui = struct
@@ -37,12 +38,6 @@ module Make (Vars : Global_vars.Vars) = struct
   let _quitButton =
     W.button (Printf.sprintf "quit ") (fun () -> Vars.quit $= true) |> Lwd.pure
   ;;
-
-  let ( <-$ ) f v = Lwd.map ~f (Lwd.get v)
-  let ( $-> ) v f = Lwd.map ~f (Lwd.get v)
-  let ( |>$ ) v f = Lwd.map ~f v
-  let ( >> ) f g x = g (f x)
-  let ( << ) f g x = f (g x)
 
   (* let ( let<- ) v f = Lwd.map ~f (Lwd.get v) *)
 
