@@ -3,8 +3,7 @@
   (synopsis "Notty Unix IO")
   (name notty_unix)
   (wrapped false)
-  (c_names winsize)
-  (c_flags (-Wall -Wextra -O3))
+  (foreign_stubs (language c) (names winsize)(flags -Wall -Wextra -O3))
   (optional)
   (libraries notty unix))
 
