@@ -6,6 +6,8 @@ Press `h` to show the help.
 
 Please provide any suggestions. I'm new to jujutsu so I'm sure people have workflows I couldn't even dream of.  
 ## Installing
+If you are on linux, just grab the latest build artifact. It's statically linked and should work on any linux machine: https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml
+
 To open a shell with nix:`nix shell github:faldor20/jj_tui`
 
 To install without nix:
@@ -22,4 +24,4 @@ I believe it won't work outside Unix so Windows users will currently have to use
 # Dev
 Can be built with nix `nix build` or open a nix shell with `nix develop`
 For non-nix the project can be buit with dune or opam. 
-I've used opam-monorepo as an experiment, that can be built using ` dune build jj_tui`
+I've used opam-monorepo as an experiment, that can be built using `dune build jj_tui`
