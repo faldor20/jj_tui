@@ -63,7 +63,7 @@
             devPackages = builtins.attrValues
               (pkgs.lib.getAttrs (builtins.attrNames devPackagesQuery) scope');
           in {
-            legacyPackages = scope';
+            # legacyPackages = scope';
 
             packages.default = main;
             devPackages = devPackages;
@@ -78,6 +78,8 @@
         in pkgs.mkShell {
           inputsFrom = [ res.packages.default ];
           buildInputs = res.devPackages ++ [
+          pkgs.ocamlPackages.ocaml-lsp
+          pkgs.ocamlPackages.ocamlformat
 
 
             # You can add packages from nixpkgs here
