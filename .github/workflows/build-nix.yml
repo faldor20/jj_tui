@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-14]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15 # NOTE (aseipp): keep in-sync with the build.yml timeout limit
 
@@ -26,3 +26,10 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@8cdf194da984e4f12b2f8c36d1fa107c1dd67f5c
       - uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e
       - run: nix build .#static
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jj_tui_linux
+          path: |
+            result/bin/jj_tui
+            
