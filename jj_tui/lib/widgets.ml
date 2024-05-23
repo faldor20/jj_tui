@@ -91,12 +91,20 @@ let make_label max_width label_str =
 ;;
 
 (** Internal function for rendering a border box with known dimensions and padding.*)
-let border_box_intern ?(label_top = I.empty) ?(label_bottom = I.empty) w h pad pad_w input
+let border_box_intern
+  ?(border_attr = A.empty)
+  ?(label_top = I.empty)
+  ?(label_bottom = I.empty)
+  w
+  h
+  pad
+  pad_w
+  input
   =
-  let vbar = I.uchar A.empty (Uchar.of_int 0x2502) 1 h in
+  let vbar = I.uchar border_attr (Uchar.of_int 0x2502) 1 h in
   Ui.vcat
     [
-      outline_top A.empty w label_top |> Ui.atom |> Ui.resize ~w:0;
+      outline_top border_attr w label_top |> Ui.atom |> Ui.resize ~w:0;
       Ui.hcat
         [
           vbar |> Ui.atom;
@@ -105,29 +113,18 @@ let border_box_intern ?(label_top = I.empty) ?(label_bottom = I.empty) w h pad p
           I.void pad_w 1 |> Ui.atom;
           vbar |> Ui.atom;
         ];
-      outline_bot A.empty w label_bottom |> Ui.atom |> Ui.resize ~w:0;
+      outline_bot border_attr w label_bottom |> Ui.atom |> Ui.resize ~w:0;
     ]
 ;;
 
-(** Creates a bordered box around the given [input] widget.
-
-    @param scaling
-      Controls how the input widget is sized within the border box. Can be:
-      - [`Static] - The input widget is not resized.
-      - [`Expand sw] - The input widget is allowed to expand to fill the available space, with a stretch width [sw].
-      - [`Shrinkable (min_width, sw)] - The input widget is allowed to shrink to a minimum width of [min_width], and expand with a stretch width [sw].
-    @param pad The padding around the input widget within the border box.
-    @param pad_w The horizontal padding around the input widget.
-    @param pad_h The vertical padding around the input widget.
-    @param label An optional label to display within the border box.
-    @param input The input widget to be bordered. *)
-let border_box
+let border_box_custom_border
   ?(scaling = `Static)
   ?(pad = neutral_grav)
   ?(pad_w = 2)
   ?(pad_h = 1)
   ?label_top
   ?label_bottom
+  get_border
   input
   =
   let max_width, min_width, sw =
@@ -153,22 +150,105 @@ let border_box
     |> Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then Lwd.set size (w, h))
   in
   (*This is original width and height of the input before padding or anything *)
-  let$* o_w, o_h = Lwd.get size in
+  let$ o_w, o_h = Lwd.get size
+  and$ input = input
+  and$ border_attr = get_border in
   let w, h = o_w + (pad_w * 2), o_h + (pad_h * 2) in
   let h = h in
-  let$ input = input in
   let bbox =
     border_box_intern
+      ~border_attr
       ?label_top:(label_top |> Option.map (make_label (w - 2)))
       ?label_bottom:(label_bottom |> Option.map (make_label (w - 2)))
+      (* ~label_bottom:(if has_focus then I.strf "focused" else I.strf "unfocused") *)
       w
       h
       pad
       pad_w
       input
+    |> Ui.resize ?mw:(max_width |> Option.map (fun x -> x + Lwd.peek layout_width))
   in
   (*If we want the input to be shrinkable we make it expandable, set it's width to something small and then set a max width for the whole box*)
-  bbox |> Ui.resize ?mw:(max_width |> Option.map (fun x -> x + Lwd.peek layout_width))
+  bbox
+;;
+
+(** Creates a bordered box around the given [input] widget. This box will change colour when focused
+
+    @param scaling
+      Controls how the input widget is sized within the border box. Can be:
+      - [`Static] - The input widget is not resized.
+      - [`Expand sw] - The input widget is allowed to expand to fill the available space, with a stretch width [sw].
+      - [`Shrinkable (min_width, sw)] - The input widget is allowed to shrink to a minimum width of [min_width], and expand with a stretch width [sw].
+    @param pad The padding around the input widget within the border box.
+    @param pad_w The horizontal padding around the input widget.
+    @param pad_h The vertical padding around the input widget.
+    @param label An optional label to display within the border box.
+    @param input The input widget to be bordered.
+    @param border_attr Style for the border, defaults to [A.empty].
+    @param focus Focus handle for the box .
+    @param focus_attr Style for the border when focused, defaults to [A.fg A.blue]. *)
+let border_box_focusable
+  ?scaling
+  ?pad
+  ?pad_w
+  ?pad_h
+  ?label_top
+  ?label_bottom
+  ?(border_attr = A.empty)
+  ?(focus_attr = A.fg A.blue)
+  ?(focus = Focus.make ())
+  input
+  =
+  let attr = Lwd.var border_attr in
+  let input =
+    input
+    |> Lwd.map2 (focus |> Focus.status) ~f:(fun focus ui ->
+      ui |> Ui.keyboard_area ~focus (fun _ -> `Unhandled))
+  in
+  border_box_custom_border
+    ?scaling
+    ?pad
+    ?pad_w
+    ?pad_h
+    ?label_top
+    ?label_bottom
+    (let$ focus = Focus.status focus in
+     if Focus.has_focus focus then focus_attr else border_attr)
+    input
+;;
+
+(** Creates a bordered box around the given [input] widget.
+
+    @param scaling
+      Controls how the input widget is sized within the border box. Can be:
+      - [`Static] - The input widget is not resized.
+      - [`Expand sw] - The input widget is allowed to expand to fill the available space, with a stretch width [sw].
+      - [`Shrinkable (min_width, sw)] - The input widget is allowed to shrink to a minimum width of [min_width], and expand with a stretch width [sw].
+    @param pad The padding around the input widget within the border box.
+    @param pad_w The horizontal padding around the input widget.
+    @param pad_h The vertical padding around the input widget.
+    @param label An optional label to display within the border box.
+    @param input The input widget to be bordered.
+    @param border_attr Style for the border, defaults to [A.empty]. *)
+let border_box
+  ?scaling
+  ?pad
+  ?pad_w
+  ?pad_h
+  ?label_top
+  ?label_bottom
+  ?(border_attr = A.empty)
+  input
+  =
+  border_box_custom_border
+    ?scaling
+    ?pad
+    ?pad_w
+    ?pad_h
+    ?label_top
+    ?label_bottom
+    (border_attr |> Lwd.pure)
+    input
 ;;
 
 (** image outline creator*)
@@ -203,6 +283,51 @@ let label_outline_strings ~label ~label_bottom ?(attr = A.empty) i =
     attr
     i
 ;;
+
+(*
+   design for a windowing system:
+   fundinmental primative:
+   window stack:
+   when inside a window stack you can navigate up and down your stack.
+   if you would also like to navigate to stacks sideways you just wrap then in a horizontal window stack.
+*)
+let v_window_stack ?focus windows =
+  let focused = ref 0 in
+  let windows, focuses =
+    windows
+    |> List.map (fun window_maker ->
+      let focus = Focus.make () in
+      window_maker ~focus, focus)
+    |> List.split
+  in
+  focuses |> List.hd |> Focus.request;
+  W.vbox windows
+;;
+
+(* |>$ Ui.keyboard_area ?focus (function *)
+(* | `Focus `Down, _ -> *)
+(* let focused_idx = !focused in *)
+(*set the focus to be the next item if possible*)
+(* List.nth_opt focuses (focused_idx + 1) *)
+(* |> Option.iter (fun x -> *)
+(* List.nth focuses focused_idx |> Focus.release; *)
+(* Focus.request x; *)
+(* focused := focused_idx + 1); *)
+(* `Handled *)
+(* | `Focus `Up, _ -> *)
+(* let focused_idx = !focused in *)
+(* let target_idx = focused_idx - 1 in *)
+(* if target_idx >= 0 *)
+(* then *)
+(*set the focus to be the previous item if possible*)
+(* List.nth_opt focuses target_idx *)
+(* |> Option.iter (fun x -> *)
+(* List.nth focuses focused_idx |> Focus.release; *)
+(* Focus.request x; *)
+(* focused := focused_idx - 1); *)
+(* `Handled *)
+(* | _ -> *)
+(* `Unhandled) *)
 
 (** ui outline creator*)
 let ui_outline
@@ -385,7 +510,8 @@ let h_rule =
 let scrollable ui =
   let scrollState = Lwd.var W.default_scroll_state in
   W.vscroll_area
-    ~change:(fun _action state -> scrollState $= state)
+    ~change:(fun _action state ->
+      if state != Lwd.peek scrollState then scrollState $= state else ())
     ~state:(Lwd.get scrollState)
     ui
 ;;

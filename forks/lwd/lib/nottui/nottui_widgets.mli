@@ -39,6 +39,7 @@ val vscroll_area :
   ui Lwd.t -> ui Lwd.t
 
 val scroll_area :
+  ?focus:Focus.status->
   ?offset:int * int -> ui Lwd.t -> ui Lwd.t
 
 val scrollbox: ui Lwd.t -> ui Lwd.t

@@ -197,12 +197,15 @@ let vscroll_area ~state ~change t =
     |> Ui.keyboard_area (focus_handler state)
   end
 
-let scroll_area ?(offset=0,0) t =
+let scroll_area ?focus ?(offset=0,0) t =
   let offset = Lwd.var offset in
+
   let scroll d_x d_y =
+       
+
     let s_x, s_y = Lwd.peek offset in
     let s_x = maxi 0 (s_x + d_x) in
-    let s_y = maxi 0 (s_y + d_y) in
+    let s_y = maxi 0 (s_y + d_y) in 
     Lwd.set offset (s_x, s_y);
     `Handled
   in
@@ -224,7 +227,7 @@ let scroll_area ?(offset=0,0) t =
     t
     |> Ui.shift_area s_x s_y
     |> Ui.mouse_area scroll_handler
-    |> Ui.keyboard_area focus_handler
+    |> Ui.keyboard_area ?focus focus_handler
   end
 
 let main_menu_item wm text f =
