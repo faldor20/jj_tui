@@ -57,94 +57,77 @@ let pad_edge x_pad y_pad grav ui =
     ui |> Ui.shift_area x_pad y_pad
 ;;
 
-let border_box ?(pad = neutral_grav) ?(pad_h = 4) ?(pad_v = 2) ?(label = "") input =
-  let width = Ui.layout_width input |> make_even in
-  let height = Ui.layout_height input in
-  let edit =
-    Ui.zcat
-      [
-        I.char A.empty ' ' (width + pad_h) (height + pad_v) |> Ui.atom;
-        input |> Ui.resize ~pad |> pad_edge (pad_h / 2) (pad_v / 2) pad;
-      ]
-  in
-  let p = I.uchar A.empty upPipe 1 1 in
-  let v_border =
-    I.vcat (List.init (edit |> Ui.layout_height) (fun _ -> p))
-    |> Ui.atom
-    |> Ui.resize ~pad:neutral_grav
-  in
-  let h_body = Ui.hcat [ v_border; edit; v_border ] in
-  let width = Ui.layout_width h_body in
-  let v_body =
-    Ui.vcat
-      [
-        Ui.zcat
-          [
-            make_top width |> Ui.atom;
-            W.string label |> Ui.resize ~pad |> pad_edge 1 0 pad;
-          ];
-        h_body;
-        make_bot width |> Ui.atom;
-      ]
-  in
-  v_body
-;;
-
 let grid xxs = xxs |> List.map I.hcat |> I.vcat
 
-(** image outline creator*)
-let outline_top attr w h =
-  let chr x = I.uchar attr (Uchar.of_int x) 1 1 in
-  let hbar = I.uchar attr (Uchar.of_int 0x2500) w 1 in
-  let a, b = chr 0x256d, chr 0x256e in
-  I.hcat [ a; hbar; b ]
+(** Truncate a string to a given length, adding an ellipsis if truncated. *)
+let truncate_string len str =
+  if String.length str <= len then str else String.sub str 0 (len - 3) ^ "..."
 ;;
 
-(** image outline creator*)
-let outline_bot attr w h =
+(** top border*)
+let outline_top attr w label =
+  let chr x = I.uchar attr (Uchar.of_int x) 1 1 in
+  let hbar = I.uchar attr (Uchar.of_int 0x2500) w 1
+  and label = if label |> I.width > w - 2 then I.empty else label |> I.hpad 1 0
+  and a, b = chr 0x256d, chr 0x256e in
+  I.zcat [ label; I.hcat [ a; hbar; b ]; label ]
+;;
+
+(** bottom border*)
+let outline_bot attr w label =
   let chr x = I.uchar attr (Uchar.of_int x) 1 1 in
   let hbar = I.uchar attr (Uchar.of_int 0x2500) w 1 in
+  let label =
+    if label |> I.width > w - 2
+    then I.empty
+    else label |> I.hpad (w - (label |> I.width |> ( + ) 1)) 0
+  in
   let c, d = chr 0x256f, chr 0x2570 in
-  I.hcat [ d; hbar; c ]
+  I.zcat [ label; I.hcat [ d; hbar; c ] ]
 ;;
 
-(*This is it! this box has a max width that actually works and is adheared to*)
-let border_box2 ?mw ?(pad = neutral_grav) ?(pad_w = 2) ?(pad_h = 1) ?(label = "") input =
-  let size = Lwd.var (0, 0) in
-  let input =
-    input
-    |>$ Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then Lwd.set size (w, h))
-  in
-  let$* o_w, o_h = Lwd.get size in
-  let w, h = o_w + (pad_w * 2), o_h + (pad_h * 2) in
-  let h = h in
-  let$ input = input in
+let make_label max_width label_str =
+  I.strf " %s " (truncate_string (max_width - 2) label_str)
+;;
+
+(** Internal function for rendering a border box with known dimensions and padding.*)
+let border_box_intern ?(label_top = I.empty) ?(label_bottom = I.empty) w h pad pad_w input
+  =
   let vbar = I.uchar A.empty (Uchar.of_int 0x2502) 1 h in
-  let bbox =
-    Ui.vcat
-      [
-        outline_top A.empty w 1 |> Ui.atom |> Ui.resize ~w:0;
-        Ui.hcat
-          [
-            vbar |> Ui.atom;
-            I.void pad_w 1 |> Ui.atom;
-            input |> Ui.resize ~pad;
-            I.void pad_w 1 |> Ui.atom;
-            vbar |> Ui.atom;
-          ];
-        outline_bot A.empty w 1 |> Ui.atom |> Ui.resize ~w:0;
-      ]
-  in
-  bbox |> Ui.resize ?mw
+  Ui.vcat
+    [
+      outline_top A.empty w label_top |> Ui.atom |> Ui.resize ~w:0;
+      Ui.hcat
+        [
+          vbar |> Ui.atom;
+          I.void pad_w 1 |> Ui.atom;
+          input |> Ui.resize ~pad;
+          I.void pad_w 1 |> Ui.atom;
+          vbar |> Ui.atom;
+        ];
+      outline_bot A.empty w label_bottom |> Ui.atom |> Ui.resize ~w:0;
+    ]
 ;;
 
-(*This is it! this box has a max width that actually works and is adheared to*)
-let border_box3
+(** Creates a bordered box around the given [input] widget.
+
+    @param scaling
+      Controls how the input widget is sized within the border box. Can be:
+      - [`Static] - The input widget is not resized.
+      - [`Expand sw] - The input widget is allowed to expand to fill the available space, with a stretch width [sw].
+      - [`Shrinkable (min_width, sw)] - The input widget is allowed to shrink to a minimum width of [min_width], and expand with a stretch width [sw].
+    @param pad The padding around the input widget within the border box.
+    @param pad_w The horizontal padding around the input widget.
+    @param pad_h The vertical padding around the input widget.
+    @param label An optional label to display within the border box.
+    @param input The input widget to be bordered. *)
+let border_box
   ?(scaling = `Static)
   ?(pad = neutral_grav)
   ?(pad_w = 2)
   ?(pad_h = 1)
-  ?(label = "")
+  ?label_top
+  ?label_bottom
   input
   =
   let max_width, min_width, sw =
@@ -169,40 +152,23 @@ let border_box3
     |> Ui.resize ?w:min_width ?sw
     |> Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then Lwd.set size (w, h))
   in
-
   (*This is original width and height of the input before padding or anything *)
   let$* o_w, o_h = Lwd.get size in
   let w, h = o_w + (pad_w * 2), o_h + (pad_h * 2) in
   let h = h in
   let$ input = input in
-  let vbar = I.uchar A.empty (Uchar.of_int 0x2502) 1 h in
   let bbox =
-    Ui.vcat
-      [
-        outline_top A.empty w 1 |> Ui.atom |> Ui.resize ~w:0;
-        Ui.hcat
-          [
-            vbar |> Ui.atom;
-            I.void pad_w 1 |> Ui.atom;
-            input |> Ui.resize ~pad;
-            I.void pad_w 1 |> Ui.atom;
-            vbar |> Ui.atom;
-          ];
-        outline_bot A.empty w 1 |> Ui.atom |> Ui.resize ~w:0;
-      ]
+    border_box_intern
+      ?label_top:(label_top |> Option.map (make_label (w - 2)))
+      ?label_bottom:(label_bottom |> Option.map (make_label (w - 2)))
+      w
+      h
+      pad
+      pad_w
+      input
   in
   (*If we want the input to be shrinkable we make it expandable, set it's width to something small and then set a max width for the whole box*)
   bbox |> Ui.resize ?mw:(max_width |> Option.map (fun x -> x + Lwd.peek layout_width))
-;;
-
-let border_box_scrollable ?(min_width = 0) input =
-  let width = ref 0 in
-  let scroll =
-    let$ scroll = input |> W.scroll_area in
-    width := scroll |> Ui.layout_width;
-    scroll |> Ui.resize ~w:min_width ~sw:1
-  in
-  scroll |> border_box2 ~mw:!width
 ;;
 
 (** image outline creator*)
@@ -259,40 +225,6 @@ let ui_outline
     |> Ui.atom
   in
   Ui.zcat [ outline; ui |> Ui.resize ~sw:0 ~pad |> pad_edge (pad_w / 2) (pad_h / 2) pad ]
-;;
-
-(** ui outline creator*)
-let ui_outline2
-  ?(pad = neutral_grav)
-  ?(pad_w = 4)
-  ?(pad_h = 2)
-  ?(attr = A.empty)
-  ?(label = "")
-  ?(label_bottom = "")
-  ui
-  =
-  let$* ui = ui in
-  dynamic_width ~sw:1 ~sh:1 ~mw:((ui |> Ui.layout_width) + 9) @@ fun size ->
-  let$ w = size in
-  ui |> Ui.resize ~w ~mw:((ui |> Ui.layout_width) - 9) |> border_box
-;;
-
-(** ui outline creator*)
-let ui_outline3
-  ?(pad = neutral_grav)
-  ?(pad_w = 4)
-  ?(pad_h = 2)
-  ?(attr = A.empty)
-  ?(label = "")
-  ?(label_bottom = "")
-  ui
-  =
-  let$* ui = ui in
-  dynamic_width ~sw:1 ~sh:1 @@ fun size ->
-  let$ w = size in
-  let max = (ui |> Ui.layout_width) - 5 in
-  let w = if w > max then max else w in
-  ui |> Ui.resize ~pad ~sw:0 ~w:(w - pad_w - 5) |> border_box
 ;;
 
 let monitor ui =
