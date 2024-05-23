@@ -29,6 +29,7 @@ let parse_query parser s =
 ;;
   let ( <-$ ) f v = Lwd.map ~f (Lwd.get v)
   let ( $-> ) v f = Lwd.map ~f (Lwd.get v)
+  let ( let$$ ) v f = Lwd.map ~f (Lwd.get v)
   let ( |>$ ) v f = Lwd.map ~f v
   let ( >> ) f g x = g (f x)
   let ( << ) f g x = f (g x)

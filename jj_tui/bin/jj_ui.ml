@@ -2,6 +2,7 @@ open Notty
 open Nottui
 open Lwd_infix
 open Global_funcs
+open Jj_tui.Util
 open Jj_tui
 module W = Nottui_widgets
 
@@ -38,12 +39,6 @@ module Make (Vars : Global_vars.Vars) = struct
   let _quitButton =
     W.button (Printf.sprintf "quit ") (fun () -> Vars.quit $= true) |> Lwd.pure
   ;;
-
-  let ( <-$ ) f v = Lwd.map ~f (Lwd.get v)
-  let ( $-> ) v f = Lwd.map ~f (Lwd.get v)
-  let ( |>$ ) v f = Lwd.map ~f v
-  let ( >> ) f g x = g (f x)
-  let ( << ) f g x = f (g x)
 
   (* let ( let<- ) v f = Lwd.map ~f (Lwd.get v) *)
 
@@ -117,6 +112,17 @@ module Make (Vars : Global_vars.Vars) = struct
         `Unhandled)
   ;;
 
+  let renderSizeMonitor ui =
+    let size = Lwd.var (0, 0) in
+    W.vbox
+      [
+        ui
+        |>$ Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then size $= (w, h));
+        (let$ size = Lwd.get size in
+         I.strf "w:%d h:%d" (fst size) (snd size) |> Ui.atom);
+      ]
+  ;;
+
   (* let squashButton = *)
   (* W.button "squash" (fun _ -> Lwd.set ui_state.view (`Cmd [ "jj"; "squash"; "-i" ])) *)
   (* ;; *)
@@ -139,9 +145,10 @@ module Make (Vars : Global_vars.Vars) = struct
           (W.vbox
              [
                Widgets.scrollable (ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
-               |>$ Ui.resize ~sh:3;
+               |>$ Ui.resize ~sh:3|>renderSizeMonitor;
                Widgets.h_rule |> Lwd.pure;
                Widgets.scrollable (ui_state.jj_branches $-> Ui.atom) |>$ Ui.resize ~sh:1;
+               Widgets.h_rule |> Lwd.pure;
                Widgets.h_rule |> Lwd.pure;
                Widgets.scrollable
                  (ui_state.command_log

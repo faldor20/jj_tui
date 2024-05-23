@@ -1,3 +1,13 @@
-(lang dune 1.7)
+(lang dune 3.5 )
 (name notty)
 (version %%VERSION_NUM%%)
+(generate_opam_files true)
+
+(package
+(name notty)
+ (documentation "https://pqwy.github.io/notty/doc")
+ (depends   
+  (cppo (>= 1.1.0))
+  (uutf (>= 1.0.0))
+	)) 
+
