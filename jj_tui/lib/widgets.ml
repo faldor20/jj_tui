@@ -304,6 +304,47 @@ let v_window_stack ?focus windows =
   W.vbox windows
 ;;
 
+let v_window_stack ?focus windows =
+  let focused = ref 0 in
+  let windows, focuses =
+    windows
+    |> List.map (fun window_maker ->
+      let focus = Focus.make () in
+      window_maker ~focus, focus)
+    |> List.split
+  in
+  focuses |> List.hd |> Focus.request;
+  W.vbox windows
+  |>$ Ui.event_emit_area (function
+    | `ASCII 'p', [] ->
+      `Remap (`Focus `Up, [])
+    | `ASCII 'n', [`Shift] ->
+      `Remap (`Focus `Down, [])
+    | _ ->
+      `Unhandled)
+;;
+let v_window_stack2  windows =
+  W.vbox windows
+  |>$ Ui.keyboard_area (function
+    | `ASCII 'p', [] ->
+      `Handled
+    | `ASCII 'n', [] ->
+      `Handled
+    | _ ->
+      `Unhandled)
+;;
+
+let h_window_stack2  windows =
+  W.hbox windows
+  |>$ Ui.keyboard_area (function
+    | `ASCII 'p', [] ->
+      `Handled
+    | `ASCII 'n', [] ->
+      `Handled
+    | _ ->
+      `Unhandled)
+;;
+
 (* |>$ Ui.keyboard_area ?focus (function *)
 (* | `Focus `Down, _ -> *)
 (* let focused_idx = !focused in *)

@@ -216,6 +216,7 @@ struct
     | Resize of t * Gravity.t2 * A.t
     | Mouse_handler of t * mouse_handler
     | Focus_area of t * (key -> may_handle)
+    | Event_emit_area of t * (key -> [may_handle|`Remap of key])
     | Shift_area of t * int * int
     | Event_filter of t * ([`Key of key | `Mouse of mouse] -> may_handle)
     | X of t * t
@@ -269,8 +270,15 @@ struct
     in
     { t with desc = Focus_area (t, f); focus }
 
+  let event_emit_area ?focus f t : t =
+      let focus = match focus with
+        | None -> t.focus
+        | Some focus -> Focus.merge focus t.focus
+      in
+      { t with desc = Event_emit_area(t, f); focus }
+
   let shift_area x y t : t =
-    { t with desc = Shift_area (t, x, y) }
+      { t with desc = Shift_area (t, x, y) }
 
   let size_sensor handler t : t =
     { t with desc = Size_sensor (t, handler) }
@@ -367,6 +375,8 @@ struct
       Format.fprintf ppf "Mouse_handler (@[%a,@ _@])" pp n
     | Focus_area (n, _) ->
       Format.fprintf ppf "Focus_area (@[%a,@ _@])" pp n
+    | Event_emit_area(n, _) ->
+      Format.fprintf ppf "Event_emit_area (@[%a,@ _@])" pp n
     | Shift_area (n, _, _) ->
       Format.fprintf ppf "Shift_area (@[%a,@ _@])" pp n
     | Event_filter (n, _) ->
@@ -379,7 +389,7 @@ struct
     | Atom _ -> ()
     | Size_sensor (u, _) | Transient_sensor (u, _) | Permanent_sensor (u, _)
     | Resize (u, _, _) | Mouse_handler (u, _)
-    | Focus_area (u, _) | Shift_area (u, _, _) | Event_filter (u, _)
+    | Focus_area (u, _) | Shift_area (u, _, _) | Event_filter (u, _)|Event_emit_area (u, _)
       -> f u
     | X (u1, u2) | Y (u1, u2) | Z (u1, u2) -> f u1; f u2
 end
@@ -490,7 +500,7 @@ struct
       match ui.desc with
       | Atom _ -> ()
       | Size_sensor (t, _) | Mouse_handler (t, _)
-      | Focus_area (t, _) | Event_filter (t, _) ->
+      | Focus_area (t, _) | Event_filter (t, _)| Event_emit_area(t, _)  ->
         update_sensors ox oy sw sh  mw mh  t
       | Transient_sensor (t, sensor) ->
         ui.desc <- t.desc;
@@ -564,7 +574,7 @@ struct
         (aux ox oy sw sh t || handle ox oy f)
       | Size_sensor (desc, _)
       | Transient_sensor (desc, _) | Permanent_sensor (desc, _)
-      | Focus_area (desc, _) ->
+      | Focus_area (desc, _)| Event_emit_area (desc, _) ->
         aux ox oy sw sh desc
       | Shift_area (desc, sx, sy) ->
         aux (ox - sx) (oy - sy) sw sh desc
@@ -642,7 +652,7 @@ struct
           render_node vx1 vy1 vx2 vy2 sw sh desc
         | Transient_sensor (desc, _) | Permanent_sensor (desc, _) ->
           render_node vx1 vy1 vx2 vy2 sw sh desc
-        | Focus_area (desc, _) | Mouse_handler (desc, _) ->
+        | Focus_area (desc, _) | Mouse_handler (desc, _)| Event_emit_area (desc, _) ->
           render_node vx1 vy1 vx2 vy2 sw sh desc
         | Shift_area (t', sx, sy) ->
           let cache = render_node
@@ -713,7 +723,7 @@ struct
     (render_node 0 0 w h w h view).image
 
   let dispatch_raw_key st key =
-    let rec iter (st: ui list) : [> `Unhandled] =
+    let rec iter (st: ui list) : [>`Remap of key| `Unhandled] =
       match st with
       | [] -> `Unhandled
       | ui :: tl ->
@@ -734,6 +744,16 @@ struct
                 match f key with
                 | `Handled -> `Handled
                 | `Unhandled -> iter tl
+            end
+          | Event_emit_area (t, f) ->
+            begin match iter [t] with
+              | `Unhandled ->
+                begin match f key with
+                | `Unhandled -> iter tl
+                |other->other
+                end
+
+              |other->other
             end
           | Mouse_handler (t, _) | Size_sensor (t, _)
           | Transient_sensor (t, _) | Permanent_sensor (t, _)
@@ -766,8 +786,9 @@ struct
     | Transient_sensor (t, _) | Permanent_sensor (t, _)
     | Shift_area (t, _, _) | Resize (t, _, _) | Event_filter (t, _) ->
       dispatch_focus t dir
-    | Focus_area (t', _) ->
+    | Focus_area (t', _)| Event_emit_area(t', _) ->
       if Focus.has_focus t'.focus then
+        (* failwith "focus" *)
         dispatch_focus t' dir || grab_focus t
       else if Focus.has_focus t.focus then
         false
@@ -817,6 +838,8 @@ struct
   let rec dispatch_key st key =
     match dispatch_raw_key st key, key with
     | `Handled, _ -> `Handled
+    | `Remap k, _ -> 
+      dispatch_key st k
     | `Unhandled, (`Arrow dir, [`Meta]) ->
       let dir : [`Down | `Left | `Right | `Up] :>
           [`Down | `Left | `Right | `Up | `Next | `Prev] = dir in

@@ -202,6 +202,9 @@ sig
   val keyboard_area : ?focus:Focus.status -> (key -> may_handle) -> t -> t
   (** Define a focus receiver, handle keyboard events over the focused area *)
 
+  val event_emit_area: ?focus:Focus.status -> (key -> [may_handle|`Remap of key]) -> t -> t
+  (** Define a focus receiver, remap keyboard events in the area. Useful for emitting focus change events *)
+
   val has_focus : t -> bool
   (** Check if this UI has focus, either directly (it is a focused
       [keyboard_area]), or inherited (one of the child is a focused

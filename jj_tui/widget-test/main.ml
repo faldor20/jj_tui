@@ -95,16 +95,16 @@ let renderer = Renderer.make ()
 
 let navMode ui =
   ui
-  |>$ Ui.keyboard_area (function
-    | `Arrow key, mods ->
-      let dir : [ `Down | `Left | `Right | `Up ] :>
-        [ `Down | `Left | `Right | `Up | `Next | `Prev ]
-        =
-        key
-      in
-      Renderer.dispatch_key renderer (`Focus dir, mods)
-    | _ ->
-      `Unhandled)
+  (* |>$ Ui.keyboard_area (function *)
+    (* | `Arrow key, mods -> *)
+      (* let dir : [ `Down | `Left | `Right | `Up ] :> *)
+        (* [ `Down | `Left | `Right | `Up | `Next | `Prev ] *)
+        (* = *)
+        (* key *)
+      (* in *)
+      (* Renderer.dispatch_key renderer (`Focus dir, mods) *)
+    (* | _ -> *)
+      (* `Unhandled) *)
 ;;
 
 let w_3 =
@@ -118,11 +118,11 @@ let w_3 =
           |> Lwd.pure
           |> W.scroll_area
           |> Wd.border_box_focusable;
-          W.vbox
+          Wd.v_window_stack2
             [
               W.string "hi this is the first level"
               |> Lwd.pure
-              |> Wd.scrollable
+              |> W.scroll_area
               |> Wd.border_box_focusable;
               W.string "hi this is the second level"
               |> Lwd.pure
