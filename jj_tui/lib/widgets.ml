@@ -81,7 +81,7 @@ let truncate_string len str =
 let outline_top attr w label =
   let chr x = I.uchar attr (Uchar.of_int x) 1 1 in
   let hbar = I.uchar attr (Uchar.of_int 0x2500) w 1
-  and label = if label |> I.width > w - 2 then I.empty else label |> I.hpad 1 0
+  and label = if label |> I.width > w - 2 then I.empty else label |> I.hpad 2 0
   and a, b = chr 0x256d, chr 0x256e in
   I.zcat [ label; I.hcat [ a; hbar; b ]; label ]
 ;;
@@ -115,14 +115,11 @@ let border_box_intern
   pad_h
   input
   =
-
   (* this is a weird quirk, but we have to be careful of runaway size expansion.
      If we increase the width of the space by making the vbar longer than the input ui element it will be able to expand to fill that space.
      That will then increase the vbar and increase the height etc etc untill the max height is reached*)
   let vbar =
-    I.uchar border_attr (Uchar.of_int 0x2502) 1 (h + pad_h)
-    |> Ui.atom
-    |> Ui.resize ~h:0
+    I.uchar border_attr (Uchar.of_int 0x2502) 1 (h + (pad_h*2)) |> Ui.atom |> Ui.resize ~h:0
   in
   Ui.vcat
     [
@@ -131,7 +128,11 @@ let border_box_intern
         [
           vbar;
           I.void pad_w 1 |> Ui.atom;
-          Ui.vcat [ input |> Ui.resize ~pad ];
+          Ui.vcat [ 
+          I.void 1 pad_h |> Ui.atom;
+          input |> Ui.resize ~pad ;
+          I.void  1 pad_h |> Ui.atom;
+          ];
           I.void pad_w 1 |> Ui.atom;
           vbar;
         ];
@@ -160,9 +161,7 @@ let border_box_custom_border
   let size = Lwd.var (0, 0) in
   let layout_width = Lwd.var 0 in
   let input =
-    let$ input = input
-       |>$ Ui.resize ?sw:sw ?mw:max_width ?sh:sw ?mh:max_width
-     in
+    let$ input = input |>$ Ui.resize ?sw ?mw:max_width ?sh:sw ?mh:max_width in
     (*We need this later to determine the max with*)
     layout_width $= (input |> Ui.layout_width);
     input
@@ -530,6 +529,15 @@ let monitor ui =
   Ui.vcat [ ui; log ]
 ;;
 
+(**clears anything behind the given area*)
+let clear_behind ui =
+  let size = Lwd.var (0, 0) in
+  W.zbox
+    [
+      (size |> Lwd.get |>$ fun (w, h) -> I.char A.empty ' ' w h |> Ui.atom|>Ui.resize ~w:0 ~h:0 );
+      ui |>$ Ui.size_sensor (fun ~w ~h -> if (w, h) <> Lwd.peek size then size $= (w, h));
+    ]
+;;
 (*========Prompt=======*)
 let prompt onExit name =
   let prompt_input = Lwd.var ("", 0) in
@@ -582,7 +590,7 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
          (*prefill the prompt if we want to *)
          if prompt_input |> Lwd.peek |> fst == ""
          then prompt_input $= (pre_fill, pre_fill |> String.length);
-         let$* prompt_field =
+         let prompt_field =
            W.zbox
              [
                W.string ~attr:A.(st underline) "                                       "
@@ -598,11 +606,12 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
          let label_bottom =
            if char_count
            then
-             Some (prompt_val |> String.length |> Int.to_string |> Printf.sprintf " %s ")
+             Some (prompt_val |> String.length |> Int.to_string )
            else None
          in
          prompt_field
-         |> ui_outline ~label ?label_bottom
+         |> border_box ~label_top:label ?label_bottom
+         |> clear_behind
          |>$ Ui.event_filter ~focus (fun event ->
            match event with
            | `Key (`Escape, _) ->
@@ -617,27 +626,7 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
     My hope is that by not directly nesting them this will allow the ui to not re-render when the prompt appears*)
   W.zbox [ ui; prompt_ui |> Lwd.map ~f:(Ui.resize ~pad:neutral_grav) ]
 ;;
-(**clears anything behind the given area*)
-let clear_behind ui=
-  let size= Lwd.var (0,0) in
-    W.zbox[
-  ui|>$Ui.size_sensor (fun ~w ~h->size$= (w,h));
-  size|> Lwd.get|>$(fun (w,h)-> I.char A.empty ' ' w h|>Ui.atom);
-  ]
 
-(**This is a simple popup that can show ontop of *)
-let popup ~show_popup_var ui =
-  let popup_ui =
-    let$* show_popup = Lwd.get show_popup_var in
-    match show_popup with
-    | Some (content, label) ->
-      let prompt_field = content in
-      prompt_field |>W.scroll_area|> border_box ~label_top:label|>clear_behind
-    | None ->
-      Ui.empty |> Lwd.pure
-  in
-  W.zbox [ ui; popup_ui |>$ Ui.resize ~pad:neutral_grav ]
-;;
 
 let prompt_example =
   let show_prompt_var = Lwd.var None in
@@ -794,4 +783,18 @@ let scroll_area ?focus ui =
 let v_scroll_area ui =
   let state = Lwd.var W.default_scroll_state in
   ui |> W.vscroll_area ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
+;;
+
+(**This is a simple popup that can show ontop of *)
+let popup ~show_popup_var ui =
+  let popup_ui =
+    let$* show_popup = Lwd.get show_popup_var in
+    match show_popup with
+    | Some (content, label) ->
+      let prompt_field = content in
+      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label |> clear_behind
+    | None ->
+      Ui.empty |> Lwd.pure
+  in
+  W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
 ;;
