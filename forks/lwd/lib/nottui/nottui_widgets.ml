@@ -201,8 +201,6 @@ let scroll_area ?focus ?(offset=0,0) t =
   let offset = Lwd.var offset in
 
   let scroll d_x d_y =
-       
-
     let s_x, s_y = Lwd.peek offset in
     let s_x = maxi 0 (s_x + d_x) in
     let s_y = maxi 0 (s_y + d_y) in 
@@ -489,7 +487,7 @@ let flex_box ?(w=Lwd.return 80) (l: Ui.t Lwd.t list) : Ui.t Lwd.t =
 
 
 (** Prints the summary, but calls [f()] to compute a sub-widget
-    when clicked on. Useful for displaying deep trees. *)
+    when clicked on. Useful for displaying deep trees. Mouse only *)
 let unfoldable ?(folded_by_default=true) summary (f: unit -> Ui.t Lwd.t) : Ui.t Lwd.t =
   let open Lwd.Infix in
   let opened = Lwd.var (not folded_by_default) in
@@ -646,7 +644,7 @@ let button_of ui f =
 (** A clickable button that calls [f] when clicked, labelled with a string. *)
 let button ?(attr=attr_clickable) s f = button_of (string ~attr s) f
 
-(* file explorer for selecting a file *)
+(* file explorer for selecting a file using the mouse *)
 let file_select
     ?(abs=false)
     ?filter

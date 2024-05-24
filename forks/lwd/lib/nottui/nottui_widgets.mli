@@ -64,8 +64,7 @@ val tabs : (string * (unit -> ui Lwd.t)) list -> ui Lwd.t
 
 val flex_box : ?w:int Lwd.t -> ui Lwd.t list -> ui Lwd.t
 
-(* FIXME Unfoldable *)
-
+(** Shows the summary when folded, calls [f()] to compute a sub-widget when clicked on. Useful for displaying deep trees. Mouse only *)
 val unfoldable :
   ?folded_by_default:bool ->
   ui Lwd.t -> (unit -> ui Lwd.t) -> ui Lwd.t
@@ -95,11 +94,13 @@ val grid :
 
 val button : ?attr:attr -> string -> (unit -> unit) -> ui
 
+(** A mouse_based file selection widget that opens at the current path *)
 val file_select :
   ?abs:bool ->
   ?filter:(String.t -> bool) ->
   on_select:(string -> unit) -> unit -> ui Lwd.t
-
+(** A toggle button that invokes the callback when toggled*)
 val toggle : ?init:bool -> string Lwd.t -> (bool -> unit) -> ui Lwd.t
 
+(** A toggle button that changes the state of the Lwd.var when toggled*)
 val toggle' : string Lwd.t -> bool Lwd.var -> ui Lwd.t
