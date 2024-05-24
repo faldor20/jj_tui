@@ -5,6 +5,7 @@ open Global_funcs
 open Jj_tui.Util
 open Jj_tui
 module W = Nottui_widgets
+module Wd = Widgets
 
 module Ui = struct
   include Nottui.Ui
@@ -144,20 +145,20 @@ module Make (Vars : Global_vars.Vars) = struct
         W.h_pane
           (W.vbox
              [
-               Widgets.scrollable (ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
+               Wd.v_scroll_area (ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
                |>$ Ui.resize ~sh:3|>renderSizeMonitor;
                Widgets.h_rule |> Lwd.pure;
-               Widgets.scrollable (ui_state.jj_branches $-> Ui.atom) |>$ Ui.resize ~sh:1;
+               Wd.v_scroll_area  (ui_state.jj_branches $-> Ui.atom) |>$ Ui.resize ~sh:1;
                Widgets.h_rule |> Lwd.pure;
                Widgets.h_rule |> Lwd.pure;
-               Widgets.scrollable
+               Wd.v_scroll_area 
                  (ui_state.command_log
                   |> Lwd.get
                   |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
                |>$ Ui.resize ~sh:1;
                v_cmd_out $-> W.string;
              ])
-          (Widgets.scrollable
+          (Wd.v_scroll_area 
              ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
         |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
         |> Widgets.popup ~show_popup_var:ui_state.show_popup

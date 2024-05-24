@@ -13,18 +13,22 @@ module Wd = Jj_tui.Widgets
 let pString s = W.string s |> Lwd.pure
 
 let w_0 =
-  W.vbox
+  W.hbox
     [
-      W.hbox
-        [
-          (let og =
-             W.string "123456789000000000000000000000000000000000000000000000000000end"
-           in
-           let focus = Focus.make () in
-           og |> Lwd.pure |> W.scroll_area |> Wd.border_box ~scaling:(`Shrinkable (15, 1))
-           (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *));
-          "shrinkable" |> pString |>$ Ui.resize ~sw:1;
-        ];
+      pString " |";
+      (let og =
+        Ui.vcat[
+         W.string "123456789000000000000000000000000000000000000000000000000000end";
+         W.string "123456789000000000000000000000000000000000000000000000000000end"
+         ]
+       in
+       og
+       |> Lwd.pure
+       |> W.scroll_area
+       |> Wd.border_box ~scaling:(`Expand 1)
+       |>$ Ui.resize ~sh:1 ~mh:1000
+       |> Wd.size_logger);
+      pString "| ";
     ]
 ;;
 
@@ -36,7 +40,7 @@ let w_1 =
           (let og =
              W.string "123456789000000000000000000000000000000000000000000000000000end"
            in
-           og |> Lwd.pure |> W.scroll_area |> Wd.border_box ~scaling:(`Shrinkable (15, 1))
+           og |> Lwd.pure |> W.scroll_area |> Wd.border_box
            (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *));
           "shrinkable" |> pString |>$ Ui.resize ~sw:1;
         ];
@@ -54,13 +58,11 @@ let w_2 =
             (let og =
                W.string "123456789000000000000000000000000000000000000000000000000000end"
              in
-             og
-             |> Lwd.pure
-             |> W.scroll_area
-             |> Wd.border_box_focusable ~focus:focus1 ~scaling:(`Shrinkable (15, 1))
+             og |> Lwd.pure |> W.scroll_area |> Wd.border_box_focusable ~focus:focus1
              (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *));
             "shrinkable" |> pString |>$ Ui.resize ~sw:1;
           ];
+        pString "demonstrates stretching to max without any other objects";
         W.hbox
           [
             (let og =
@@ -70,11 +72,63 @@ let w_2 =
              |> Lwd.pure
              |> W.scroll_area
              |> Wd.border_box_focusable
-                  ~focus:focus2
-                  ~pad_h:4
-                  ~scaling:(`Shrinkable (15, 1))
-             (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *));
+             |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default);
+          ];
+        pString "Same as above but centered";
+        W.hbox
+          [
+            (let og =
+               W.string "123456789000000000000000000000000000000000000000000000000000end"
+             in
+             og
+             |> Lwd.pure
+             |> Wd.scroll_area
+             |> Wd.border_box_focusable
+             |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav);
+          ];
+        W.hbox
+          [
+            (let og =
+               W.string "123456789000000000000000000000000000000000000000000000000000end"
+             in
+             og
+             |> Lwd.pure
+             |> Wd.scroll_area
+             |> Wd.border_box_focusable
+             |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default);
             "shrinkable" |> pString |>$ Ui.resize ~sw:1;
+          ];
+        W.hbox
+          [
+            (let og =
+               W.string "123456789000000000000000000000000000000000000000000000000000end"
+             in
+             og
+             |> Lwd.pure
+             |> Wd.scroll_area
+             |> Wd.border_box_focusable
+             |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default);
+          ];
+        W.hbox
+          [
+            (let og =
+               W.string "123456789000000000000000000000000000000000000000000000000000end"
+             in
+             og
+             |> Lwd.pure
+             |> Wd.scroll_area
+             |> Wd.border_box_focusable ~scaling:(`Expand 1)
+
+             |> Wd.size_logger
+             |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default
+             );
+          ];
+        W.hbox
+          [
+            (let og =
+               W.string "123456789000000000000000000000000000000000000000000000000000end"
+             in
+             og |> Lwd.pure |> W.scroll_area);
           ];
       ]
     |>$ Ui.keyboard_area (function
@@ -224,7 +278,7 @@ let w_6 =
   let state = Lwd.var W.default_scroll_state in
   W.vbox
     [
-      Ui.vcat [ W.string "hi";W.string "50"; W.string "there"; W.string "mate" ]
+      Ui.vcat [ W.string "hi"; W.string "50"; W.string "there"; W.string "mate" ]
       |> Lwd.pure
       |> W.vscroll_area ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
       |>$ Ui.resize ~h:2 ~sh:0;
@@ -235,27 +289,40 @@ let w_6 =
         (fun () -> W.string "I'm unfolded" |> Lwd.pure);
     ]
 ;;
+
 let w_7 =
-  let state = Lwd.var (W.default_scroll_state,W.default_scroll_state) in
+  let state = Lwd.var (W.default_scroll_state, W.default_scroll_state) in
   W.vbox
     [
-    Wd.h_window_stack2[
-      Ui.vcat [ W.string "hi";W.string "50"; W.string "there345678987654356789876545end"; W.string "mate" ]
-      |> Lwd.pure
-      |> Wd.scroll_area 
-      |>$ Ui.resize ~mw:(15)
-      ;
-      W.string "|"|>Lwd.pure
-      ];
-    Wd.h_window_stack2[
-      Ui.vcat [ W.string "hi";W.string "50"; W.string "there345678987654356789876545end"; W.string "mate" ]
-      |> Lwd.pure
-      |> Wd.v_scroll_area 
-      |>$ Ui.resize  ~h:2 ~sh:(0)
-      ;
-      W.string "|"|>Lwd.pure
-      ];
-      W.string "----"|>Lwd.pure
+      Wd.h_window_stack2
+        [
+          Ui.vcat
+            [
+              W.string "hi";
+              W.string "50";
+              W.string "there345678987654356789876545end";
+              W.string "mate";
+            ]
+          |> Lwd.pure
+          |> Wd.scroll_area
+          |>$ Ui.resize ~mw:15;
+          W.string "|" |> Lwd.pure;
+        ];
+      Wd.h_window_stack2
+        [
+          Ui.vcat
+            [
+              W.string "hi";
+              W.string "50";
+              W.string "there345678987654356789876545end";
+              W.string "mate";
+            ]
+          |> Lwd.pure
+          |> Wd.v_scroll_area
+          |>$ Ui.resize ~h:2 ~sh:0;
+          W.string "|" |> Lwd.pure;
+        ];
+      W.string "----" |> Lwd.pure;
     ]
 ;;
 
@@ -279,7 +346,7 @@ let main_ui =
      w_5
    | 6 ->
      w_6
-   | 7->
+   | 7 ->
      w_7
    | _ ->
      W.string "not a test" |> Lwd.pure)

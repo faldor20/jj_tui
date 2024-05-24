@@ -17,6 +17,17 @@ let dynamic_size ?(w = 10) ~sw ?(h = 10) ~sh f =
     |> Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then Lwd.set size (w, h)))
 ;;
 
+let size_logger ui =
+  let size = Lwd.var (-1, -1) in
+  W.vbox
+    [
+      (size |> Lwd.get |>$ fun (w, h) -> W.fmt "w:%d,h:%d" w h);
+      ui
+      |>$ Ui.size_sensor (fun ~w ~h ->
+        if Lwd.peek size <> (w, h) then Lwd.set size (w, h));
+    ]
+;;
+
 let neutral_grav = Gravity.make ~h:`Neutral ~v:`Neutral
 let make_even num = num + (num mod 2 * 1)
 let upPipe = Uchar.of_int 0x2503
@@ -61,7 +72,9 @@ let grid xxs = xxs |> List.map I.hcat |> I.vcat
 
 (** Truncate a string to a given length, adding an ellipsis if truncated. *)
 let truncate_string len str =
-  if String.length str <= len then str else String.sub str 0 (len - 3) ^ "..."
+  if String.length str > len
+  then if len <= 3 then "" else String.sub str 0 (len - 3) ^ "..."
+  else str
 ;;
 
 (** top border*)
@@ -99,19 +112,28 @@ let border_box_intern
   h
   pad
   pad_w
+  pad_h
   input
   =
-  let vbar = I.uchar border_attr (Uchar.of_int 0x2502) 1 h in
+
+  (* this is a weird quirk, but we have to be careful of runaway size expansion.
+     If we increase the width of the space by making the vbar longer than the input ui element it will be able to expand to fill that space.
+     That will then increase the vbar and increase the height etc etc untill the max height is reached*)
+  let vbar =
+    I.uchar border_attr (Uchar.of_int 0x2502) 1 (h + pad_h)
+    |> Ui.atom
+    |> Ui.resize ~h:0
+  in
   Ui.vcat
     [
       outline_top border_attr w label_top |> Ui.atom |> Ui.resize ~w:0;
       Ui.hcat
         [
-          vbar |> Ui.atom;
+          vbar;
           I.void pad_w 1 |> Ui.atom;
-          input |> Ui.resize ~pad;
+          Ui.vcat [ input |> Ui.resize ~pad ];
           I.void pad_w 1 |> Ui.atom;
-          vbar |> Ui.atom;
+          vbar;
         ];
       outline_bot border_attr w label_bottom |> Ui.atom |> Ui.resize ~w:0;
     ]
@@ -133,27 +155,25 @@ let border_box_custom_border
       None, None, None
     (* This allows the input to expand to fill space*)
     | `Expand sw ->
-      None, None, Some sw
-    (* This allows the input to shrink to some minimum width*)
-    | `Shrinkable (min_width, sw) ->
-      Some (2 + (pad_w * 2)), Some min_width, Some sw
+      Some 1000, None, Some sw
   in
   let size = Lwd.var (0, 0) in
   let layout_width = Lwd.var 0 in
   let input =
-    let$ input = input in
+    let$ input = input
+       |>$ Ui.resize ?sw:sw ?mw:max_width ?sh:sw ?mh:max_width
+     in
     (*We need this later to determine the max with*)
     layout_width $= (input |> Ui.layout_width);
     input
     (*This lets us tell the input to be a flexible size*)
-    |> Ui.resize ?w:min_width ?sw
     |> Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then Lwd.set size (w, h))
   in
   (*This is original width and height of the input before padding or anything *)
   let$ o_w, o_h = Lwd.get size
   and$ input = input
   and$ border_attr = get_border in
-  let w, h = o_w + (pad_w * 2), o_h + (pad_h * 2) in
+  let w, h = o_w + (pad_w * 2), o_h in
   let h = h in
   let bbox =
     border_box_intern
@@ -165,12 +185,15 @@ let border_box_custom_border
       h
       pad
       pad_w
+      pad_h
       input
-    |> Ui.resize ?mw:(max_width |> Option.map (fun x -> x + Lwd.peek layout_width))
   in
   (*If we want the input to be shrinkable we make it expandable, set it's width to something small and then set a max width for the whole box*)
   bbox
 ;;
+
+(* FIXME I have no clue why, but without this second resize the max width stuff doesn't work *)
+(* |> Ui.resize *)
 
 (** Creates a bordered box around the given [input] widget. This box will change colour when focused
 
@@ -454,8 +477,8 @@ let h_window_stack2 windows =
     | _ ->
       `Unhandled)
 ;;
-(**Tries to fix the issue with the current layout system in which we cannot enter/exit a particular nodes selection tree
-*)
+
+(**Tries to fix the issue with the current layout system in which we cannot enter/exit a particular nodes selection tree *)
 let v_window_stack2 windows =
   let focus = Focus.make () in
   let$ focus = focus |> Focus.status
@@ -594,6 +617,13 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
     My hope is that by not directly nesting them this will allow the ui to not re-render when the prompt appears*)
   W.zbox [ ui; prompt_ui |> Lwd.map ~f:(Ui.resize ~pad:neutral_grav) ]
 ;;
+(**clears anything behind the given area*)
+let clear_behind ui=
+  let size= Lwd.var (0,0) in
+    W.zbox[
+  ui|>$Ui.size_sensor (fun ~w ~h->size$= (w,h));
+  size|> Lwd.get|>$(fun (w,h)-> I.char A.empty ' ' w h|>Ui.atom);
+  ]
 
 (**This is a simple popup that can show ontop of *)
 let popup ~show_popup_var ui =
@@ -602,11 +632,11 @@ let popup ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let prompt_field = content in
-      prompt_field |> Lwd.bind ~f:(ui_outline ~label)
+      prompt_field |>W.scroll_area|> border_box ~label_top:label|>clear_behind
     | None ->
       Ui.empty |> Lwd.pure
   in
-  W.zbox [ ui; popup_ui |> Lwd.map ~f:(Ui.resize ~w:25 ~pad:neutral_grav) ]
+  W.zbox [ ui; popup_ui |>$ Ui.resize ~pad:neutral_grav ]
 ;;
 
 let prompt_example =
@@ -653,92 +683,115 @@ let h_rule =
   |> Ui.resize ~w:0 ~sw:100
 ;;
 
-
-(** A scroll area that won't scroll beyond it's limits*)
-let scroll_area_intern ?focus ~state ~change t =
-
+(** A scroll area that won't scroll beyond it's limits
+    WARN This is bugged! becasue of some issues with height stretching that's disabled *)
+let scroll_area_intern ?beforesize ?(max = false) ?focus ~state ~change t =
   let open Nottui_widgets in
   let open Lwd_utils in
-
   let w_visible = ref (-1) in
   let w_total = ref (-1) in
   let h_visible = ref (-1) in
   let h_total = ref (-1) in
-
   let scroll position bound handle delta =
     let newPos = position + delta in
     let newPos = clampi newPos ~min:0 ~max:bound in
-    if newPos <> position then
-      handle newPos;
+    if newPos <> position then handle newPos;
     `Handled
   in
-  let focus_handler state_w state_h = 
-    let scroll_w= scroll state_w.position state_w.bound  
-      (fun position->
-        change `ActionV ({state_w with position},state_h)) 
+  let focus_handler state_w state_h =
+    let scroll_w =
+      scroll state_w.position state_w.bound (fun position ->
+        change `ActionV ({ state_w with position }, state_h))
     in
-    let scroll_h= scroll state_h.position state_h.bound
-      (fun position->
-        change `ActionH (state_w, {state_h with position})) 
-    in
-    function
-    | `Arrow `Left , [] -> scroll_w (-scroll_step) 
-    | `Arrow `Right, [] -> scroll_w  (+scroll_step) 
-    | `Arrow `Up   , [] -> scroll_h (-scroll_step)
-    | `Arrow `Down , [] -> scroll_h (+scroll_step)
-    | `Page `Up, [] -> scroll_h ((-scroll_step) * 8)
-    | `Page `Down, [] -> scroll_h ((+scroll_step) * 8)
-    | _ -> `Unhandled
-  in
-  let scroll_handler state_w state_h ~x:_ ~y:_ = 
-    let scroll_h= scroll state_h.position state_h.bound
-      (fun position->
-        change `ActionH (state_w,{state_h with position})) 
+    let scroll_h =
+      scroll state_h.position state_h.bound (fun position ->
+        change `ActionH (state_w, { state_h with position }))
     in
     function
-    | `Scroll `Up   -> scroll_h (-scroll_step)
-    | `Scroll `Down -> scroll_h (+scroll_step)
-    | _ -> `Unhandled
+    | `Arrow `Left, [] ->
+      scroll_w (-scroll_step)
+    | `Arrow `Right, [] ->
+      scroll_w (+scroll_step)
+    | `Arrow `Up, [] ->
+      scroll_h (-scroll_step)
+    | `Arrow `Down, [] ->
+      scroll_h (+scroll_step)
+    | `Page `Up, [] ->
+      scroll_h (-scroll_step * 8)
+    | `Page `Down, [] ->
+      scroll_h (+scroll_step * 8)
+    | _ ->
+      `Unhandled
   in
-  Lwd.map2 t (state) ~f:begin fun t (state_w,state_h) ->
+  let scroll_handler state_w state_h ~x:_ ~y:_ =
+    let scroll_h =
+      scroll state_h.position state_h.bound (fun position ->
+        change `ActionH (state_w, { state_h with position }))
+    in
+    function
+    | `Scroll `Up ->
+      scroll_h (-scroll_step)
+    | `Scroll `Down ->
+      scroll_h (+scroll_step)
+    | _ ->
+      `Unhandled
+  in
+  Lwd.map2 t state ~f:(fun t (state_w, state_h) ->
+    let tw, th = Ui.layout_width t, Ui.layout_height t in
+    let mw, mh = if max then Some tw, Some th else None, None in
     t
-    |> Ui.shift_area state_w.position state_h.position
-    (*TODO: make an alternative that has this already set*)
-    |> Ui.resize ~h:0 ~sh:1 ~w:0 ~sw:1
+    |> Ui.resize ~w:5 ~sw:1
     |> Ui.size_sensor (fun ~w ~h ->
       let sense v_spec v state total visible =
         let tchange =
           if !total <> v_spec
-          then (total := v_spec; true)
+          then (
+            total := v_spec;
+            true)
           else false
         in
         let vchange =
           if !visible <> v
-          then (visible := v; true)
+          then (
+            visible := v;
+            true)
           else false
         in
-        if tchange || vchange then
-           Some{state with visible = !visible; total = !total;
-                           bound = maxi 0 (!total - !visible); }
-          else None
+        if tchange || vchange
+        then
+          Some
+            {
+              state with
+              visible = !visible;
+              total = !total;
+              bound = maxi 0 (!total - !visible);
+            }
+        else None
       in
-      let w_update =sense (Ui.layout_width t) w state_w w_total w_visible in
-      let h_update =sense (Ui.layout_height t) h state_h h_total h_visible in
-      match w_update,h_update with
-      |Some w,Some h-> change `ContentBoth((w,h))
-      |Some w,None-> change `ContentW((w,state_h))
-      |None,Some h-> change `ContentH((state_w,h))
-      |None,None-> ();
-      )
+      let w_update = sense tw w state_w w_total w_visible in
+      let h_update = sense th h state_h h_total h_visible in
+      match w_update, h_update with
+      | Some w, Some h ->
+        change `ContentBoth (w, h)
+      | Some w, None ->
+        change `ContentW (w, state_h)
+      | None, Some h ->
+        change `ContentH (state_w, h)
+      | None, None ->
+        ())
+    |> Ui.shift_area state_w.position state_h.position
+    (* |>Ui.join_y (Ui.atom (I.string A.empty (string_of_int state_w.visible))) *)
+    (*TODO: make an alternative that has this already set*)
     |> Ui.mouse_area (scroll_handler state_w state_h)
-    |> Ui.keyboard_area ?focus (focus_handler state_w state_h)
-  end
+    |> Ui.keyboard_area ?focus (focus_handler state_w state_h))
 ;;
 
-let scroll_area ?focus ui=
-  let state = Lwd.var (W.default_scroll_state,W.default_scroll_state) in
-      ui|> scroll_area_intern ?focus ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
+let scroll_area ?focus ui =
+  let state = Lwd.var (W.default_scroll_state, W.default_scroll_state) in
+  ui |> scroll_area_intern ?focus ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
+;;
+
 let v_scroll_area ui =
-  let state = Lwd.var (W.default_scroll_state) in
-      ui|> W.vscroll_area  ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
+  let state = Lwd.var W.default_scroll_state in
+  ui |> W.vscroll_area ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
 ;;

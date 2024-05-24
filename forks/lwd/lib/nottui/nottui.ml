@@ -244,8 +244,8 @@ struct
 
   let atom img : t =
     { w = I.width img; sw = 0;
-    mw=10000;
-    mh=10000;
+    mw=I.width img;
+    mh=I.height img;
       h = I.height img; sh = 0;
       focus = Focus.empty; flags = flags_none;
       desc = Atom img;
@@ -313,7 +313,7 @@ struct
   let join_x a b = {
     w = (a.w + b.w);   sw = (a.sw + b.sw);
     h = (maxi a.h b.h); sh = (maxi a.sh b.sh);
-    mw=a.mh+b.mh;
+    mw=a.mw+b.mw;
     mh=maxi a.mh b.mh;
     flags = a.flags lor b.flags;
     focus = Focus.merge a.focus b.focus; desc = X (a, b);
@@ -434,13 +434,12 @@ struct
           flex * sa / stretch
         else
           flex - flex * sb / stretch
-
-      
+   
 
       in
       (* this is way to complex but basically:
-      1. streach a, if we hit max give the leftover to b
-      2. streach b give the leftover to a
+      1. stretch a, if we hit max give the leftover to b
+      2. stretch b give the leftover to a
       3. check if a is overstretched
       *)
       let aRatio,bRatio= ref (a+ratio), ref (b+(flex-ratio)) in
@@ -465,12 +464,17 @@ struct
     else
       (a, b)
 
-  let pack ~fixed ~stretch total g1 g2 =
+  let pack ~max ~fixed ~stretch total g1 g2 =
+    (*flex is the space we should expand into if we stretch*)
     let flex = total - fixed in
-    if stretch > 0 && flex > 0 then
+    if stretch > 0 && flex > 0 && max >total then
       (0, total)
     else
+    (* If we can stretch and we got here we must have wanted to stretch beyond the max which means we should stretch to max and recalculate the flex*)
+      let (fixed,flex)=if stretch > 0 then (max,total-max) else (fixed,flex) in
+
       let gravity = if flex >= 0 then g1 else g2 in
+
       match gravity with
       | `Negative -> (0, fixed)
       | `Neutral  -> (flex / 2, fixed)
@@ -495,7 +499,7 @@ struct
       | Atom _ -> ()
       | Size_sensor (t, _) | Mouse_handler (t, _)
       | Focus_area (t, _) | Event_filter (t, _) ->
-        update_sensors ox oy sw sh  mw mh  t
+        update_sensors ox oy sw sh mw mh  t
       | Transient_sensor (t, sensor) ->
         ui.desc <- t.desc;
         let sensor = sensor ~x:ox ~y:oy ~w:sw ~h:sh in
@@ -507,22 +511,22 @@ struct
         sensor ()
       | Resize (t, g, _) ->
         let open Gravity in
-        let dx, rw = pack ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
-        let dy, rh = pack ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
+        let dx, rw = pack ~max:t.mw ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
+        let dy, rh = pack ~max:t.mh ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
         update_sensors (ox + dx) (oy + dy) rw rh  mw mh t
       | Shift_area (t, sx, sy) ->
         update_sensors (ox - sx) (oy - sy) sw sh  mw mh  t
       | X (a, b) ->
         let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mw ~mB:b.mw sw in
-        update_sensors ox oy aw sh  mw mh  a;
-        update_sensors (ox + aw) oy bw sh  mw mh b
+        update_sensors ox oy aw sh mw mh a;
+        update_sensors (ox + aw) oy bw sh mw mh b
       | Y (a, b) ->
         let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh ~mA:a.mh ~mB:b.mh sh in
         update_sensors ox oy sw ah mw mh a;
         update_sensors ox (oy + ah) sw bh mw mh  b
       | Z (a, b) ->
         update_sensors ox oy sw sh mw mh a;
-        update_sensors ox oy sw sh mw mh  b
+        update_sensors ox oy sw sh mw mh b
     )
 
   let update_focus ui =
@@ -560,8 +564,8 @@ struct
       | Z (a, b) ->
         aux ox oy sw sh b || aux ox oy sw sh a
       | Mouse_handler (t, f) ->
-        let _offsetx, rw = pack ~fixed:t.w ~stretch:t.sw sw `Negative `Negative
-        and _offsety, rh = pack ~fixed:t.h ~stretch:t.sh sh `Negative `Negative
+        let _offsetx, rw = pack ~max:t.mw ~fixed:t.w ~stretch:t.sw sw `Negative `Negative
+        and _offsety, rh = pack  ~max:t.mh~fixed:t.h ~stretch:t.sh sh `Negative `Negative
         in
         assert (_offsetx = 0 && _offsety = 0);
         (x - ox >= 0 && x - ox <= rw && y - oy >= 0 && y - oy <= rh) &&
@@ -574,8 +578,8 @@ struct
         aux (ox - sx) (oy - sy) sw sh desc
       | Resize (t, g, _bg) ->
         let open Gravity in
-        let dx, rw = pack ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
-        let dy, rh = pack ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
+        let dx, rw = pack  ~max:t.mw~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
+        let dy, rh = pack  ~max:t.mh~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
         aux (ox + dx) (oy + dy) rw rh t
       | Event_filter (n, f) ->
         begin match f (`Mouse (`Press btn, (x, y), [])) with
@@ -692,8 +696,8 @@ struct
           { vx; vy; image }
         | Resize (t, g, bg) ->
           let open Gravity in
-          let dx, rw = pack ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
-          let dy, rh = pack ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
+          let dx, rw = pack ~max:t.mw ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
+          let dy, rh = pack ~max:t.mh ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
           let c =
             render_node (vx1 - dx) (vy1 - dy) (vx2 - dx) (vy2 - dy) rw rh t
           in
