@@ -151,13 +151,10 @@ sig
 
   (** {1 Event handles} *)
 
-  type may_handle = [ `Unhandled | `Handled ]
-  (** An event is propagated until it gets handled.
-      Handler functions return a value of type [may_handle] to indicate
-      whether the event was handled or not. *)
 
   type mouse_handler = x:int -> y:int -> Unescape.button -> [
-      | may_handle
+      | `Handled
+      |`Unhandled
       | `Grab of (x:int -> y:int -> unit) * (x:int -> y:int -> unit)
     ]
   (** The type of handlers for mouse events. They receive the (absolute)
@@ -179,7 +176,7 @@ sig
     | `Copy
     | `Paste
     (* Focus management *)
-    | `Focus of [`Next | `Prev | `Left | `Right | `Up | `Down]
+    | `Focus of [`Out|`Next | `Prev | `Left | `Right | `Up | `Down]
   ]
   (** Key handlers normally reacts to keyboard input but a few special keys are
       defined to represent higher-level actions.
@@ -189,6 +186,11 @@ sig
     | Unescape.special | `Uchar of Uchar.t | `ASCII of char | semantic_key
   ] * Unescape.mods
   (** A key is the pair of a main key and a list of modifiers *)
+
+  type may_handle = [ `Unhandled | `Handled| `Remap of key ]
+  (** An event is propagated until it gets handled.
+      Handler functions return a value of type [may_handle] to indicate
+      whether the event was handled, not handled, or should be remapped to aonother event. *)
 
   type mouse = Unescape.mouse
   (** Specification of mouse inputs, taken from Notty *)
@@ -200,10 +202,7 @@ sig
   (** Handle mouse events that happens over an ui. *)
 
   val keyboard_area : ?focus:Focus.status -> (key -> may_handle) -> t -> t
-  (** Define a focus receiver, handle keyboard events over the focused area *)
-
-  val event_emit_area: ?focus:Focus.status -> (key -> [may_handle|`Remap of key]) -> t -> t
-  (** Define a focus receiver, remap keyboard events in the area. Useful for emitting focus change events *)
+  (** Define a focus receiver, handle keyboard events over the focused area. Distinct from [event_filter] because [`Focus *] events will move focus between these areas *)
 
   val has_focus : t -> bool
   (** Check if this UI has focus, either directly (it is a focused

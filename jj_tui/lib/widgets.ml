@@ -291,8 +291,9 @@ let label_outline_strings ~label ~label_bottom ?(attr = A.empty) i =
    when inside a window stack you can navigate up and down your stack.
    if you would also like to navigate to stacks sideways you just wrap then in a horizontal window stack.
 *)
-let v_window_stack ?focus windows =
+let v_window_stack ~focus windows =
   let focused = ref 0 in
+  let is_focused = ref false in
   let windows, focuses =
     windows
     |> List.map (fun window_maker ->
@@ -301,11 +302,53 @@ let v_window_stack ?focus windows =
     |> List.split
   in
   focuses |> List.hd |> Focus.request;
-  W.vbox windows
+  (let$ ui = W.vbox windows
+   and$ focus = focus |> Focus.status in
+   if (not !is_focused) && Focus.has_focus focus
+   then (
+     is_focused := true;
+     List.nth focuses !focused |> Focus.request)
+   else if !is_focused && not (Focus.has_focus focus)
+   then is_focused := false;
+   ui
+   |> Ui.join_x (if !is_focused then W.string "f" else W.string "u")
+   |> Ui.keyboard_area
+        ~focus
+        (if !is_focused
+         then
+           function
+           | `Arrow `Down, [ `Ctrl ] ->
+             let focused_idx = !focused in
+             (* set the focus to be the next item if possible *)
+             List.nth_opt focuses (focused_idx + 1)
+             |> Option.iter (fun x ->
+               List.nth focuses focused_idx |> Focus.release;
+               Focus.request x;
+               focused := focused_idx + 1);
+             `Handled
+           | `Arrow `Up, [ `Ctrl ] ->
+             let focused_idx = !focused in
+             let target_idx = focused_idx - 1 in
+             if target_idx >= 0
+             then
+               (* set the focus to be the previous item if possible *)
+               List.nth_opt focuses target_idx
+               |> Option.iter (fun x ->
+                 List.nth focuses focused_idx |> Focus.release;
+                 Focus.request x;
+                 focused := focused_idx - 1);
+             `Handled
+           | _ ->
+             `Unhandled
+         else fun x -> `Unhandled))
+  |> border_box_custom_border
+       (let$ focus = focus |> Focus.status |>$ Focus.has_focus in
+        if focus then A.fg A.blue else A.empty)
 ;;
 
-let v_window_stack ?focus windows =
+let h_window_stack ~focus windows =
   let focused = ref 0 in
+  let is_focused = ref false in
   let windows, focuses =
     windows
     |> List.map (fun window_maker ->
@@ -313,62 +356,124 @@ let v_window_stack ?focus windows =
       window_maker ~focus, focus)
     |> List.split
   in
-  focuses |> List.hd |> Focus.request;
-  W.vbox windows
-  |>$ Ui.event_emit_area (function
-    | `ASCII 'p', [] ->
-      `Remap (`Focus `Up, [])
-    | `ASCII 'n', [`Shift] ->
-      `Remap (`Focus `Down, [])
-    | _ ->
-      `Unhandled)
-;;
-let v_window_stack2  windows =
-  W.vbox windows
-  |>$ Ui.keyboard_area (function
-    | `ASCII 'p', [] ->
-      `Handled
-    | `ASCII 'n', [] ->
-      `Handled
-    | _ ->
-      `Unhandled)
+  (let$ ui = W.hbox windows
+   and$ focus = focus |> Focus.status in
+   if (not !is_focused) && Focus.has_focus focus
+   then (
+     is_focused := true;
+     List.nth focuses !focused |> Focus.request)
+   else if !is_focused && not (Focus.has_focus focus)
+   then is_focused := false;
+   ui
+   |> Ui.keyboard_area
+        ~focus
+        (if !is_focused
+         then
+           function
+           | `Arrow `Right, [ `Ctrl ] ->
+             let focused_idx = !focused in
+             (* set the focus to be the next item if possible *)
+             List.nth_opt focuses (focused_idx + 1)
+             |> Option.iter (fun x ->
+               List.nth focuses focused_idx |> Focus.release;
+               Focus.request x;
+               focused := focused_idx + 1);
+             `Handled
+           | `Arrow `Left, [ `Ctrl ] ->
+             let focused_idx = !focused in
+             let target_idx = focused_idx - 1 in
+             if target_idx >= 0
+             then
+               (* set the focus to be the previous item if possible *)
+               List.nth_opt focuses target_idx
+               |> Option.iter (fun x ->
+                 List.nth focuses focused_idx |> Focus.release;
+                 Focus.request x;
+                 focused := focused_idx - 1);
+             `Handled
+           | _ ->
+             `Unhandled
+         else fun x -> `Unhandled))
+  |> border_box_custom_border
+       (let$ focus = focus |> Focus.status |>$ Focus.has_focus in
+        if focus then A.fg A.blue else A.empty)
 ;;
 
-let h_window_stack2  windows =
-  W.hbox windows
-  |>$ Ui.keyboard_area (function
-    | `ASCII 'p', [] ->
-      `Handled
-    | `ASCII 'n', [] ->
-      `Handled
-    | _ ->
-      `Unhandled)
-;;
-
-(* |>$ Ui.keyboard_area ?focus (function *)
-(* | `Focus `Down, _ -> *)
-(* let focused_idx = !focused in *)
-(*set the focus to be the next item if possible*)
-(* List.nth_opt focuses (focused_idx + 1) *)
-(* |> Option.iter (fun x -> *)
-(* List.nth focuses focused_idx |> Focus.release; *)
-(* Focus.request x; *)
-(* focused := focused_idx + 1); *)
-(* `Handled *)
-(* | `Focus `Up, _ -> *)
-(* let focused_idx = !focused in *)
-(* let target_idx = focused_idx - 1 in *)
-(* if target_idx >= 0 *)
-(* then *)
-(*set the focus to be the previous item if possible*)
-(* List.nth_opt focuses target_idx *)
-(* |> Option.iter (fun x -> *)
-(* List.nth focuses focused_idx |> Focus.release; *)
-(* Focus.request x; *)
-(* focused := focused_idx - 1); *)
-(* `Handled *)
+(* let v_window_stack ?focus windows = *)
+(* let focused = ref 0 in *)
+(* let windows, focuses = *)
+(* windows *)
+(* |> List.map (fun window_maker -> *)
+(* let focus = Focus.make () in *)
+(* window_maker ~focus, focus) *)
+(* |> List.split *)
+(* in *)
+(* focuses |> List.hd |> Focus.request; *)
+(* W.vbox windows *)
+(* |>$ Ui.keyboard_area (function *)
+(* | `ASCII 'p', [] -> *)
+(* `Remap (`Focus `Up, []) *)
+(* | `ASCII 'n', [ `Shift ] -> *)
+(* `Remap (`Focus `Down, []) *)
 (* | _ -> *)
 (* `Unhandled) *)
+(* ;; *)
+
+let v_window_stack2 windows =
+  let focus = Focus.make () in
+  let$ focus = focus |> Focus.status
+  and$ ui = W.vbox windows in
+  ui
+  |> Ui.keyboard_area ~focus (function
+    | `ASCII 'p', [] ->
+      `Handled
+    | `ASCII 'n', [] ->
+      `Handled
+    | `ASCII 'i', [] ->
+      `Handled
+    | `ASCII 'e', [] ->
+      Out_channel.with_open_text "Out" (fun chan -> Out_channel.output_string chan "out");
+      `Remap (`Focus `Out, [])
+    | _ ->
+      `Unhandled)
+;;
+
+let h_window_stack2 windows =
+  let focus = Focus.make () in
+  let$ focus = focus |> Focus.status
+  and$ ui = W.hbox windows in
+  ui
+  |> Ui.keyboard_area ~focus (function
+    | `ASCII 'p', [] ->
+      `Handled
+    | `ASCII 'n', [] ->
+      `Handled
+    | `ASCII 'e', [] ->
+      Out_channel.with_open_text "Out" (fun chan -> Out_channel.output_string chan "out");
+      `Remap (`Focus `Out, [])
+    | _ ->
+      `Unhandled)
+;;
+(**Tries to fix the issue with the current layout system in which we cannot enter/exit a particular nodes selection tree
+*)
+let v_window_stack2 windows =
+  let focus = Focus.make () in
+  let$ focus = focus |> Focus.status
+  and$ ui = W.vbox windows in
+  ui
+  |> Ui.keyboard_area ~focus (function
+    | `ASCII 'p', [] ->
+      `Handled
+    | `ASCII 'n', [] ->
+      `Handled
+    | `ASCII 'i', [] ->
+      `Handled
+    | `ASCII 'e', [] ->
+      Out_channel.with_open_text "Out" (fun chan -> Out_channel.output_string chan "out");
+      `Remap (`Focus `Out, [])
+    | _ ->
+      `Unhandled)
+;;
 
 (** ui outline creator*)
 let ui_outline
@@ -548,11 +653,92 @@ let h_rule =
   |> Ui.resize ~w:0 ~sw:100
 ;;
 
-let scrollable ui =
-  let scrollState = Lwd.var W.default_scroll_state in
-  W.vscroll_area
-    ~change:(fun _action state ->
-      if state != Lwd.peek scrollState then scrollState $= state else ())
-    ~state:(Lwd.get scrollState)
-    ui
+
+(** A scroll area that won't scroll beyond it's limits*)
+let scroll_area_intern ?focus ~state ~change t =
+
+  let open Nottui_widgets in
+  let open Lwd_utils in
+
+  let w_visible = ref (-1) in
+  let w_total = ref (-1) in
+  let h_visible = ref (-1) in
+  let h_total = ref (-1) in
+
+  let scroll position bound handle delta =
+    let newPos = position + delta in
+    let newPos = clampi newPos ~min:0 ~max:bound in
+    if newPos <> position then
+      handle newPos;
+    `Handled
+  in
+  let focus_handler state_w state_h = 
+    let scroll_w= scroll state_w.position state_w.bound  
+      (fun position->
+        change `ActionV ({state_w with position},state_h)) 
+    in
+    let scroll_h= scroll state_h.position state_h.bound
+      (fun position->
+        change `ActionH (state_w, {state_h with position})) 
+    in
+    function
+    | `Arrow `Left , [] -> scroll_w (-scroll_step) 
+    | `Arrow `Right, [] -> scroll_w  (+scroll_step) 
+    | `Arrow `Up   , [] -> scroll_h (-scroll_step)
+    | `Arrow `Down , [] -> scroll_h (+scroll_step)
+    | `Page `Up, [] -> scroll_h ((-scroll_step) * 8)
+    | `Page `Down, [] -> scroll_h ((+scroll_step) * 8)
+    | _ -> `Unhandled
+  in
+  let scroll_handler state_w state_h ~x:_ ~y:_ = 
+    let scroll_h= scroll state_h.position state_h.bound
+      (fun position->
+        change `ActionH (state_w,{state_h with position})) 
+    in
+    function
+    | `Scroll `Up   -> scroll_h (-scroll_step)
+    | `Scroll `Down -> scroll_h (+scroll_step)
+    | _ -> `Unhandled
+  in
+  Lwd.map2 t (state) ~f:begin fun t (state_w,state_h) ->
+    t
+    |> Ui.shift_area state_w.position state_h.position
+    (*TODO: make an alternative that has this already set*)
+    |> Ui.resize ~h:0 ~sh:1 ~w:0 ~sw:1
+    |> Ui.size_sensor (fun ~w ~h ->
+      let sense v_spec v state total visible =
+        let tchange =
+          if !total <> v_spec
+          then (total := v_spec; true)
+          else false
+        in
+        let vchange =
+          if !visible <> v
+          then (visible := v; true)
+          else false
+        in
+        if tchange || vchange then
+           Some{state with visible = !visible; total = !total;
+                           bound = maxi 0 (!total - !visible); }
+          else None
+      in
+      let w_update =sense (Ui.layout_width t) w state_w w_total w_visible in
+      let h_update =sense (Ui.layout_height t) h state_h h_total h_visible in
+      match w_update,h_update with
+      |Some w,Some h-> change `ContentBoth((w,h))
+      |Some w,None-> change `ContentW((w,state_h))
+      |None,Some h-> change `ContentH((state_w,h))
+      |None,None-> ();
+      )
+    |> Ui.mouse_area (scroll_handler state_w state_h)
+    |> Ui.keyboard_area ?focus (focus_handler state_w state_h)
+  end
+;;
+
+let scroll_area ?focus ui=
+  let state = Lwd.var (W.default_scroll_state,W.default_scroll_state) in
+      ui|> scroll_area_intern ?focus ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
+let v_scroll_area ui =
+  let state = Lwd.var (W.default_scroll_state) in
+      ui|> W.vscroll_area  ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
 ;;
