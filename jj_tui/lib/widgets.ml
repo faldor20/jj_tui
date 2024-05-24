@@ -568,7 +568,6 @@ let prompt onExit name =
       `Unhandled)
 ;;
 
-(*TODO: I should check that focus handle isn't being made eadh time*)
 (**This prompt will either *)
 let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_var ui =
   let prompt_input = Lwd.var ("", 0) in

@@ -328,7 +328,8 @@ let h_pane left right =
         splitter
     in
     let ui = Ui.join_x l (Ui.join_x splitter r) in
-    let ui = Ui.resize ~w:10 ~h:10 ~sw:1 ~sh:1 ui in
+    (*make sure the panes can get infinetly wide*)
+    let ui = Ui.resize ~w:10 ~h:10 ~sw:1 ~sh:1 ~mh:1000 ~mw:1000 ui in
     let ui =
       match state with
       | Split _ -> ui
