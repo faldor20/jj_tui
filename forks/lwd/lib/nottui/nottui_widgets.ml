@@ -303,14 +303,15 @@ type pane_state =
       ; at : int
       }
 
-let h_pane left right =
+let h_pane ?(splitter_color = A.lightyellow) left right =
   let state_var = Lwd.var (Split { pos = 5; max = 10 }) in
   let render state (l, r) =
     let (Split { pos; max } | Re_split { pos; max; _ }) = state in
-    let l = Ui.resize ~w:0 ~h:0 ~sh:1 ~sw:pos l in
-    let r = Ui.resize ~w:0 ~h:0 ~sh:1 ~sw:(max - pos) r in
+    (*make sure the panes can get infinetly wide and shrink infinitely small*)
+    let l = Ui.resize ~w:0 ~h:0 ~sh:1 ~sw:pos ~mw:1000 ~mh:1000 l in
+    let r = Ui.resize ~w:0 ~h:0 ~sh:1 ~sw:(max - pos) ~mw:1000 ~mh:1000 r in
     let splitter =
-      Ui.resize ~bg:Notty.A.(bg lightyellow) ~w:1 ~h:0 ~sw:0 ~sh:1 Ui.empty
+      Ui.resize ~bg:Notty.A.(bg splitter_color) ~w:1 ~h:0 ~sw:0 ~sh:1 Ui.empty
     in
     let splitter =
       Ui.mouse_area
@@ -328,7 +329,6 @@ let h_pane left right =
         splitter
     in
     let ui = Ui.join_x l (Ui.join_x splitter r) in
-    (*make sure the panes can get infinetly wide*)
     let ui = Ui.resize ~w:10 ~h:10 ~sw:1 ~sh:1 ~mh:1000 ~mw:1000 ui in
     let ui =
       match state with
@@ -475,6 +475,7 @@ let edit_field ?(focus = Focus.make ()) state ~on_change ~on_submit =
   in
   Lwd.map2 state node ~f:(fun state content -> Ui.mouse_area (mouse_grab state) content)
 ;;
+
 
 (** Tab view, where exactly one element of [l] is shown at a time. *)
 let tabs (tabs : (string * (unit -> Ui.t Lwd.t)) list) : Ui.t Lwd.t =

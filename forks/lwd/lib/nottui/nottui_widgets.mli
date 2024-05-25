@@ -46,7 +46,7 @@ val scrollbox: ui Lwd.t -> ui Lwd.t
 
 (* FIXME Explain panes *)
 val v_pane : ui Lwd.t -> ui Lwd.t -> ui Lwd.t
-val h_pane : ui Lwd.t -> ui Lwd.t -> ui Lwd.t
+val h_pane : ?splitter_color:(Notty.A.color)-> ui Lwd.t -> ui Lwd.t -> ui Lwd.t
 
 (* FIXME Edit field *)
 
