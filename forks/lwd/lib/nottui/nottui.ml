@@ -718,7 +718,11 @@ struct
       cache
 
   let image {size = (w, h); view; _}  =
-    (render_node 0 0 w h w h view).image
+    (*There is a weird quirk in how rending works that is fixed by having an empty top level node.
+    See when you resize you actually resize the parent node and then insert a resize node. That means that if you resize at the top level It doesn't have a parent node and the resize doesn't apply. This is a very odd quirk which can be fixed by ensuring there is always a top level node that doesn't actually do anything.
+    Hence we wrap everything in this resize node which does nothing.
+    *)
+    (render_node 0 0 w h w h (view|>resize)).image
 
   let dispatch_raw_key st key =
     let rec iter (st: ui list) : [> `Unhandled] =
