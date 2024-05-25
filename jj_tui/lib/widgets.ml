@@ -119,7 +119,9 @@ let border_box_intern
      If we increase the width of the space by making the vbar longer than the input ui element it will be able to expand to fill that space.
      That will then increase the vbar and increase the height etc etc untill the max height is reached*)
   let vbar =
-    I.uchar border_attr (Uchar.of_int 0x2502) 1 (h + (pad_h*2)) |> Ui.atom |> Ui.resize ~h:0
+    I.uchar border_attr (Uchar.of_int 0x2502) 1 (h + (pad_h * 2))
+    |> Ui.atom
+    |> Ui.resize ~h:0
   in
   Ui.vcat
     [
@@ -128,11 +130,12 @@ let border_box_intern
         [
           vbar;
           I.void pad_w 1 |> Ui.atom;
-          Ui.vcat [ 
-          I.void 1 pad_h |> Ui.atom;
-          input |> Ui.resize ~pad ;
-          I.void  1 pad_h |> Ui.atom;
-          ];
+          Ui.vcat
+            [
+              I.void 1 pad_h |> Ui.atom;
+              input |> Ui.resize ~pad;
+              I.void 1 pad_h |> Ui.atom;
+            ];
           I.void pad_w 1 |> Ui.atom;
           vbar;
         ];
@@ -530,14 +533,25 @@ let monitor ui =
 ;;
 
 (**clears anything behind the given area*)
-let clear_behind ui =
+let set_bg attr ui =
   let size = Lwd.var (0, 0) in
   W.zbox
     [
-      (size |> Lwd.get |>$ fun (w, h) -> I.char A.empty ' ' w h |> Ui.atom|>Ui.resize ~w:0 ~h:0 );
+      ( size |> Lwd.get |>$ fun (w, h) ->
+        I.char attr ' ' w h |> Ui.atom |> Ui.resize ~w:0 ~h:0 );
       ui |>$ Ui.size_sensor (fun ~w ~h -> if (w, h) <> Lwd.peek size then size $= (w, h));
     ]
 ;;
+
+(**Clears anything behind the given area using the width. If you have a dynamic sized element use [set_bg]*)
+let set_bg_static attr ui =
+  let w, h = Ui.layout_width ui, Ui.layout_height ui in
+  Ui.zcat [ I.char attr ' ' w h |> Ui.atom |> Ui.resize ~w:0 ~h:0; ui ]
+;;
+
+(**clears anything behind the given area*)
+let clear_bg ui = set_bg A.empty ui
+
 (*========Prompt=======*)
 let prompt onExit name =
   let prompt_input = Lwd.var ("", 0) in
@@ -604,13 +618,12 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
          let$* focus = focus |> Focus.status in
          let label_bottom =
            if char_count
-           then
-             Some (prompt_val |> String.length |> Int.to_string )
+           then Some (prompt_val |> String.length |> Int.to_string)
            else None
          in
          prompt_field
          |> border_box ~label_top:label ?label_bottom
-         |> clear_behind
+         |> clear_bg
          |>$ Ui.event_filter ~focus (fun event ->
            match event with
            | `Key (`Escape, _) ->
@@ -625,7 +638,6 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
     My hope is that by not directly nesting them this will allow the ui to not re-render when the prompt appears*)
   W.zbox [ ui; prompt_ui |> Lwd.map ~f:(Ui.resize ~pad:neutral_grav) ]
 ;;
-
 
 let prompt_example =
   let show_prompt_var = Lwd.var None in
@@ -791,9 +803,217 @@ let popup ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let prompt_field = content in
-      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label |> clear_behind
+      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label |> clear_bg
     | None ->
       Ui.empty |> Lwd.pure
   in
   W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
+;;
+
+(**This is a simple popup that can show ontop of *)
+let popup ~show_popup_var ui =
+  let popup_ui =
+    let$* show_popup = Lwd.get show_popup_var in
+    match show_popup with
+    | Some (content, label) ->
+      let prompt_field = content in
+      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label |> clear_bg
+    | None ->
+      Ui.empty |> Lwd.pure
+  in
+  W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
+;;
+
+(*A simple un_navigateable input field that only allows typing and deleting content. Try using edit_field for somethign that allows navigating within the text*)
+let input_field ?(focus = Focus.make ()) start_state ~on_change ~on_submit =
+  let update focus_h focus text =
+    let content =
+      Ui.atom @@ I.hcat [ I.string A.(st underline) (if text = "" then " " else text) ]
+    in
+    let handler = function
+      | `ASCII 'U', [ `Ctrl ] ->
+        on_change "";
+        `Handled (* clear *)
+      | `Escape, [] ->
+        Focus.release focus_h;
+        `Handled
+      | `ASCII k, _ ->
+        let text = text ^ String.make 1 k in
+        on_change text;
+        `Handled
+      | `Backspace, _ ->
+        let text =
+          if text |> String.length > 0
+          then String.sub text 0 (String.length text - 1)
+          else text
+        in
+        on_change text;
+        `Handled
+      | `Enter, _ ->
+        on_submit text;
+        `Handled
+      | _ ->
+        `Unhandled
+    in
+    Ui.keyboard_area ~focus handler content
+  in
+  let node = Lwd.map2 ~f:(update focus) (Focus.status focus) start_state in
+  node
+;;
+
+(*A size sensor that automatically updates the size variable*)
+let simpleSizeSensor ~size_var ui =
+  ui
+  |> Ui.size_sensor (fun ~w ~h ->
+    if Lwd.peek size_var <> (w, h) then Lwd.set size_var (w, h))
+;;
+
+(** Selection list that allows for custom handling of keyboard events.
+Scrolls when the selection reaches the lower third
+Only handles up and down keyboard events. Use [~custom_handler] to do handle confirming your selection and such
+*)
+let selection_list_custom ?(focus = Focus.make ()) ~custom_handler (items : 'a list) =
+  let length = List.length items in
+  let selected_var = Lwd.var 0 in
+  let selected_position = Lwd.var (0, 0) in
+  (*handle selections*)
+  let render_items =
+    let$ focus = focus |> Focus.status
+    and$ selected = Lwd.get selected_var in
+    items
+    |> List.mapi (fun i x ->
+      if selected == i
+      then
+        x true
+        |> Ui.transient_sensor (fun ~x ~y ~w ~h () ->
+          if (x, y) <> Lwd.peek selected_position then selected_position $= (x, y))
+      else x false)
+    |> Ui.vcat
+    |> Ui.keyboard_area ~focus (function
+      | `Arrow `Up, [] ->
+        selected_var $= max (Lwd.peek selected_var - 1) 0;
+        `Handled
+      | `Arrow `Down, [] ->
+        selected_var $= min (Lwd.peek selected_var + 1) ((items |> List.length) - 1);
+        `Handled
+      | a ->
+        custom_handler items selected_var a)
+  in
+  let rendered_size_var = Lwd.var (0, 0) in
+  (*Handle scrolling*)
+  let scrollitems =
+    let size_var = Lwd.var (0, 0) in
+    let shift_amount =
+      let$ selected = Lwd.get selected_var
+      and$ size = Lwd.get size_var
+      and$ ren_size = Lwd.get rendered_size_var in
+      (*portion of the total size of the element that is rendered*)
+      let size_ratio =
+        (ren_size |> snd |> float_of_int) /. (size |> snd |> float_of_int)
+      in
+      (*Tries to ensure that we start scrolling the list when we've selected about a third of the way down (using 3.0 causes weird jumping, so i use just less than )*)
+      let offset = size_ratio *. ((length |> float_of_int) /. 2.9) in
+      (*portion of the list that is behind the selection*)
+      let list_ratio =
+        ((selected |> float_of_int) +. offset) /. (length |> float_of_int)
+      in
+      (*if our position is further down the list than the portion that is shown we will shift by that amoumt *)
+      Float.max (list_ratio -. size_ratio) 0.0 *. (size |> snd |> float_of_int)
+      |> int_of_float
+    in
+    let$ items = render_items
+    and$ shift_amount = shift_amount in
+    items
+    |> Ui.shift_area 0 shift_amount
+    |> Ui.resize ~sh:1
+    |> simpleSizeSensor ~size_var
+    |> Ui.resize ~w:3 ~sw:1 ~h:0 ~mw:1000
+    |> simpleSizeSensor ~size_var:rendered_size_var
+  in
+  scrollitems
+;;
+
+(**filterable list item *)
+type 'a filterable_item = {
+  data : 'a;
+  (**info attached to each ui elment in the list,  used for filtering and on_select callback *)
+  ui : bool -> Ui.t;
+}
+
+(** A filterable selectable list.
+
+    This version allows you to implement custom handlers for keys and only provides functionality for moving up and down the list.
+
+    For basic usage you likely want {!filterable_selection_list} which provides `Enter` and `Esc` handlers *)
+let filterable_selection_list_custom
+  ?(focus = Focus.make ())
+  ~(filter_predicate : string -> 'a -> bool)
+  ~custom_handler
+  ~filter_text_var
+  (items : 'a filterable_item list)
+  =
+
+  (*filter the list whenever the input changes*)
+  let items =
+    let$* filter_text = filter_text_var |> Lwd.get in
+    let items = items |> List.filter (fun x -> filter_predicate filter_text x.data) in
+    (* if we re-render we should always reset the selected list *)
+    selection_list_custom ~focus
+      ~custom_handler:(fun _ id x -> custom_handler items id x)
+      (items |> List.map (fun x -> x.ui))
+  in
+  items
+;;
+
+(** Filterable selection list
+
+    Allows filtering and selecting items in a list.
+    Also handles shifting the list so that the selection dosen't go out of view
+    @param ~filter_predicate Function called to deterimine if an items should be included
+    @param ~on_confirm Called when user presses enter
+    @param ?on_esc Called when user presses esc
+    @param list_items List of items to be displayed/selected/filtered *)
+let filterable_selection_list
+  ?(focus = Focus.make ())
+  ~filter_predicate
+  ?(on_esc = fun _ -> ())
+  ~on_confirm
+  list_items
+  =
+  let filter_text_var = Lwd.var "" in
+  let filter_text_ui =
+    input_field
+      ~focus
+      (filter_text_var |> Lwd.get)
+      ~on_change:(fun x -> filter_text_var $= x)
+      ~on_submit:(fun _ -> ())
+    |>$ Ui.resize ~w:3 ~sw:1 ~mw:10000
+  in
+  let list_ui =
+    list_items
+    |> filterable_selection_list_custom
+         ~filter_predicate
+         ~focus
+         ~filter_text_var
+         ~custom_handler:(fun items selected_var key ->
+           match key with
+           | `Enter, [] ->
+             List.nth_opt items (Lwd.peek selected_var)
+             |> Option.iter (fun item -> item.data |> on_confirm);
+             `Handled
+           | `Escape, [] ->
+             List.nth_opt items (Lwd.peek selected_var)
+             |> Option.iter (fun item -> item.data |> on_esc);
+             `Handled
+           | _ ->
+             `Unhandled)
+  in
+  W.vbox
+    [
+      filter_text_ui
+      (*Ensures the filter text box never expands beyond the size of the list elements*)
+      |> border_box;
+      list_ui |> border_box;
+    ]
+  |> border_box
 ;;

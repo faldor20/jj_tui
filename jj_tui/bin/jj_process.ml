@@ -41,8 +41,13 @@ module Make (Vars : Global_vars.Vars) = struct
     out |> Result.to_option |> Option.value ~default:"there was an error"
   ;;
 
-  let jj_no_log args =
-    let res = cmdArgs "jj" (List.concat [ args; [ "--color"; "always" ] ]) in
+  let jj_no_log ?(color = true) args =
+    let res =
+      cmdArgs
+        "jj"
+        (List.concat
+           [ args; (if color then [ "--color"; "always" ] else [ "--color";"never" ]) ])
+    in
     if res |> String.length > 10000
     then String.sub res 0 10000 ^ "...truncated because it's really long"
     else res

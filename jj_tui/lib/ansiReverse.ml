@@ -139,7 +139,7 @@ let fold_left_pre (f : 'acc -> 'a -> 'acc) (init : 'a -> 'acc) (input : 'a list)
     xs |> List.fold_left f state
 ;;
 
-let string_to_image str =
+let string_to_image ?(extra_attr = A.empty) str =
   match parse_ansi_escape_codes str with
   | Error a ->
     Printf.printf "restut: %s" a;
@@ -153,7 +153,7 @@ let string_to_image str =
         (* print_endline str; *)
         str
         |> String.split_on_char '\n'
-        |> List.map (fun x -> `Image (I.string attr x))
+        |> List.map (fun x -> `Image (I.string A.(attr ++ extra_attr) x))
         |> Base.List.intersperse ~sep:`Newline)
     in
     let newline_seperated = locate_newlines coded_strs in
@@ -221,6 +221,4 @@ let escaped_string ?(attr = A.empty) str =
    s |> parse_ansi_escape_codes
    |> List.map (fun (x, str) -> escaped_string ~attr:x str)
    |> I.vcat *)
-let colored_string s = s |> string_to_image |> Result.get_ok
-
-;
+let colored_string ?extra_attr s = s |> string_to_image ?extra_attr |> Result.get_ok
