@@ -17,7 +17,7 @@ space-around-arrays=true
 # let a=[ item 
 dock-collection-brackets=true
 #We need this too otherwires the semicolons wee be before
-break-separators=after
+#break-separators=after
 
 break-colon=after
 

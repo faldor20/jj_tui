@@ -26,6 +26,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open Jj_process.Make (Vars)
   open Vars
   module Jj_commands = Jj_commands.Make (Vars)
+  module File_view = File_view.Make (Vars)
 
   (* let task_pool () = *)
   (* Option.get !Vars.pool *)
@@ -53,7 +54,8 @@ module Make (Vars : Global_vars.Vars) = struct
     let handler =
       match input_state with
       | `Normal ->
-        Jj_commands.command_input Jj_commands.commandMapping
+        (* TODO figure out my global command state handling*)
+        fun _ -> `Unhandled
       | `Mode handle ->
         handle
     in
@@ -99,8 +101,8 @@ module Make (Vars : Global_vars.Vars) = struct
     let$ ui =
       W.vbox
         [
-          W.string (Printf.sprintf "exit code:%s" (res |> exit_status_to_str)) |> Lwd.pure;
-          W.button "back to main UI" (fun _ -> post_change `Main) |> Lwd.pure;
+          W.string (Printf.sprintf "exit code:%s" (res |> exit_status_to_str)) |> Lwd.pure
+        ; W.button "back to main UI" (fun _ -> post_change `Main) |> Lwd.pure
         ]
     in
     ui
@@ -118,9 +120,9 @@ module Make (Vars : Global_vars.Vars) = struct
     W.vbox
       [
         ui
-        |>$ Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then size $= (w, h));
-        (let$ size = Lwd.get size in
-         I.strf "w:%d h:%d" (fst size) (snd size) |> Ui.atom);
+        |>$ Ui.size_sensor (fun ~w ~h -> if Lwd.peek size <> (w, h) then size $= (w, h))
+      ; (let$ size = Lwd.get size in
+         I.strf "w:%d h:%d" (fst size) (snd size) |> Ui.atom)
       ]
   ;;
 
@@ -128,9 +130,16 @@ module Make (Vars : Global_vars.Vars) = struct
   (* W.button "squash" (fun _ -> Lwd.set ui_state.view (`Cmd [ "jj"; "squash"; "-i" ])) *)
   (* ;; *)
 
-  let mainUi env =
-    (*we want to initialize our states*)
+  let mainUi ~sw env =
+    (*we want to initialize our states and keep them up to date*)
     on_change ();
+    Eio.Fiber.fork_daemon ~sw (fun _ ->
+      let clock = Eio.Stdenv.clock env in
+      while true do
+        Eio.Time.sleep clock 5.0;
+        on_change ()
+      done;
+      `Stop_daemon);
     let$* running = Lwd.get ui_state.view in
     match running with
     | `Cmd_I cmd ->
@@ -141,25 +150,41 @@ module Make (Vars : Global_vars.Vars) = struct
       interactive_process env ("jj" :: cmd)
     | `Main ->
       let v_cmd_out = Lwd.var "" in
+      let file_focus = Focus.make () in
+      let graph_focus = Focus.make () in
       let$* pane =
         W.h_pane
           (W.vbox
              [
-               Wd.v_scroll_area (ui_state.jj_tree $-> (I.pad ~l:1 ~r:1 >> Ui.atom))
-               |>$ Ui.resize ~sh:3|>renderSizeMonitor;
-               Widgets.h_rule |> Lwd.pure;
-               Wd.v_scroll_area  (ui_state.jj_branches $-> Ui.atom) |>$ Ui.resize ~sh:1;
-               Widgets.h_rule |> Lwd.pure;
-               Widgets.h_rule |> Lwd.pure;
-               Wd.v_scroll_area 
+               File_view.file_view ()
+               |>$ Ui.resize ~w:10 ~sw:1
+               |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
+             ; Wd.v_scroll_area (ui_state.jj_tree $-> Ui.atom)
+               |>$ (Ui.resize ~mw:1000 ~sh:3 ~w:10 ~sw:1
+                    >> Ui.keyboard_area (function
+                      | `ASCII k, [] ->
+                        Jj_commands.command_input Jj_commands.commandMapping k
+                      | _ ->
+                        `Unhandled))
+               |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
+             ; Wd.v_scroll_area (ui_state.jj_branches $-> Ui.atom)
+               |>$ Ui.resize ~mw:1000 ~w:10 ~sw:1 ~sh:1
+               |> Wd.border_box_focusable ~pad_h:0
+             ; Wd.v_scroll_area
                  (ui_state.command_log
                   |> Lwd.get
                   |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
-               |>$ Ui.resize ~sh:1;
-               v_cmd_out $-> W.string;
+               |>$ Ui.resize ~sh:1
+             ; v_cmd_out $-> W.string
              ])
-          (Wd.v_scroll_area 
-             ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
+          (let$* file_focus = file_focus |> Focus.status in
+           if file_focus |> Focus.has_focus
+           then
+             let$ status = File_view.file_status () in
+             status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
+           else
+             Wd.v_scroll_area
+               ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
         |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
         |> Widgets.popup ~show_popup_var:ui_state.show_popup
       in

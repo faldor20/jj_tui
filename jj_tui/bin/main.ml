@@ -40,13 +40,13 @@ let ui_loop ~quit ~term root =
 
 (*TODO:For hosting a subprocess i should look into using EIO and Ui_loop.step like some of the other libraries built with nottui*)
 let start_ui env =
+  Switch.run @@ fun sw ->
   (*initialse the state*)
   let term = Notty_unix.Term.create () in
   Vars.term := Some term;
-  Vars.eio_env := Some env;
-  ui_loop ~quit:Vars.quit ~term (Jj_ui.mainUi env)
+  Vars.set_eio_env env;
+  ui_loop ~quit:Vars.quit ~term (Jj_ui.mainUi ~sw env)
 ;;
-
 
 let start () = Eio_main.run @@ fun env -> Fiber.all [ (fun _ -> start_ui env) ];;
 

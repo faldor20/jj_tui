@@ -20,9 +20,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
   let cmdArgs cmd args =
-    let env = Vars.get_eio_env () in
-    let mgr = Eio.Stdenv.process_mgr env in
-    let cwd = Eio.Stdenv.cwd env in
+    let Vars.{ cwd; mgr; _ } = Vars.get_eio_vars () in
     let out =
       Eio_process.run
         ~cwd
@@ -41,16 +39,34 @@ module Make (Vars : Global_vars.Vars) = struct
     out |> Result.to_option |> Option.value ~default:"there was an error"
   ;;
 
-  let jj_no_log ?(color = true) args =
+  (** Prevents concurrent acess to jj when running commands that cause snapshotting.
+      jj can get currupted otherwise *)
+  let access_lock = Eio.Mutex.create ()
+
+  (** Run a jj command without outputting to the command_log.
+      @param ?snapshot=true
+        When true snapshots the state when running the command and also aquires a lock before running it. Set to false for commands you wish to run concurrently. like those for generating content in the UI
+      @param ?color=true When true output will have terminal escape codes for color *)
+  let jj_no_log ?(snapshot = true) ?(color = true) args =
+    let locked =
+      if snapshot
+      then (
+        Mutex.lock access_lock;
+        true)
+      else false
+    in
     let res =
       cmdArgs
         "jj"
         (List.concat
-           [ args; (if color then [ "--color"; "always" ] else [ "--color";"never" ]) ])
+           [
+             args;
+             (if snapshot then [] else [ "--ignore-working-copy" ]);
+             (if color then [ "--color"; "always" ] else [ "--color"; "never" ]);
+           ])
     in
-    if res |> String.length > 10000
-    then String.sub res 0 10000 ^ "...truncated because it's really long"
-    else res
+    if locked then Mutex.unlock access_lock;
+    res
   ;;
 
   let jj args =

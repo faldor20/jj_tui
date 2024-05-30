@@ -21,10 +21,10 @@ let size_logger ui =
   let size = Lwd.var (-1, -1) in
   W.vbox
     [
-      (size |> Lwd.get |>$ fun (w, h) -> W.fmt "w:%d,h:%d" w h);
-      ui
+      (size |> Lwd.get |>$ fun (w, h) -> W.fmt "w:%d,h:%d" w h)
+    ; ui
       |>$ Ui.size_sensor (fun ~w ~h ->
-        if Lwd.peek size <> (w, h) then Lwd.set size (w, h));
+        if Lwd.peek size <> (w, h) then Lwd.set size (w, h))
     ]
 ;;
 
@@ -125,21 +125,21 @@ let border_box_intern
   in
   Ui.vcat
     [
-      outline_top border_attr w label_top |> Ui.atom |> Ui.resize ~w:0;
-      Ui.hcat
+      outline_top border_attr w label_top |> Ui.atom |> Ui.resize ~w:0
+    ; Ui.hcat
         [
-          vbar;
-          I.void pad_w 1 |> Ui.atom;
-          Ui.vcat
+          vbar
+        ; I.void pad_w 1 |> Ui.atom
+        ; Ui.vcat
             [
-              I.void 1 pad_h |> Ui.atom;
-              input |> Ui.resize ~pad;
-              I.void 1 pad_h |> Ui.atom;
-            ];
-          I.void pad_w 1 |> Ui.atom;
-          vbar;
-        ];
-      outline_bot border_attr w label_bottom |> Ui.atom |> Ui.resize ~w:0;
+              I.void 1 pad_h |> Ui.atom
+            ; input |> Ui.resize ~pad
+            ; I.void 1 pad_h |> Ui.atom
+            ]
+        ; I.void pad_w 1 |> Ui.atom
+        ; vbar
+        ]
+    ; outline_bot border_attr w label_bottom |> Ui.atom |> Ui.resize ~w:0
     ]
 ;;
 
@@ -538,8 +538,8 @@ let set_bg attr ui =
   W.zbox
     [
       ( size |> Lwd.get |>$ fun (w, h) ->
-        I.char attr ' ' w h |> Ui.atom |> Ui.resize ~w:0 ~h:0 );
-      ui |>$ Ui.size_sensor (fun ~w ~h -> if (w, h) <> Lwd.peek size then size $= (w, h));
+        I.char attr ' ' w h |> Ui.atom |> Ui.resize ~w:0 ~h:0 )
+    ; ui |>$ Ui.size_sensor (fun ~w ~h -> if (w, h) <> Lwd.peek size then size $= (w, h))
     ]
 ;;
 
@@ -560,11 +560,11 @@ let prompt onExit name =
     W.zbox
       [
         W.string ~attr:A.(st underline) "                                       "
-        |> Lwd.pure;
-        W.edit_field
+        |> Lwd.pure
+      ; W.edit_field
           prompt_val
           ~on_change:(fun state -> Lwd.set prompt_input state)
-          ~on_submit:(fun (str, _) -> onExit (`Finished str));
+          ~on_submit:(fun (str, _) -> onExit (`Finished str))
       ]
   in
   let$ prompt_val, _ = prompt_val in
@@ -607,11 +607,11 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
            W.zbox
              [
                W.string ~attr:A.(st underline) "                                       "
-               |> Lwd.pure;
-               W.edit_field
+               |> Lwd.pure
+             ; W.edit_field
                  prompt_val
                  ~on_change:(fun state -> Lwd.set prompt_input state)
-                 ~on_submit:(fun (str, _) -> on_exit (`Finished str));
+                 ~on_submit:(fun (str, _) -> on_exit (`Finished str))
              ]
          in
          let$* prompt_val, _ = prompt_val in
@@ -644,24 +644,24 @@ let prompt_example =
   let ui =
     Ui.vcat
       [
-        W.string "hi this is my main ui";
-        W.string "another line";
-        W.string "another line";
-        W.string
+        W.string "hi this is my main ui"
+      ; W.string "another line"
+      ; W.string "another line"
+      ; W.string
           "another linanother \
-           lineaorsietnaoiresntoiaernstoieanrstoiaernstoiearnostieanroseitnaoriestnoairesntoiaernsotieanrsotienaoriestnoairesntoiearnstoieanrste";
-        W.string "another line";
-        W.string
+           lineaorsietnaoiresntoiaernstoieanrstoiaernstoiearnostieanroseitnaoriestnoairesntoiaernsotieanrsotienaoriestnoairesntoiearnstoieanrste"
+      ; W.string "another line"
+      ; W.string
           "another linanother \
-           lineaorsietnaoiresntoiaernstoieanrstoiaernstoiearnostieanroseitnaoriestnoairesntoiaernsotieanrsotienaoriestnoairesntoiearnstoieanrste";
-        W.string "another line";
-        W.string "another line";
-        W.string "another line";
-        W.string "another line";
-        W.string "another line";
-        W.string
+           lineaorsietnaoiresntoiaernstoieanrstoiaernstoiearnostieanroseitnaoriestnoairesntoiaernsotieanrsotienaoriestnoairesntoiearnstoieanrste"
+      ; W.string "another line"
+      ; W.string "another line"
+      ; W.string "another line"
+      ; W.string "another line"
+      ; W.string "another line"
+      ; W.string
           "another \
-           lineaorsietnaoiresntoiaernstoieanrstoiaernstoiearnostieanroseitnaoriestnoairesntoiaernsotieanrsotienaoriestnoairesntoiearnstoieanrst";
+           lineaorsietnaoiresntoiaernstoieanrstoiaernstoiearnostieanroseitnaoriestnoairesntoiaernsotieanrsotienaoriestnoairesntoiearnstoieanrst"
       ]
     |> Ui.keyboard_area (fun x ->
       match x with
@@ -762,9 +762,9 @@ let scroll_area_intern ?beforesize ?(max = false) ?focus ~state ~change t =
           Some
             {
               state with
-              visible = !visible;
-              total = !total;
-              bound = maxi 0 (!total - !visible);
+              visible = !visible
+            ; total = !total
+            ; bound = maxi 0 (!total - !visible)
             }
         else None
       in
@@ -868,33 +868,63 @@ let simpleSizeSensor ~size_var ui =
     if Lwd.peek size_var <> (w, h) then Lwd.set size_var (w, h))
 ;;
 
+(**selectable list item with a ui and some data *)
+type 'a selectable_item = {
+    data : 'a
+  (**info attached to each ui elment in the list,  used for filtering and on_select callback *)
+  ; ui : bool -> Ui.t
+}
+
+(** A simple widged to make an item selectable. Used in conjuction with selection_list_custom*)
+let selectable_item ui is_focused =
+  let height = Ui.layout_height ui in
+  let prefix =
+    if is_focused then I.char A.(bg A.blue) '>' 1 height else I.char A.empty ' ' 1 height
+  in
+  Ui.hcat [ prefix |> Ui.atom; ui ]
+;;
+
 (** Selection list that allows for custom handling of keyboard events.
-Scrolls when the selection reaches the lower third
-Only handles up and down keyboard events. Use [~custom_handler] to do handle confirming your selection and such
-*)
-let selection_list_custom ?(focus = Focus.make ()) ~custom_handler (items : 'a list) =
-  let length = List.length items in
+    Scrolls when the selection reaches the lower third
+    Only handles up and down keyboard events. Use [~custom_handler] to do handle confirming your selection and such *)
+let selection_list_custom
+  ?(focus = Focus.make ())
+  ?(on_selection_change = fun _ -> ())
+  ~custom_handler
+  (items : 'a selectable_item list Lwd.t)
+  =
   let selected_var = Lwd.var 0 in
   let selected_position = Lwd.var (0, 0) in
   (*handle selections*)
   let render_items =
+    let$* items =items in
+    (* First ensure if our list has gotten shorter we haven't selected off the list*)
+    (* We do this here to ensure that the selected var is updated before we render to avoid double rendering*)
+      let max_selected = (List.length items)-1  in
+      let selected = Lwd.peek selected_var in
+      if Int.min selected max_selected <> selected then selected_var $=max_selected;
+
     let$ focus = focus |> Focus.status
     and$ selected = Lwd.get selected_var in
     items
     |> List.mapi (fun i x ->
       if selected == i
       then
-        x true
+        x.ui true
         |> Ui.transient_sensor (fun ~x ~y ~w ~h () ->
           if (x, y) <> Lwd.peek selected_position then selected_position $= (x, y))
-      else x false)
+      else x.ui false)
     |> Ui.vcat
     |> Ui.keyboard_area ~focus (function
       | `Arrow `Up, [] ->
-        selected_var $= max (Lwd.peek selected_var - 1) 0;
+        let selected = max (Lwd.peek selected_var - 1) 0 in
+        selected_var $= selected;
+        List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
         `Handled
       | `Arrow `Down, [] ->
-        selected_var $= min (Lwd.peek selected_var + 1) ((items |> List.length) - 1);
+        let selected = min (Lwd.peek selected_var + 1) ((items |> List.length) - 1) in
+        selected_var $= selected;
+        List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
         `Handled
       | a ->
         custom_handler items selected_var a)
@@ -906,6 +936,7 @@ let selection_list_custom ?(focus = Focus.make ()) ~custom_handler (items : 'a l
     let shift_amount =
       let$ selected = Lwd.get selected_var
       and$ size = Lwd.get size_var
+      and$ length = items |>$ List.length
       and$ ren_size = Lwd.get rendered_size_var in
       (*portion of the total size of the element that is rendered*)
       let size_ratio =
@@ -933,13 +964,6 @@ let selection_list_custom ?(focus = Focus.make ()) ~custom_handler (items : 'a l
   scrollitems
 ;;
 
-(**filterable list item *)
-type 'a filterable_item = {
-  data : 'a;
-  (**info attached to each ui elment in the list,  used for filtering and on_select callback *)
-  ui : bool -> Ui.t;
-}
-
 (** A filterable selectable list.
 
     This version allows you to implement custom handlers for keys and only provides functionality for moving up and down the list.
@@ -950,17 +974,21 @@ let filterable_selection_list_custom
   ~(filter_predicate : string -> 'a -> bool)
   ~custom_handler
   ~filter_text_var
-  (items : 'a filterable_item list)
+  (items : 'a selectable_item list Lwd.var)
   =
-
   (*filter the list whenever the input changes*)
   let items =
-    let$* filter_text = filter_text_var |> Lwd.get in
-    let items = items |> List.filter (fun x -> filter_predicate filter_text x.data) in
     (* if we re-render we should always reset the selected list *)
-    selection_list_custom ~focus
-      ~custom_handler:(fun _ id x -> custom_handler items id x)
-      (items |> List.map (fun x -> x.ui))
+    let items =
+      let$ filter_text = filter_text_var |> Lwd.get
+      and$ items = items |> Lwd.get in
+      items |> List.filter (fun x -> filter_predicate filter_text x.data)
+    in
+    selection_list_custom
+      ~focus
+      ~custom_handler:(fun _ id x ->
+        custom_handler (Lwd.observe items |> Lwd.quick_sample) id x)
+      items
   in
   items
 ;;
@@ -1012,8 +1040,8 @@ let filterable_selection_list
     [
       filter_text_ui
       (*Ensures the filter text box never expands beyond the size of the list elements*)
-      |> border_box;
-      list_ui |> border_box;
+      |> border_box
+    ; list_ui |> border_box
     ]
   |> border_box
 ;;

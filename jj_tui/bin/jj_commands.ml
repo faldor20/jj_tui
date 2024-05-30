@@ -18,6 +18,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | Prompt of string * cmd_args
     | PromptThen of string * (string -> command_variant)
     | Prompt_I of string * cmd_args
+    | Prompt_Fn of string * (unit->cmd_args)
     | SubCmd of command list
     | Fun of (unit -> unit)
 
@@ -48,7 +49,7 @@ module Make (Vars : Global_vars.Vars) = struct
        | {
         key;
         description;
-        cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _;
+        cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _| Prompt_Fn _;
        } ->
          [ line key description ]
        | { key; description; cmd = SubCmd subs } ->
@@ -56,13 +57,7 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   let commands_list_ui commands =
-    commands
-    |> render_commands
-    |> I.vcat
-    |> Ui.atom
-    |> Lwd.pure
-
-|> Wd.scroll_area
+    commands |> render_commands |> I.vcat |> Ui.atom |> Lwd.pure |> Wd.scroll_area
   ;;
 
   let rec commandMapping =
@@ -88,8 +83,7 @@ module Make (Vars : Global_vars.Vars) = struct
                 cmd =
                   Fun
                     (fun _ ->
-                      ui_state.show_popup
-                      $= Some (commands_list_ui commandMapping, "Help");
+                      ui_state.show_popup $= Some (commands_list_ui commandMapping, "Help");
                       ui_state.input $= `Mode (fun _ -> `Unhandled));
               };
             ];
@@ -343,16 +337,20 @@ module Make (Vars : Global_vars.Vars) = struct
       ui_state.show_popup $= None;
       prompt str (`Cmd_I args);
       raise Handled
+    | Prompt_Fn (str, fn) ->
+      ui_state.show_popup $= None;
+      prompt str (`Cmd (fn()));
+      raise Handled
     | Fun func ->
       ui_state.show_popup $= None;
       func ();
       raise Handled
     | SubCmd sub_map ->
-      ui_state.show_popup
-      $= Some (commands_list_ui sub_map,  description);
+      ui_state.show_popup $= Some (commands_list_ui sub_map, description);
       ui_state.input $= `Mode (command_input ~is_sub:true sub_map);
       raise Handled
 
+  (** Try mapching the command mapping to the provided key and run the command if it matches*)
   and command_input ?(is_sub = false) keymap key =
     (* Use exceptions so we can break out of the list*)
     try
