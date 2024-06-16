@@ -27,7 +27,7 @@ jobs:
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: "ocaml-variants.5.2.0+options,ocaml-option-flambda,ocaml-option-musl,ocaml-option-stati"
+          ocaml-compiler: "ocaml-variants.5.2.0+options,ocaml-option-musl,ocaml-option-static"
 
       - run: opam install . --deps-only --with-test
 
