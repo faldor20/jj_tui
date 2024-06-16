@@ -23,12 +23,11 @@ jobs:
     steps:
       - name: Checkout tree
         uses: actions/checkout@v4
-      - name: Install system dependencies
-        run: sudo apt install musl-dev 
+
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: "ocaml-option-static,ocaml.5.1.1"
+          ocaml-compiler: "ocaml-variants.5.1.1+options,ocaml-option-static,ocaml-option-no-compression"
       - name: Install system dependencies
         run: sudo apt install musl-dev
       - run: opam install . --deps-only --with-test
