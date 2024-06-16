@@ -28,7 +28,8 @@ jobs:
         uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: "ocaml-variants.5.1.1+options,ocaml-option-static"
-
+      - name: Install system dependencies
+        run: sudo apt install musl-dev
       - run: opam install . --deps-only --with-test
 
       - run: opam exec -- dune build --profile static
