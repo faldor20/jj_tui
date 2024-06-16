@@ -28,7 +28,7 @@ jobs:
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: "ocaml-variants.5.1.1,ocaml-option-static"
+          ocaml-compiler: "ocaml-option-static,ocaml-5.1.1,"
       - name: Install system dependencies
         run: sudo apt install musl-dev
       - run: opam install . --deps-only --with-test
