@@ -27,7 +27,7 @@ jobs:
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: "5.1.1+musl+static"
+          ocaml-compiler: "5.1.1"
           dune-cache: true
 
       - run: opam install . --deps-only --with-test
