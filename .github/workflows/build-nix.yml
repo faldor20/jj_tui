@@ -52,7 +52,7 @@ jobs:
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: jj_tui_linux
+          name: jj_tui_macos
           path: |
             result/bin/jj_tui
             
