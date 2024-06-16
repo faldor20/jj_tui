@@ -27,7 +27,7 @@ jobs:
       - name: Set-up OCaml
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: "ocaml-5.1.1"
+          ocaml-compiler: "5.1.1"
   
       - run: opam install . --deps-only --with-test
 
