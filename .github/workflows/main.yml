@@ -29,7 +29,7 @@ jobs:
         with:
           ocaml-compiler: "ocaml-variants.5.1.1+options,ocaml-option-static,ocaml-option-no-compression"
       - name: Install system dependencies
-        run: sudo apt install musl-dev linux-headers-amd64
+        run: sudo apt install musl-dev linux-headers-$(uname -r)
       - run: opam install . --deps-only --with-test
 
       - run: opam exec -- dune build --profile static
