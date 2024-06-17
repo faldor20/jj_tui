@@ -905,6 +905,7 @@ let selection_list_custom
     let max_selected = List.length items - 1 in
     if Int.min selected max_selected <> selected then selected_var $= max_selected;
     let selected = Lwd.peek selected_var in
+    List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
     items
     |> List.mapi (fun i x ->
       if selected == i
@@ -918,14 +919,12 @@ let selection_list_custom
       | `Arrow `Up, [] ->
         let selected = max (Lwd.peek selected_var - 1) 0 in
         selected_var $= selected;
-        List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
         `Handled
       | `Arrow `Down, [] ->
         let selected =
           Int.max (min (Lwd.peek selected_var + 1) ((items |> List.length) - 1)) 0
         in
         selected_var $= selected;
-        List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
         `Handled
       | a ->
         custom_handler items selected_var a)
