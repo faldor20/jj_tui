@@ -3,8 +3,11 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
   open Notty
+  open Jj_tui
   module W = Nottui_widgets
   open Nottui
+  open! Jj_tui.Util
+  module Wd = Widgets
 
   type cmd_args = string list
 
@@ -52,7 +55,15 @@ module Make (Vars : Global_vars.Vars) = struct
          line key description :: render_commands ~sub_level:(sub_level + 1) subs
   ;;
 
-  let commands_list_ui commands = commands |> render_commands |> I.vcat |> Ui.atom
+  let commands_list_ui commands =
+    commands
+    |> render_commands
+    |> I.vcat
+    |> Ui.atom
+    |> Lwd.pure
+
+|> Wd.scroll_area
+  ;;
 
   let rec commandMapping =
     [
@@ -62,7 +73,7 @@ module Make (Vars : Global_vars.Vars) = struct
         cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui commandMapping, " Help ");
+              ui_state.show_popup $= Some (commands_list_ui commandMapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled));
       };
       {
@@ -78,7 +89,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   Fun
                     (fun _ ->
                       ui_state.show_popup
-                      $= Some (commands_list_ui commandMapping, " Help ");
+                      $= Some (commands_list_ui commandMapping, "Help");
                       ui_state.input $= `Mode (fun _ -> `Unhandled));
               };
             ];
@@ -291,7 +302,7 @@ module Make (Vars : Global_vars.Vars) = struct
     let prompt str cmd =
       ui_state.show_prompt
       $= Some
-           ( Printf.sprintf " %s " str,
+           ( str,
              "",
              function
              | `Finished str ->
@@ -338,7 +349,7 @@ module Make (Vars : Global_vars.Vars) = struct
       raise Handled
     | SubCmd sub_map ->
       ui_state.show_popup
-      $= Some (commands_list_ui sub_map, Printf.sprintf " %s " description);
+      $= Some (commands_list_ui sub_map,  description);
       ui_state.input $= `Mode (command_input ~is_sub:true sub_map);
       raise Handled
 

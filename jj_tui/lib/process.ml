@@ -1,37 +1,99 @@
+open Eio
 
-let mk_home_cmd cmd =
-  let home_dir = Unix.getenv "HOME" in
-  Printf.sprintf "HOME=%s %s" home_dir cmd
+module type t = sig
+  val jj : string list -> string
+  val switch_to_process : Eio_unix.Stdenv.base -> string list -> Process.exit_status
+end
 
-let proc_silent cmd =
-  let _exit_code = Unix.system (mk_home_cmd cmd) in
-  ()
+module Make (Vars : sig val get_eio_env: unit ->Eio_unix.Stdenv.base;; val add_cmd_log: string->unit end) = struct
+  (** Makes a new process that has acess to all input and output
+      This should be used for running other tui sub-programs *)
+  let switch_to_process env command =
+    Switch.run @@ fun sw ->
+    let mgr = Eio.Stdenv.process_mgr env in
+    let stdout = Eio.Stdenv.stdout env in
+    let stdin = Eio.Stdenv.stdin env in
+    let stderr = Eio.Stdenv.stderr env in
+    let proc = Eio.Process.spawn ~sw mgr ~stderr ~stdin ~stdout command in
+    proc |> Eio.Process.await
+  ;;
+  
 
-let proc cmd =
-  Printf.eprintf "🐚  %s\n%!" cmd;
-  proc_silent cmd
+  (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
+  let cmdArgs cmd args =
+    let env = Vars.get_eio_env () in
+    let mgr = Eio.Stdenv.process_mgr env in
+    let cwd = Eio.Stdenv.cwd env in
+    let out =
+      Eio_process.run
+        ~cwd
+        ~process_mgr:mgr
+        ~prog:cmd
+        ~args
+        ~f:(fun x ->
+          (match x.exit_status with
+           | `Exited i ->
+             if i == 0 then x.stdout else x.stdout ^ x.stderr
+           | `Signaled _ ->
+             x.stderr)
+          |> Base.Or_error.return)
+        ()
+    in
+    out |> Result.to_option |> Option.value ~default:"there was an error"
+  ;;
 
-let collect_chan (channel : in_channel) : string =
-  let rec loop acc =
-    match input_line channel with
-    | exception End_of_file -> acc
-    | line -> loop (acc ^ line ^ "\n")
-  in
-  loop ""
+  let jj_no_log args =
+    let res = cmdArgs "jj" (List.concat [ args; [ "--color"; "always" ] ]) in
+    if res |> String.length > 10000
+    then String.sub res 0 10000 ^ "...truncated because it's really long"
+    else res
+  ;;
 
-let proc_stdout cmd =
-  let ((proc_stdout, _proc_stdin, _proc_stderr) as process) =
-    Unix.open_process_full (mk_home_cmd cmd) [||]
-  in
-  let stdout_result = collect_chan proc_stdout in
-  let _ = Unix.close_process_full process in
-  String.trim stdout_result
+  let jj args =
+    (*update the command log*)
 
-let proc_stdOutAndErr cmd =
-  let ((proc_stdout, _proc_stdin, proc_stderr) as process) =
-    Unix.open_process_full (mk_home_cmd cmd) [||]
-  in
-  let stdout_result = collect_chan proc_stdout in
-  let stderr_result = collect_chan proc_stderr in
-  let _ = Unix.close_process_full process in
-  String.trim (stdout_result^stderr_result)
+      [ "jj" ] @ args |> String.concat " "|>Vars.add_cmd_log ;
+    jj_no_log args
+  ;;
+
+  (**gets the description of the current and previous change. Useful when squashing*)
+  let get_messages () =
+    (* let string_from_graph strings = *)
+    (* strings *)
+    (* |> List.map (fun x -> *)
+
+    (* if x |> String.length > 1 *)
+    (* then Base.String.sub x ~pos:3 ~len:((x |> String.length) - 3) *)
+    (* else "" *)
+    (* ) *)
+    (* |> String.concat "\n" *)
+    (* in *)
+    (* let output = jj [ "log"; "-T"; "description" ]|>String.trim in *)
+    (* let thisDesc, rest = *)
+    (* String.split_on_char '\n' output *)
+    (* |> Base.List.drop_while ~f:(fun x -> x |> String.starts_with ~prefix:"@"|>not) *)
+    (* |> Base.List.split_while ~f:(fun x -> x |> String.starts_with ~prefix:"◉" |> not) *)
+    (* in *)
+    (* match rest with *)
+    (* | hd :: tl -> *)
+    (* let tl = *)
+    (* tl |> Base.List.take_while ~f:(fun x -> x |> String.starts_with ~prefix:"│") *)
+    (* in *)
+    (* let prevDesc = hd :: tl in *)
+    (* (thisDesc |> string_from_graph, prevDesc |> string_from_graph) *)
+    (* | [] -> *)
+    (*TODO: give this a better error*)
+    (* ("error","missing commit") *)
+    let output =
+      jj
+        [
+          "log";"--no-graph"; "-T"; {|"::"++current_working_copy++"::\n"++description++"\n::end::\n"|};
+        ]
+      |> String.trim
+    in
+    let current, prev =
+      output |> OutputParsing.parse_descriptions |> Result.get_ok
+    in
+    current |> String.concat "", prev |> String.concat ""
+  ;;
+end

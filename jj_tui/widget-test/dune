@@ -1,0 +1,5 @@
+(executable
+ (public_name widget_test)
+ (name main)
+ (libraries jj_tui lwd nottui base stdio eio_main eio-process )
+ )
