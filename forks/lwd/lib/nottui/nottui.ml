@@ -736,6 +736,9 @@ struct
             let st' =
               if Focus.has_focus b.focus
               then b :: tl
+              else if Focus.has_focus a.focus
+              then a :: tl
+              (*If neither branch has focus we can just go down either*)
               else a :: b :: tl
             in
             iter st'

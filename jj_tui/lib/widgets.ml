@@ -897,15 +897,14 @@ let selection_list_custom
   let selected_position = Lwd.var (0, 0) in
   (*handle selections*)
   let render_items =
-    let$* items =items in
+    let$ focus = focus |> Focus.status
+    and$ items = items
+    and$ selected = Lwd.get selected_var in
     (* First ensure if our list has gotten shorter we haven't selected off the list*)
     (* We do this here to ensure that the selected var is updated before we render to avoid double rendering*)
-      let max_selected = (List.length items)-1  in
-      let selected = Lwd.peek selected_var in
-      if Int.min selected max_selected <> selected then selected_var $=max_selected;
-
-    let$ focus = focus |> Focus.status
-    and$ selected = Lwd.get selected_var in
+    let max_selected = List.length items - 1 in
+    if Int.min selected max_selected <> selected then selected_var $= max_selected;
+    let selected = Lwd.peek selected_var in
     items
     |> List.mapi (fun i x ->
       if selected == i
@@ -922,7 +921,9 @@ let selection_list_custom
         List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
         `Handled
       | `Arrow `Down, [] ->
-        let selected = min (Lwd.peek selected_var + 1) ((items |> List.length) - 1) in
+        let selected =
+          Int.max (min (Lwd.peek selected_var + 1) ((items |> List.length) - 1)) 0
+        in
         selected_var $= selected;
         List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
         `Handled

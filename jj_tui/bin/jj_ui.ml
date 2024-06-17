@@ -10,11 +10,6 @@ module Wd = Widgets
 module Ui = struct
   include Nottui.Ui
 
-  (* let pad ?(l=0) ?(r=0) ?(t=0) ?(b=0) ui= *)
-  (* match l,r,t,b with *)
-  (* |(0,0,_,_)-> *)
-  (* |(_,_,0,0)-> *)
-  (* |(_,_,_,_)-> *)
   let pad v h ui =
     let o_w = Ui.layout_width ui in
     let o_h = Ui.layout_height ui in
@@ -50,7 +45,8 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   let inputs ui =
-    let$ input_state = Lwd.get ui_state.input in
+    let$ input_state = Lwd.get ui_state.input
+    and$ ui = ui in
     let handler =
       match input_state with
       | `Normal ->
@@ -152,42 +148,40 @@ module Make (Vars : Global_vars.Vars) = struct
       let v_cmd_out = Lwd.var "" in
       let file_focus = Focus.make () in
       let graph_focus = Focus.make () in
-      let$* pane =
-        W.h_pane
-          (W.vbox
-             [
-               File_view.file_view ()
-               |>$ Ui.resize ~w:10 ~sw:1
-               |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
-             ; Wd.v_scroll_area (ui_state.jj_tree $-> Ui.atom)
-               |>$ (Ui.resize ~mw:1000 ~sh:3 ~w:10 ~sw:1
-                    >> Ui.keyboard_area (function
-                      | `ASCII k, [] ->
-                        Jj_commands.command_input Jj_commands.commandMapping k
-                      | _ ->
-                        `Unhandled))
-               |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
-             ; Wd.v_scroll_area (ui_state.jj_branches $-> Ui.atom)
-               |>$ Ui.resize ~mw:1000 ~w:10 ~sw:1 ~sh:1
-               |> Wd.border_box_focusable ~pad_h:0
-             ; Wd.v_scroll_area
-                 (ui_state.command_log
-                  |> Lwd.get
-                  |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
-               |>$ Ui.resize ~sh:1
-             ; v_cmd_out $-> W.string
-             ])
-          (let$* file_focus = file_focus |> Focus.status in
-           if file_focus |> Focus.has_focus
-           then
-             let$ status = File_view.file_status () in
-             status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
-           else
-             Wd.v_scroll_area
-               ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
-        |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
-        |> Widgets.popup ~show_popup_var:ui_state.show_popup
-      in
-      pane |> inputs
+      W.h_pane
+        (W.vbox
+           [
+             File_view.file_view ()
+             |>$ Ui.resize ~w:10 ~sw:1
+             |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
+           ; Wd.v_scroll_area (ui_state.jj_tree $-> Ui.atom)
+             |>$ Ui.resize ~mw:1000 ~sh:3 ~w:10 ~sw:1
+             |>$ Ui.keyboard_area (function
+               | `ASCII k, [] ->
+                 Jj_commands.command_input Jj_commands.commandMapping k
+               | _ ->
+                 `Unhandled)
+             |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
+           ; Wd.v_scroll_area (ui_state.jj_branches $-> Ui.atom)
+             |>$ Ui.resize ~mw:1000 ~w:10 ~sw:1 ~sh:1
+             |> Wd.border_box_focusable ~pad_h:0
+           ; Wd.v_scroll_area
+               (ui_state.command_log
+                |> Lwd.get
+                |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
+             |>$ Ui.resize ~sh:1
+           ; v_cmd_out $-> W.string
+           ])
+        (let$* file_focus = file_focus |> Focus.status in
+         if file_focus |> Focus.has_focus
+         then
+           let$ status = File_view.file_status () in
+           status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
+         else
+           Wd.v_scroll_area
+             ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
+      |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
+      |> Widgets.popup ~show_popup_var:ui_state.show_popup
+      |> inputs
   ;;
 end
