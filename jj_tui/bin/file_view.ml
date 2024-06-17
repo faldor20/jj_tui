@@ -25,6 +25,17 @@ module Make (Vars : Global_vars.Vars) = struct
                   [ "squash"; "-u"; "--from"; "@"; "--into"; rev; Lwd.peek selected_file ]
             )
       }
+    ; {
+        key = 'd'
+      ; description = "Restore to previous revision (git discard)"
+      ; cmd =
+          Dynamic
+            (fun _ ->
+              let selected = Lwd.peek selected_file in
+              confirm_prompt
+                ("discard all changes to '" ^ selected ^ "' in this revision")
+                (Cmd [ "restore"; selected ]))
+      }
     ]
   ;;
 

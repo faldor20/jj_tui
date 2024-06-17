@@ -147,6 +147,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | `Main ->
       let v_cmd_out = Lwd.var "" in
       let file_focus = Focus.make () in
+      Focus.request file_focus;
       let graph_focus = Focus.make () in
       W.h_pane
         (W.vbox
