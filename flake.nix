@@ -111,9 +111,9 @@
           packages = {
             default = (jj_tui pkgs ocamlPackages
               "release").jj_tui; # Development environment output
-            static =
-              (jj_tui pkgs.pkgsStatic pkgs.pkgsStatic.ocaml-ng.ocamlPackages_5_1
-                "static").jj_tui; # Development environment output
+            static = (jj_tui pkgs.pkgsCross.musl64
+              pkgs.pkgsCross.musl64.ocaml-ng.ocamlPackages_5_1
+              "static").jj_tui; # Development environment output
           };
           devShells = {
             default = mkShell.override { stdenv = pkgs.gccStdenv; } {
