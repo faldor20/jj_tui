@@ -68,15 +68,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1718585467,
-        "narHash": "sha256-YgS1N7GrYe2/sRGRwJkjv5RiJLOKYPB0GXBu8+fe0t0=",
-        "owner": "faldor20",
+        "lastModified": 1718572869,
+        "narHash": "sha256-Fendny0DmXnJXffYPTIyeixdxkNFD7CBuoisQ2U37WU=",
+        "owner": "nix-ocaml",
         "repo": "nix-overlays",
-        "rev": "4ee8648df178d92eb07f5733c5d7e01872423a15",
+        "rev": "e83c9a2411b1801540622d4c5e66db3f809b5f80",
         "type": "github"
       },
       "original": {
-        "owner": "faldor20",
+        "owner": "nix-ocaml",
         "repo": "nix-overlays",
         "type": "github"
       }
