@@ -7,7 +7,7 @@
     nixpkgs.url = "nixpkgs-unstable"; # also valid: "nixpkgs"
 
     ocaml-overlay = {
-      url = "github:faldor20/nix-overlays";
+      url = "github:nix-ocaml/nix-overlays";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -106,19 +106,7 @@
           _module.args.pkgs = import inputs.nixpkgs {
             inherit system;
             config.allowUnfree = true;
-            overlays = [
-              ocaml-overlay.overlays.default
-
-              # (self: super: {
-              #   ocaml-ng.ocamlPackages_5_1.logs =
-              #     (super.ocaml-ng.ocamlPackages_5_1.logs.override { jsooSupport = false; }).overrideAttrs
-              #     (o: {
-              #       pname = "logs";
-              #       propagatedBuildInputs = o.propagatedBuildInputs
-              #         ++ [ super.ocaml-ng.ocamlPackages_5_1.topkg ];
-              #     });
-              # })
-            ];
+            overlays = [ ocaml-overlay.overlays.default ];
           };
           packages = {
             default = (jj_tui pkgs ocamlPackages
