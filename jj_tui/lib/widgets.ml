@@ -5,7 +5,6 @@ open! Util
 open! Widgets_citty
 module W = Nottui_widgets
 
-
 let dynamic_width = dynamic_width
 
 let dynamic_size ?(w = 10) ~sw ?(h = 10) ~sh f =
@@ -615,7 +614,7 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
                  ~on_submit:(fun (str, _) -> on_exit (`Finished str))
              ]
          in
-         let$* prompt_val, _ = prompt_val 
+         let$* prompt_val, _ = prompt_val
          and$ focus_status = focus |> Focus.status in
          let label_bottom =
            if char_count
@@ -797,7 +796,6 @@ let v_scroll_area ui =
   ui |> W.vscroll_area ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
 ;;
 
-
 (**This is a simple popup that can show ontop of *)
 let popup ~show_popup_var ui =
   let popup_ui =
@@ -886,15 +884,18 @@ let selection_list_custom
   (*handle selections*)
   let render_items =
     let$ focus = focus |> Focus.status
-    and$ items = items
-    and$ selected = 
-      Lwd.get selected_var in
-    (* First ensure if our list has gotten shorter we haven't selected off the list*)
-    (* We do this here to ensure that the selected var is updated before we render to avoid double rendering*)
-    let max_selected = Int.max 0 (List.length items - 1 ) in
-    if Int.min selected max_selected <> selected then selected_var $= max_selected;
-    let selected = Lwd.peek selected_var in
-    List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
+    and$ items, selected =
+      (* This doesn't depend on changes in focus so we run it with just the items and selected*)
+      let$ items = items
+      and$ selected = Lwd.get selected_var in
+      (* First ensure if our list has gotten shorter we haven't selected off the list*)
+      (* We do this here to ensure that the selected var is updated before we render to avoid double rendering*)
+      let max_selected = Int.max 0 (List.length items - 1) in
+      if Int.min selected max_selected <> selected then selected_var $= max_selected;
+      let selected = Lwd.peek selected_var in
+      List.nth_opt items selected |> Option.iter (fun x ->  on_selection_change x.data);
+      items, selected
+    in
     items
     |> List.mapi (fun i x ->
       if selected == i

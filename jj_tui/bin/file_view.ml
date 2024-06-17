@@ -39,7 +39,7 @@ module Make (Vars : Global_vars.Vars) = struct
     ]
   ;;
 
-  let file_view () =
+  let file_view sw () =
     let file_uis =
       let$ files = Lwd.get Vars.ui_state.jj_change_files in
       files
@@ -47,7 +47,9 @@ module Make (Vars : Global_vars.Vars) = struct
         Wd.{ data = file; ui = Wd.selectable_item (W.string file) })
     in
     Wd.selection_list_custom
-      ~on_selection_change:(Lwd.set selected_file)
+      ~on_selection_change:(fun x ->
+        Eio.Fiber.fork ~sw @@ fun _ ->
+        Vars.update_ui_state @@ fun _ -> Lwd.set selected_file x)
       ~custom_handler:(fun _ _ key ->
         match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
       file_uis
@@ -56,6 +58,6 @@ module Make (Vars : Global_vars.Vars) = struct
   (**Get the status for the currently selected file*)
   let file_status () =
     let$ selected = Lwd.get selected_file in
-    jj_no_log [ "diff"; selected ]
+    if selected != "" then jj_no_log [ "diff"; selected ] else ""
   ;;
 end

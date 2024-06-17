@@ -88,6 +88,7 @@ let map2 x y ~f = inj (
     | x, y -> operator (Map2 (x, y, f))
   )
 
+
 let pair x y = inj (
     match prj x, prj y with
     | Pure vx, Pure vy -> Pure (vx, vy)

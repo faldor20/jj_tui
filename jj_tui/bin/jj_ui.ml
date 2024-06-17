@@ -134,7 +134,7 @@ module Make (Vars : Global_vars.Vars) = struct
       let clock = Eio.Stdenv.clock env in
       while true do
         Eio.Time.sleep clock 5.0;
-        on_change ()
+        on_change ~cause_snapshot:true ();
       done;
       `Stop_daemon);
     let$* running = Lwd.get ui_state.view in
@@ -153,7 +153,7 @@ module Make (Vars : Global_vars.Vars) = struct
       W.h_pane
         (W.vbox
            [
-             File_view.file_view ()
+             File_view.file_view sw ()
              |>$ Ui.resize ~w:10 ~sw:1
              |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
            ; Wd.v_scroll_area (ui_state.jj_tree $-> Ui.atom)
