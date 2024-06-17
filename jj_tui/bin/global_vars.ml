@@ -75,4 +75,5 @@ module Vars : Vars = struct
   let get_eio_env () = (Option.get !eio).env
   let get_eio_vars () = Option.get !eio
   let get_term () = Option.get !term
+
 end

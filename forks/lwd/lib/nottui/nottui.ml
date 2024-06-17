@@ -11,6 +11,12 @@ sig
   val release_var : var -> unit
   val release : handle -> unit
 
+  val request_reversable : handle -> unit
+  (** Request the focus and add to the focus stack *)
+
+  val release_reversable : handle -> unit
+  (** Release the focus (if the handle has it) and restore the last focus on the stack *)
+
   type status =
     | Empty
     | Handle of int * var
@@ -22,6 +28,8 @@ sig
   val has_focus : status -> bool
   val merge : status -> status -> status
 end = struct
+  (*The focus system works by having a clock which changes each time the focus changes. An item has focus so long as its `var` is greater than 0
+  When we render the UI we go through and set anything with a focus value not matching that of the clock to 0  *)
 
   type var = int Lwd.var
 
@@ -32,9 +40,11 @@ end = struct
 
   type handle = var * status Lwd.t
 
-  let make () =
+  let make ():handle =
     let v = Lwd.var 0 in
-    (v, Lwd.map ~f:(fun i -> Handle (i, v)) (Lwd.get v))
+    (v,
+    (Lwd.get v)|> Lwd.map ~f:(fun i -> Handle (i, v)) 
+     )
 
   let empty : status = Empty
 
@@ -46,15 +56,37 @@ end = struct
 
   let clock = ref 0
 
+    let currently_focused:var ref= ref (make()|>fst)
+
+    let focus_stack:var Stack.t= Stack.create()
+
   let request_var (v : var) =
     incr clock;
-    Lwd.set v !clock
+    Lwd.set v !clock;
+    currently_focused := v;
+    ;;
   let release_var (v : var) =
     incr clock;
     Lwd.set v 0
-
-  let request (v, _ : handle) = request_var v
+  ;;
+  let request ((v, _ ): handle) = 
+    request_var v;
+    ;;
   let release (v, _ : handle) = incr clock; Lwd.set v 0
+
+
+  let request_reversable (v, _ : handle)=
+      focus_stack|>Stack.push !currently_focused;
+      request_var v ;
+  ;;
+
+  let release_reversable (v, _ : handle)=
+    (* we should only release if we actually have the focus*)
+    if (Lwd.peek v)>0 then
+    focus_stack|>Stack.pop |>request_var;
+
+  ;;
+
 
   let merge s1 s2 : status = match s1, s2 with
     | Empty, x | x, Empty -> x
@@ -66,7 +98,26 @@ end = struct
       Conflict i2
     | Conflict _, (Handle (_, _) | Conflict _) -> s1
     | Handle (i1, _), (Handle (_, _) | Conflict _) -> Conflict i1
+
+    (*
+    Can i get the currently focused focus handle??
+
+    I could modify the focus handle so that it stores the last focused thing. That way when i call focus release on it it can return us to that. In a sense this would be almost like a linked list.
+    I have an issue that if the focus isn't stored in the UI somewhere if i have two concurrent UIs their focus control will collide. Is this a real concern? Could I store the current focus in the root node, or as part of the UI rendering?
+
+    The renderer could store the currently focused item.
+    When we walk the focus tree, if the items are focused we keep walking untill we hit the end and then we assign that as the focused item.
+    When switching focus we use that focused item.
+
+
+    Would could have a FocusManager module. It stores the most recently focused item and also has the focus heap. When you request focus it can either be a queue adding request or a non queue adding request. When i release focus it will always release back to the last item in the heap
+    *)
+
+
+
+  
 end
+
 
 module Gravity :
 sig
@@ -410,6 +461,7 @@ struct
 
   let size t = t.size
 
+
   let solve_focus ui i =
     let rec aux ui =
       match ui.focus with
@@ -529,6 +581,7 @@ struct
         update_sensors ox oy sw sh mw mh b
     )
 
+  (** goes through all focuses and attempts to resolve any that have changed*)
   let update_focus ui =
     match ui.focus with
     | Focus.Empty | Focus.Handle _ -> ()
@@ -738,7 +791,7 @@ struct
               then b :: tl
               else if Focus.has_focus a.focus
               then a :: tl
-              (*If neither branch has focus we can just go down either*)
+              (*If neither branch has focus we can just go down both*)
               else a :: b :: tl
             in
             iter st'

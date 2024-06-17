@@ -50,6 +50,13 @@ sig
       - the result can evolve over time, parties can join or leave, or bid
         "more".
   *)
+
+  val request_reversable : handle -> unit
+  (** Request the focus and add to the focus stack *)
+
+  val release_reversable : handle -> unit
+  (** Release the focus (if the handle has it) and restore the last focus on the stack *)
+
 end
 
 (** {1 Gravity (horizontal and vertical alignments)} *)

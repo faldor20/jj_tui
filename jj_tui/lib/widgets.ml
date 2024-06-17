@@ -5,6 +5,7 @@ open! Util
 open! Widgets_citty
 module W = Nottui_widgets
 
+
 let dynamic_width = dynamic_width
 
 let dynamic_size ?(w = 10) ~sw ?(h = 10) ~sh f =
@@ -593,13 +594,13 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
       show_prompt_val
       |> Option.map @@ fun (label, pre_fill, on_exit) ->
          let on_exit result =
-           Focus.release focus;
+           Focus.release_reversable focus;
            show_prompt_var $= None;
            prompt_input $= ("", 0);
            on_exit result
          in
          (*we need focus because the base ui is rendering first and so *)
-         Focus.request focus;
+         Focus.request_reversable focus;
          (*prefill the prompt if we want to *)
          if prompt_input |> Lwd.peek |> fst == ""
          then prompt_input $= (pre_fill, pre_fill |> String.length);
@@ -614,17 +615,17 @@ let general_prompt ?(focus = Focus.make ()) ?(char_count = false) ~show_prompt_v
                  ~on_submit:(fun (str, _) -> on_exit (`Finished str))
              ]
          in
-         let$* prompt_val, _ = prompt_val in
-         let$* focus = focus |> Focus.status in
+         let$* prompt_val, _ = prompt_val 
+         and$ focus_status = focus |> Focus.status in
          let label_bottom =
            if char_count
            then Some (prompt_val |> String.length |> Int.to_string)
            else None
          in
          prompt_field
-         |> border_box ~label_top:label ?label_bottom
+         |> border_box_focusable ~focus ~label_top:label ?label_bottom
          |> clear_bg
-         |>$ Ui.event_filter ~focus (fun event ->
+         |>$ Ui.event_filter ~focus:focus_status (fun event ->
            match event with
            | `Key (`Escape, _) ->
              on_exit `Closed;
@@ -796,19 +797,6 @@ let v_scroll_area ui =
   ui |> W.vscroll_area ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
 ;;
 
-(**This is a simple popup that can show ontop of *)
-let popup ~show_popup_var ui =
-  let popup_ui =
-    let$* show_popup = Lwd.get show_popup_var in
-    match show_popup with
-    | Some (content, label) ->
-      let prompt_field = content in
-      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label |> clear_bg
-    | None ->
-      Ui.empty |> Lwd.pure
-  in
-  W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
-;;
 
 (**This is a simple popup that can show ontop of *)
 let popup ~show_popup_var ui =
@@ -899,7 +887,8 @@ let selection_list_custom
   let render_items =
     let$ focus = focus |> Focus.status
     and$ items = items
-    and$ selected = Lwd.get selected_var in
+    and$ selected = 
+      Lwd.get selected_var in
     (* First ensure if our list has gotten shorter we haven't selected off the list*)
     (* We do this here to ensure that the selected var is updated before we render to avoid double rendering*)
     let max_selected = Int.max 0 (List.length items - 1 ) in
