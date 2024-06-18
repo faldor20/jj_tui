@@ -115,9 +115,9 @@ let border_box_intern
   pad_h
   input
   =
-     (*can't go below 1 internal width or things get weird*)
-     let h=if pad_h<1 then Int.max h 1 else h in
-     let w=if pad_w<1 then Int.max w 1 else w in
+  (*can't go below 1 internal width or things get weird*)
+  let h = if pad_h < 1 then Int.max h 1 else h in
+  let w = if pad_w < 1 then Int.max w 1 else w in
   (* this is a weird quirk, but we have to be careful of runaway size expansion.
      If we increase the width of the space by making the vbar longer than the input ui element it will be able to expand to fill that space.
      That will then increase the vbar and increase the height etc etc untill the max height is reached*)
@@ -1039,3 +1039,9 @@ let filterable_selection_list
     ]
   |> border_box
 ;;
+
+(** 
+[on_focus f ui]
+
+Transforms the Ui with function [f] if the Ui is focused *)
+let on_focus f ui = if ui |> Ui.has_focus then ui |> f else ui

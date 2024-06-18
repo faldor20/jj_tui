@@ -15,7 +15,6 @@ module Ui = struct
     let o_h = Ui.layout_height ui in
     Ui.resize ~w:(o_w + h) ~h:(o_h + v) ui
   ;;
-
 end
 
 module Make (Vars : Global_vars.Vars) = struct
@@ -154,7 +153,6 @@ module Make (Vars : Global_vars.Vars) = struct
       Focus.request file_focus;
       let graph_focus = Focus.make () in
       let branch_focus = Focus.make () in
-      let summary_focus= Focus.make () in
       W.hbox
         [
           W.vbox
@@ -170,23 +168,22 @@ module Make (Vars : Global_vars.Vars) = struct
                 | _ ->
                   `Unhandled)
               |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
-            ; (let$ ui = Wd.scroll_area (ui_state.jj_branches $-> Ui.atom)
-               and$ focus = Focus.status branch_focus in
+            ; (let$ ui = Wd.scroll_area (ui_state.jj_branches $-> Ui.atom) in
                ui
                |> Ui.resize
                     ~w:5
                     ~sw:1
-                    ~sh:(if focus |> Focus.has_focus then 3 else 0)
+                    ~sh:(if ui |> Ui.has_focus then 3 else 0)
                     ~h:2
                     ~mh:1000
                     ~mw:1000)
               |> Wd.border_box_focusable ~focus:branch_focus ~pad_h:0
-              (* ; Wd.v_scroll_area *)
-              (* (ui_state.command_log *)
-              (* |> Lwd.get *)
-              (* |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist)) *)
-              (* |>$ Ui.resize ~sw:1 ~w:0 ~sh:1 *)
-              (* ; v_cmd_out $-> W.string *)
+              ; Wd.v_scroll_area
+              (ui_state.command_log
+              |> Lwd.get
+              |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
+              |>$ Ui.resize ~sw:1 ~w:0  ~sh:1
+              ; v_cmd_out $-> W.string
             ]
         ; (let$* file_focus = file_focus |> Focus.status in
            if file_focus |> Focus.has_focus
@@ -195,18 +192,10 @@ module Make (Vars : Global_vars.Vars) = struct
              status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
            else (fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show)
           |> Wd.scroll_area
-          |>(fun ui->
-          let$ ui = ui
-          and$ focus= Focus.status summary_focus |>$ Focus.has_focus in
           (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
-          let sw,mw=
-              if focus then 
-              (3,1000 )
-              else
-              (2,100 )
-            in
-          ui|>Ui.resize ~w:0 ~sh:3 ~sw ~mw  ~mh:10000)
-          |> Wd.border_box_focusable ~focus:summary_focus
+          |>$ (Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:100 ~mh:10000
+               >> Wd.on_focus (Ui.resize ~sw:3 ~mw:1000))
+          |> Wd.border_box_focusable
         ]
       |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
       |> Widgets.popup ~show_popup_var:ui_state.show_popup
