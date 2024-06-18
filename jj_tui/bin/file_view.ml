@@ -12,11 +12,11 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let selected_file = Lwd.var ""
 
-  let rec  command_mapping =
+  let rec command_mapping =
     [
       {
         key = 'm'
-      ; description = "Move commit"
+      ; description = "Move file to other commit"
       ; cmd =
           PromptThen
             ( "Revision to move file to"
@@ -35,8 +35,8 @@ module Make (Vars : Global_vars.Vars) = struct
               confirm_prompt
                 ("discard all changes to '" ^ selected ^ "' in this revision")
                 (Cmd [ "restore"; selected ]))
-      };
-      {
+      }
+    ; {
         key = 'h'
       ; description = "Show help"
       ; cmd =

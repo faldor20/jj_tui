@@ -7,7 +7,6 @@ open Jj_tui
 module W = Nottui_widgets
 module Wd = Widgets
 
-
 module Ui = struct
   include Nottui.Ui
 
@@ -135,9 +134,9 @@ module Make (Vars : Global_vars.Vars) = struct
       while true do
         Eio.Time.sleep clock 5.0;
         (*we need to lock this becasue we could end up updating while the ui is rendering*)
-        Vars.render_mutex|>Eio.Mutex.lock;
+        Vars.render_mutex |> Eio.Mutex.lock;
         update_status ~cause_snapshot:true ();
-        Vars.render_mutex|>Eio.Mutex.unlock;
+        Vars.render_mutex |> Eio.Mutex.unlock
       done;
       `Stop_daemon);
     let$* running = Lwd.get ui_state.view in
