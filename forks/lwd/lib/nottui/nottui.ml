@@ -284,6 +284,8 @@ struct
   let layout_stretch_width t = t.sw
   let layout_height t = t.h
   let layout_stretch_height t = t.sh
+  let layout_max_width t = t.w
+  let layout_max_height t = t.w
 
   let cache : cache =
     { vx = Interval.zero; vy = Interval.zero; image = I.empty }

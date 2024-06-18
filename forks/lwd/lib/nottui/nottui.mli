@@ -144,6 +144,12 @@ sig
   val layout_stretch_height : t -> int
   (** Get the layout height strength of an UI element *)
 
+  val layout_max_width :t ->int
+  (** Get the layout max_width of an UI element *)
+
+  val layout_max_height  :t ->int
+  (** Get the layout max_height of an UI element *)
+
   (** {1 Primitive images} *)
 
   val empty : t

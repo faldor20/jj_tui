@@ -15,6 +15,7 @@ module Ui = struct
     let o_h = Ui.layout_height ui in
     Ui.resize ~w:(o_w + h) ~h:(o_h + v) ui
   ;;
+
 end
 
 module Make (Vars : Global_vars.Vars) = struct
@@ -153,6 +154,7 @@ module Make (Vars : Global_vars.Vars) = struct
       Focus.request file_focus;
       let graph_focus = Focus.make () in
       let branch_focus = Focus.make () in
+      let summary_focus= Focus.make () in
       W.hbox
         [
           W.vbox
@@ -193,8 +195,18 @@ module Make (Vars : Global_vars.Vars) = struct
              status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
            else (fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show)
           |> Wd.scroll_area
-          |>$ Ui.resize ~w:0 ~sh:3 ~sw:2  ~mh:10000
-          |> Wd.border_box_focusable
+          |>(fun ui->
+          let$ ui = ui
+          and$ focus= Focus.status summary_focus |>$ Focus.has_focus in
+          (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
+          let sw,mw=
+              if focus then 
+              (3,1000 )
+              else
+              (2,100 )
+            in
+          ui|>Ui.resize ~w:0 ~sh:3 ~sw ~mw  ~mh:10000)
+          |> Wd.border_box_focusable ~focus:summary_focus
         ]
       |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
       |> Widgets.popup ~show_popup_var:ui_state.show_popup
