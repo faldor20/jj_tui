@@ -157,18 +157,18 @@ module Make (Vars : Global_vars.Vars) = struct
           W.vbox
             [
               File_view.file_view sw ()
-              |>$ Ui.resize ~w:5 ~sw:1
+              |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000
               |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
-            ; Wd.v_scroll_area (ui_state.jj_tree $-> Ui.atom)
-              |>$ Ui.resize ~sh:3 ~w:5 ~sw:1
+            ; Wd.scroll_area (ui_state.jj_tree $-> Ui.atom)
+              |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000~h:10~mh:1000
               |>$ Ui.keyboard_area (function
                 | `ASCII k, [] ->
                   Jj_commands.handleInputs Jj_commands.command_mapping k
                 | _ ->
                   `Unhandled)
               |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
-            ; Wd.v_scroll_area (ui_state.jj_branches $-> Ui.atom)
-              |>$ Ui.resize ~w:5 ~sw:1 ~sh:1
+            ; Wd.scroll_area(ui_state.jj_branches $-> Ui.atom)
+              |>$ Ui.resize ~w:5 ~sw:1 ~sh:1 ~h:5 ~mh:1000 ~mw:1000
               |> Wd.border_box_focusable ~pad_h:0
               (* ; Wd.v_scroll_area *)
               (* (ui_state.command_log *)
@@ -184,7 +184,7 @@ module Make (Vars : Global_vars.Vars) = struct
              status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
            else (fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show)
           |> Wd.v_scroll_area
-          |>$ Ui.resize ~sh:3 ~sw:1 ~mw:10000 ~mh:10000
+          |>$ Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:10000 ~mh:10000
           |> Wd.border_box_focusable
         ]
       |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt

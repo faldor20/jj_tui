@@ -16,4 +16,5 @@
 
 ** Make better use uf `jj log -r '@|@-' -T 'template'` style commands
 ** Make window the shows current file status and window that shows branches
+** Mode that turns on --ignore-immutable so we can edit the full history
 

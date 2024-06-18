@@ -694,7 +694,7 @@ let scroll_area_intern ?beforesize ?(max = false) ?focus ~state ~change t =
   let h_total = ref (-1) in
   let scroll position bound handle delta =
     let newPos = position + delta in
-    let newPos = clampi newPos ~min:0 ~max:bound in
+    let newPos = clampi newPos ~min:0 ~max:(bound) in
     if newPos <> position then handle newPos;
     `Handled
   in
@@ -740,7 +740,10 @@ let scroll_area_intern ?beforesize ?(max = false) ?focus ~state ~change t =
     let tw, th = Ui.layout_width t, Ui.layout_height t in
     let mw, mh = if max then Some tw, Some th else None, None in
     t
-    |> Ui.resize ~w:5 ~sw:1
+    |> Ui.resize ~w:5 ~sw:1 ~h:2 ~sh:1
+    |> Ui.shift_area state_w.position state_h.position
+    (* |>Ui.join_y (Ui.atom (I.string A.empty (string_of_int state_w.visible))) *)
+    (*TODO: make an alternative that has this already set*)
     |> Ui.size_sensor (fun ~w ~h ->
       let sense v_spec v state total visible =
         let tchange =
@@ -779,9 +782,6 @@ let scroll_area_intern ?beforesize ?(max = false) ?focus ~state ~change t =
         change `ContentH (state_w, h)
       | None, None ->
         ())
-    |> Ui.shift_area state_w.position state_h.position
-    (* |>Ui.join_y (Ui.atom (I.string A.empty (string_of_int state_w.visible))) *)
-    (*TODO: make an alternative that has this already set*)
     |> Ui.mouse_area (scroll_handler state_w state_h)
     |> Ui.keyboard_area ?focus (focus_handler state_w state_h))
 ;;
@@ -893,7 +893,7 @@ let selection_list_custom
       let max_selected = Int.max 0 (List.length items - 1) in
       if Int.min selected max_selected <> selected then selected_var $= max_selected;
       let selected = Lwd.peek selected_var in
-      List.nth_opt items selected |> Option.iter (fun x ->  on_selection_change x.data);
+      List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
       items, selected
     in
     items
