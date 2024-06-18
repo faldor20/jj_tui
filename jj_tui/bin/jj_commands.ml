@@ -96,7 +96,8 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Fun
                     (fun _ ->
-                      ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
+                      ui_state.show_popup
+                      $= Some (commands_list_ui command_mapping, "Help");
                       ui_state.input $= `Mode (fun _ -> `Unhandled))
               }
             ]
@@ -121,7 +122,20 @@ module Make (Vars : Global_vars.Vars) = struct
       ; description = "Edit the next child change"
       ; cmd = Cmd [ "next"; "--edit" ]
       }
-    ; { key = 'i'; cmd = Cmd [ "new" ]; description = "Make a new empty change" }
+    ; {
+        key = 'i'
+      ; cmd =
+          SubCmd
+            [
+              { key = 'i'; description = "Make a new empty change"; cmd = Cmd [ "new" ] }
+            ; {
+                key = 'a'
+              ; description = "Insert a new empty change after a specific revision"
+              ; cmd = Prompt ("New change after commit:", [ "new" ])
+              }
+            ]
+      ; description = "Make a new empty change"
+      }
     ; {
         key = 'c'
       ; description = "Describe this change and move on (same as `describe` then `new`) "
@@ -349,7 +363,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | Fun func ->
       ui_state.show_popup $= None;
       func ();
-      Global_funcs.update_status();
+      Global_funcs.update_status ();
       raise Handled
     | SubCmd sub_map ->
       ui_state.show_popup $= Some (commands_list_ui sub_map, description);
@@ -359,7 +373,7 @@ module Make (Vars : Global_vars.Vars) = struct
       f () |> handleCommand description
 
   (** Try mapching the command mapping to the provided key and run the command if it matches*)
-  and command_input ~is_sub  keymap key =
+  and command_input ~is_sub keymap key =
     (* Use exceptions so we can break out of the list*)
     try
       keymap
@@ -382,8 +396,11 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   (** Handles input and sub_commands*)
-  let handleInputs command_mapping=
-    match (Lwd.peek ui_state.input) with
-    |`Mode mode->mode
-    |`Normal ->command_input ~is_sub:false command_mapping
+  let handleInputs command_mapping =
+    match Lwd.peek ui_state.input with
+    | `Mode mode ->
+      mode
+    | `Normal ->
+      command_input ~is_sub:false command_mapping
+  ;;
 end
