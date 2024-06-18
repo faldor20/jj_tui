@@ -289,7 +289,7 @@ struct
     { vx = Interval.zero; vy = Interval.zero; image = I.empty }
 
   let empty : t =
-    { w = 0; sw = 0; h = 0; sh = 0; mw= 10000; mh=10000; flags = flags_none;
+    { w = 0; sw = 0; h = 0; sh = 0; mw= 0; mh=0; flags = flags_none;
       focus = Focus.empty; desc = Atom I.empty;
       sensor_cache = None; cache }
 

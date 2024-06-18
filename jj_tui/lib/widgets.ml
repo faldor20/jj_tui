@@ -115,6 +115,9 @@ let border_box_intern
   pad_h
   input
   =
+     (*can't go below 1 internal width or things get weird*)
+     let h=if pad_h<1 then Int.max h 1 else h in
+     let w=if pad_w<1 then Int.max w 1 else w in
   (* this is a weird quirk, but we have to be careful of runaway size expansion.
      If we increase the width of the space by making the vbar longer than the input ui element it will be able to expand to fill that space.
      That will then increase the vbar and increase the height etc etc untill the max height is reached*)
@@ -694,7 +697,7 @@ let scroll_area_intern ?beforesize ?(max = false) ?focus ~state ~change t =
   let h_total = ref (-1) in
   let scroll position bound handle delta =
     let newPos = position + delta in
-    let newPos = clampi newPos ~min:0 ~max:(bound) in
+    let newPos = clampi newPos ~min:0 ~max:bound in
     if newPos <> position then handle newPos;
     `Handled
   in
@@ -896,6 +899,7 @@ let selection_list_custom
       List.nth_opt items selected |> Option.iter (fun x -> on_selection_change x.data);
       items, selected
     in
+    (*Ui.vcat can be a little weird when the*)
     items
     |> List.mapi (fun i x ->
       if selected == i
