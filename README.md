@@ -1,4 +1,5 @@
 # Jujutsu TUI
+[![nix](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml/badge.svg)](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml)
 A WIP TUI for the new version control system Jujutsu 
 ![screenshot](./screenshot.jpg)
 
