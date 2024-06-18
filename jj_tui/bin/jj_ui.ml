@@ -178,12 +178,6 @@ module Make (Vars : Global_vars.Vars) = struct
                     ~mh:1000
                     ~mw:1000)
               |> Wd.border_box_focusable ~focus:branch_focus ~pad_h:0
-              ; Wd.v_scroll_area
-              (ui_state.command_log
-              |> Lwd.get
-              |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
-              |>$ Ui.resize ~sw:1 ~w:0  ~sh:1
-              ; v_cmd_out $-> W.string
             ]
         ; (let$* file_focus = file_focus |> Focus.status in
            if file_focus |> Focus.has_focus
