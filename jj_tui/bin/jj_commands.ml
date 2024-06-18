@@ -358,7 +358,7 @@ module Make (Vars : Global_vars.Vars) = struct
       f () |> handleCommand description
 
   (** Try mapching the command mapping to the provided key and run the command if it matches*)
-  and command_input ?(is_sub = false) keymap key =
+  and command_input ~is_sub  keymap key =
     (* Use exceptions so we can break out of the list*)
     try
       keymap
@@ -379,4 +379,10 @@ module Make (Vars : Global_vars.Vars) = struct
     | Handled ->
       ()
   ;;
+
+  (** Handles input and sub_commands*)
+  let handleInputs commandMapping=
+    match (Lwd.peek ui_state.input) with
+    |`Mode mode->mode
+    |`Normal ->command_input ~is_sub:false commandMapping
 end

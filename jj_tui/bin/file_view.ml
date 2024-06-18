@@ -49,7 +49,7 @@ module Make (Vars : Global_vars.Vars) = struct
     Wd.selection_list_custom
       ~on_selection_change:(Lwd.set selected_file)
       ~custom_handler:(fun _ _ key ->
-        match key with `ASCII k, [] -> command_input command_mapping k | _ -> `Unhandled)
+        match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
       file_uis
   ;;
 

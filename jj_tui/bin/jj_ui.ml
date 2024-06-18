@@ -159,7 +159,7 @@ module Make (Vars : Global_vars.Vars) = struct
              |>$ Ui.resize ~mw:1000 ~sh:3 ~w:10 ~sw:1
              |>$ Ui.keyboard_area (function
                | `ASCII k, [] ->
-                 Jj_commands.command_input Jj_commands.commandMapping k
+                 Jj_commands.handleInputs Jj_commands.commandMapping k
                | _ ->
                  `Unhandled)
              |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
