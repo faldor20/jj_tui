@@ -381,10 +381,41 @@ let w_8 =
       `Handled
     | _ ->
       `Unhandled)
-  (* |> Lwd.observe *)
-  (* |> Lwd.quick_sample *)
-  (* |> Ui.pp Format.str_formatter; *)
-  (* pString (Format.flush_str_formatter())|>Wd.v_scroll_area *)
+;;
+
+(* |> Lwd.observe *)
+(* |> Lwd.quick_sample *)
+(* |> Ui.pp Format.str_formatter; *)
+(* pString (Format.flush_str_formatter())|>Wd.v_scroll_area *)
+
+let w_9 =
+  let state = Lwd.var (W.default_scroll_state, W.default_scroll_state) in
+  let items =
+    [ "hi"; "it's"; "meeeeeeeeeeeeeeeeeeeeeeeee" ]
+    |> List.map (fun item -> Wd.{ data = item; ui = Wd.selectable_item (W.string item) })
+    |> Lwd.pure
+  in
+  W.vbox
+    [
+      items
+      |> Wd.selection_list_custom
+           ~on_selection_change:(fun x -> ())
+           ~custom_handler:(fun _ _ key -> match key with _ -> `Unhandled)
+      |>$ Ui.resize ~w:10 ~sw:1
+      |> Wd.border_box_focusable ~pad_h:0
+    ; items
+      |> Wd.selection_list_custom
+           ~on_selection_change:(fun x -> ())
+           ~custom_handler:(fun _ _ key -> match key with _ -> `Unhandled)
+      |>$ Ui.resize ~w:10 ~sw:1
+      |> Wd.border_box_focusable ~pad_h:0
+    ; items
+      |> Wd.selection_list_custom
+           ~on_selection_change:(fun x -> ())
+           ~custom_handler:(fun _ _ key -> match key with _ -> `Unhandled)
+      |>$ Ui.resize ~w:10 ~sw:1
+      |> Wd.border_box_focusable ~pad_h:0
+    ]
 ;;
 
 let quit = Lwd.var false
@@ -411,6 +442,8 @@ let main_ui =
      w_7
    | 8 ->
      w_8
+   | 9 ->
+     w_9
    | _ ->
      W.string "not a test" |> Lwd.pure)
   |>$ Ui.event_filter (function
@@ -437,6 +470,9 @@ let main_ui =
       `Handled
     | `Key (`ASCII '8', _) ->
       Lwd.set test_number 8;
+      `Handled
+    | `Key (`ASCII '9', _) ->
+      Lwd.set test_number 9;
       `Handled
     | `Key (`ASCII 'q', [ `Ctrl ]) ->
       quit $= true;

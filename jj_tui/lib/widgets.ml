@@ -948,7 +948,7 @@ let selection_list_custom
     |> Ui.shift_area 0 shift_amount
     |> Ui.resize ~sh:1
     |> simpleSizeSensor ~size_var
-    |> Ui.resize ~w:3 ~sw:1 ~h:0 ~mw:1000
+    |> Ui.resize ~w:3 ~sw:1 ~h:0
     |> simpleSizeSensor ~size_var:rendered_size_var
   in
   scrollitems

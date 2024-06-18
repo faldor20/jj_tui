@@ -152,38 +152,41 @@ module Make (Vars : Global_vars.Vars) = struct
       let file_focus = Focus.make () in
       Focus.request file_focus;
       let graph_focus = Focus.make () in
-      W.h_pane
-        (W.vbox
-           [
-             File_view.file_view sw ()
-             |>$ Ui.resize ~w:10 ~sw:1
-             |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
-           ; Wd.v_scroll_area (ui_state.jj_tree $-> Ui.atom)
-             |>$ Ui.resize ~mw:1000 ~sh:3 ~w:10 ~sw:1
-             |>$ Ui.keyboard_area (function
-               | `ASCII k, [] ->
-                 Jj_commands.handleInputs Jj_commands.command_mapping k
-               | _ ->
-                 `Unhandled)
-             |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
-           ; Wd.v_scroll_area (ui_state.jj_branches $-> Ui.atom)
-             |>$ Ui.resize ~mw:1000 ~w:10 ~sw:1 ~sh:1
-             |> Wd.border_box_focusable ~pad_h:0
-           ; Wd.v_scroll_area
-               (ui_state.command_log
-                |> Lwd.get
-                |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist))
-             |>$ Ui.resize ~sh:1
-           ; v_cmd_out $-> W.string
-           ])
-        (let$* file_focus = file_focus |> Focus.status in
-         if file_focus |> Focus.has_focus
-         then
-           let$ status = File_view.file_status () in
-           status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
-         else
-           Wd.v_scroll_area
-             ((fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show))
+      W.hbox
+        [
+          W.vbox
+            [
+              File_view.file_view sw ()
+              |>$ Ui.resize ~w:5 ~sw:1
+              |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
+            ; Wd.v_scroll_area (ui_state.jj_tree $-> Ui.atom)
+              |>$ Ui.resize ~sh:3 ~w:5 ~sw:1
+              |>$ Ui.keyboard_area (function
+                | `ASCII k, [] ->
+                  Jj_commands.handleInputs Jj_commands.command_mapping k
+                | _ ->
+                  `Unhandled)
+              |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
+            ; Wd.v_scroll_area (ui_state.jj_branches $-> Ui.atom)
+              |>$ Ui.resize ~w:5 ~sw:1 ~sh:1
+              |> Wd.border_box_focusable ~pad_h:0
+              (* ; Wd.v_scroll_area *)
+              (* (ui_state.command_log *)
+              (* |> Lwd.get *)
+              (* |> Lwd.bind ~f:(List.map (W.string >> Lwd.pure) >> W.vlist)) *)
+              (* |>$ Ui.resize ~sw:1 ~w:0 ~sh:1 *)
+              (* ; v_cmd_out $-> W.string *)
+            ]
+        ; (let$* file_focus = file_focus |> Focus.status in
+           if file_focus |> Focus.has_focus
+           then
+             let$ status = File_view.file_status () in
+             status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
+           else (fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show)
+          |> Wd.v_scroll_area
+          |>$ Ui.resize ~sh:3 ~sw:1 ~mw:10000 ~mh:10000
+          |> Wd.border_box_focusable
+        ]
       |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
       |> Widgets.popup ~show_popup_var:ui_state.show_popup
       |> inputs
