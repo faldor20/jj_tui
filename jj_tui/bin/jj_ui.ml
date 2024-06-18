@@ -41,7 +41,7 @@ module Make (Vars : Global_vars.Vars) = struct
   (* let ( let<- ) v f = Lwd.map ~f (Lwd.get v) *)
 
   let post_change new_view =
-    on_change ();
+    update_status ();
     Lwd.set ui_state.view new_view
   ;;
 
@@ -65,7 +65,7 @@ module Make (Vars : Global_vars.Vars) = struct
        | `ASCII key, _ ->
          (match handler key with
           | `Handled ->
-            on_change ();
+            update_status ();
             `Handled
           | `Unhandled ->
             `Unhandled)
@@ -129,12 +129,15 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let mainUi ~sw env =
     (*we want to initialize our states and keep them up to date*)
-    on_change ();
+    update_status ();
     Eio.Fiber.fork_daemon ~sw (fun _ ->
       let clock = Eio.Stdenv.clock env in
       while true do
         Eio.Time.sleep clock 5.0;
-        on_change ~cause_snapshot:true ();
+        (*we need to lock this becasue we could end up updating while the ui is rendering*)
+        Vars.render_mutex|>Eio.Mutex.lock;
+        update_status ~cause_snapshot:true ();
+        Vars.render_mutex|>Eio.Mutex.unlock;
       done;
       `Stop_daemon);
     let$* running = Lwd.get ui_state.view in
@@ -160,7 +163,7 @@ module Make (Vars : Global_vars.Vars) = struct
              |>$ Ui.resize ~mw:1000 ~sh:3 ~w:10 ~sw:1
              |>$ Ui.keyboard_area (function
                | `ASCII k, [] ->
-                 Jj_commands.handleInputs Jj_commands.commandMapping k
+                 Jj_commands.handleInputs Jj_commands.command_mapping k
                | _ ->
                  `Unhandled)
              |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0

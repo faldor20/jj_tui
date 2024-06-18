@@ -12,7 +12,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let selected_file = Lwd.var ""
 
-  let command_mapping =
+  let rec  command_mapping =
     [
       {
         key = 'm'
@@ -35,6 +35,15 @@ module Make (Vars : Global_vars.Vars) = struct
               confirm_prompt
                 ("discard all changes to '" ^ selected ^ "' in this revision")
                 (Cmd [ "restore"; selected ]))
+      };
+      {
+        key = 'h'
+      ; description = "Show help"
+      ; cmd =
+          Fun
+            (fun _ ->
+              ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
+              ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ]
   ;;

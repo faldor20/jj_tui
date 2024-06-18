@@ -73,7 +73,7 @@ module Make (Vars : Global_vars.Vars) = struct
     SubCmd [ { key = 'y'; description = "Yes I want to " ^ prompt; cmd } ]
   ;;
 
-  let rec commandMapping =
+  let rec command_mapping =
     [
       {
         key = 'h'
@@ -81,7 +81,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui commandMapping, "Help");
+              ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
@@ -96,7 +96,7 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Fun
                     (fun _ ->
-                      ui_state.show_popup $= Some (commands_list_ui commandMapping, "Help");
+                      ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
                       ui_state.input $= `Mode (fun _ -> `Unhandled))
               }
             ]
@@ -295,7 +295,7 @@ module Make (Vars : Global_vars.Vars) = struct
   let rec handleCommand description cmd =
     let noOut args =
       let _ = jj args in
-      Global_funcs.on_change ();
+      Global_funcs.update_status ();
       ()
     in
     let prompt str cmd =
@@ -308,7 +308,7 @@ module Make (Vars : Global_vars.Vars) = struct
                (match cmd with
                 | `Cmd args ->
                   let _result = jj (args @ [ str ]) in
-                  Global_funcs.on_change ();
+                  Global_funcs.update_status ();
                   ()
                   (* v_cmd_out $= jj (args @ [ str ]); *)
                 | `Cmd_I args ->
@@ -349,6 +349,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | Fun func ->
       ui_state.show_popup $= None;
       func ();
+      Global_funcs.update_status();
       raise Handled
     | SubCmd sub_map ->
       ui_state.show_popup $= Some (commands_list_ui sub_map, description);
@@ -381,8 +382,8 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   (** Handles input and sub_commands*)
-  let handleInputs commandMapping=
+  let handleInputs command_mapping=
     match (Lwd.peek ui_state.input) with
     |`Mode mode->mode
-    |`Normal ->command_input ~is_sub:false commandMapping
+    |`Normal ->command_input ~is_sub:false command_mapping
 end

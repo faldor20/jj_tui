@@ -22,9 +22,13 @@ let list_files ?(rev = "@") () =
 ;;
 
 
-(**Updates the state; Without snapshotting the working copy by default *)
-let on_change ?(cause_snapshot = false) () =
+
+(**Updates the status windows; Without snapshotting the working copy by default
+This should be called after any command that performs a change
+ *)
+let update_status ?(cause_snapshot = false) () =
   Eio.Switch.run @@ fun sw ->
+
   let log_res =
     jj_no_log ~snapshot:cause_snapshot [ "show"; "-s"; "--color-words" ] |> colored_string
   in
@@ -46,12 +50,8 @@ let on_change ?(cause_snapshot = false) () =
   and files_list = Eio.Promise.await_exn files_list
   and branches = Eio.Promise.await_exn branches in
   (*now we can assign our results*)
-  Vars.render_mutex|>Eio.Mutex.lock;
-
   Vars.ui_state.jj_show $= log_res;
   Vars.ui_state.jj_branches $= branches;
   Vars.ui_state.jj_tree $= tree;
   Vars.ui_state.jj_change_files $= files_list;
-
-  Vars.render_mutex|>Eio.Mutex.unlock;
 ;;
