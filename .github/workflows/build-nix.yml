@@ -26,7 +26,7 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e
       - run: nix build .#static
       - name: Create tar.gz
-        run: tar -czvf jj_tui_linux.tar.gz result/bin/jj_tui
+        run: tar -czvf jj_tui_linux.tar.gz -C result/bin jj_tui
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -47,7 +47,7 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e
       - run: nix build
       - name: Create tar.gz
-        run: tar -czvf jj_tui_macos.tar.gz result/bin/jj_tui
+        run: tar -czvf jj_tui_macos.tar.gz -C result/bin jj_tui
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
