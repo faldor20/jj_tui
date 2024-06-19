@@ -71,8 +71,8 @@ let w_2 =
              in
              og
              |> Lwd.pure
-|>Wd.v_scroll_area
-              |> Wd.border_box_focusable
+             |> Wd.v_scroll_area
+             |> Wd.border_box_focusable
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ]
       ; pString "Same as above but centered"
@@ -146,7 +146,7 @@ let w_2 =
 
 let renderer = Renderer.make ()
 let navMode ui = ui
-(* |>$ Ui.keyboard_area (function *)
+(*  (Focus.status outerFocus)|>$$ (fun ui focus  ->ui|>Ui.keyboard_area (function *)
 (* | `Arrow key, mods -> *)
 (* let dir : [ `Down | `Left | `Right | `Up ] :> *)
 (* [ `Down | `Left | `Right | `Up | `Next | `Prev ] *)
@@ -173,8 +173,9 @@ let is_focused_widget2 ~focus =
 let w_3 =
   let start = Focus.make () in
   Focus.request start;
-  W.hbox
-    [ (*
+  W.vbox
+    [
+      (*
          Wd.v_window_stack2
          [
           is_focused_widget ()
@@ -216,9 +217,66 @@ let w_3 =
           |> Wd.scroll_area
           |> Wd.border_box_focusable
         ]
-      *) ]
-  |> navMode
+      *)
+      (let attr = A.fg A.blue in
+       let elem = Ui.hcat [ W.string ~attr "hi"; W.string "there" ] in
+       let elem_sw0 =
+         Ui.hcat [ W.string ~attr "hi" |> Ui.resize ~mw:1000 ~sw:1; W.string "there" ]
+       in
+       let elem_sw1 =
+         Ui.hcat
+           [
+             W.string ~attr "hi" |> Ui.resize ~mw:1000 ~sw:1
+           ; W.string "there" |> Ui.resize ~mw:1000 ~sw:2
+           ]
+       in
+       let elem_w =
+         Ui.hcat
+           [
+             W.string ~attr "1234567890abcd" |> Ui.resize ~w:10 ~sw:1 ~mw:1000
+           ; W.string "there" |> Ui.resize ~sw:1 ~w:5 ~mw:1000
+           ]
+       in
+       let elem_mw =
+         Ui.hcat
+           [
+             W.string ~attr "1234567890abcd" |> Ui.resize ~w:5 ~sw:1 ~mw:7
+           ; W.string "there" |> Ui.resize ~sw:2
+           ]
+       in
+       Ui.vcat [ elem; elem_sw0; elem_sw1; elem_w; elem_mw ]
+       |> Ui.resize ~w:15 ~sw:0
+       |> Lwd.pure
+       |> Wd.border_box ~pad_w:0 ~pad_h:0)
+    ; (let output = Lwd.var "none" in
+       (*A button that responds to the enter keypress*)
+       let button ?(focus = Focus.make ()) name =
+         let$ focus = focus |> Focus.status in
+         W.string name
+         |> Ui.keyboard_area ~focus (function
+           | `Enter, _ ->
+             output $= "inner";
+             `Handled
+           | _ ->
+             `Unhandled)
+       in
+       let outerFocus = Focus.make () in
+
+       (*We wrap the button in some more UI*)
+       let$ outer = W.vbox [ button "I'm a button"; Lwd.get output |>$ W.string ]
+       and$ focus = Focus.status outerFocus in
+       outer
+       (*We also give the outer UI respond the "Enter" keypress*)
+       |> Ui.keyboard_area ~focus (function
+         | `Enter, _ ->
+           output $= "outer";
+           `Handled
+         | _ ->
+           `Unhandled))
+    ]
 ;;
+
+Ui.keyboard_area
 
 let w_5 =
   let focus = Focus.make () in
