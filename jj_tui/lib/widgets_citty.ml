@@ -1,5 +1,6 @@
 open! Nottui
 open! Notty
+
 let dynamic_width ?(w = 0) ?mw ~sw ?h ?sh f =
   let width = Lwd.var w in
   let body = f (Lwd.get width) in
@@ -9,7 +10,6 @@ let dynamic_width ?(w = 0) ?mw ~sw ?h ?sh f =
     |> Ui.resize ~w ~sw ?mw ?h ?sh
     |> Ui.size_sensor (fun ~w ~h:_ -> if Lwd.peek width <> w then Lwd.set width w))
 ;;
-
 
 open Nottui
 
@@ -125,15 +125,15 @@ let word_wrap_string_table table width =
            | suffix :: rest ->
              let ui = rest |> List.rev_map wrap_line |> Lwd_utils.reduce Ui.pack_y in
              prefix, Some (ui, suffix)))
-      ( ("", None),
-        fun (pa, ta) (pb, tb) ->
+      ( ("", None)
+      , fun (pa, ta) (pb, tb) ->
           match ta with
           | None ->
             pa ^ pb, tb
           | Some (ua, sa) ->
             let line = sa ^ pb in
-            ( pa,
-              Some
+            ( pa
+            , Some
                 (match tb with
                  | None ->
                    ua, line
@@ -217,8 +217,8 @@ let vertical_scrollbar ~set_scroll (st : Nottui_widgets.scroll_state) =
                   float st.position +. (float dy /. float st.visible *. float st.total)
                 in
                 let position = max 0 (min st.bound (int_of_float position)) in
-                set_scroll { st with position }),
-              fun ~x:_ ~y:_ -> () )
+                set_scroll { st with position })
+            , fun ~x:_ ~y:_ -> () )
       | _ ->
         `Unhandled
     in
@@ -323,21 +323,21 @@ module Pane : sig
   val get : 'a view -> 'a option
 end = struct
   type 'a visual_pane = {
-    var : ui Lwd.t Lwd.var;
-    mutable view : 'a view option;
+      var : ui Lwd.t Lwd.var
+    ; mutable view : 'a view option
   }
 
   and 'a view = {
-    t : 'a t;
-    content : ui Lwd.t Lwd.var;
-    mutable tag : 'a option;
-    previous : 'a view option;
+      t : 'a t
+    ; content : ui Lwd.t Lwd.var
+    ; mutable tag : 'a option
+    ; previous : 'a view option
   }
 
   and 'a t = {
-    left : 'a visual_pane;
-    middle : 'a visual_pane;
-    right : 'a visual_pane;
+      left : 'a visual_pane
+    ; middle : 'a visual_pane
+    ; right : 'a visual_pane
   }
 
   let bind_pane visual view =
@@ -358,11 +358,11 @@ end = struct
     Lwd_utils.pack
       Ui.pack_x
       [
-        place_ui_var t.left.var ~sw:1;
-        spacer;
-        place_ui_var t.middle.var ~sw:2;
-        spacer;
-        place_ui_var t.right.var ~sw:6;
+        place_ui_var t.left.var ~sw:1
+      ; spacer
+      ; place_ui_var t.middle.var ~sw:2
+      ; spacer
+      ; place_ui_var t.right.var ~sw:6
       ]
   ;;
 

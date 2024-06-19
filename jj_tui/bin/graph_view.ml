@@ -1,4 +1,3 @@
-
 module Make (Vars : Global_vars.Vars) = struct
   open Lwd_infix
   open Vars

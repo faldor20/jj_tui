@@ -4,7 +4,7 @@ open Lwd_infix
 open! Util
 open! Widgets_citty
 include Box_widget
-module Wip=  Wip
+module Wip = Wip
 
 let neutral_grav = Gravity.make ~h:`Neutral ~v:`Neutral
 let make_even num = num + (num mod 2 * 1)
@@ -31,7 +31,6 @@ let size_logger ui =
         if Lwd.peek size <> (w, h) then Lwd.set size (w, h))
     ]
 ;;
-
 
 let monitor ui =
   ui |> Ui.layout_spec |> Ui.pp_layout_spec Format.str_formatter;
@@ -194,7 +193,7 @@ let h_rule =
   |> Ui.resize ~w:0 ~sw:100
 ;;
 
-let scroll_area_intern  ?focus ~state ~change t =
+let scroll_area_intern ?focus ~state ~change t =
   let open Nottui_widgets in
   let open Lwd_utils in
   let w_visible = ref (-1) in
@@ -294,6 +293,7 @@ let scroll_area_intern  ?focus ~state ~change t =
     |> Ui.mouse_area (scroll_handler state_w state_h)
     |> Ui.keyboard_area ?focus (focus_handler state_w state_h))
 ;;
+
 (** A scroll area that allows keyboard scrolling in both x and y directions*)
 let scroll_area ?focus ui =
   let state = Lwd.var (W.default_scroll_state, W.default_scroll_state) in
@@ -481,7 +481,7 @@ let filterable_selection_list_custom
     (* if we re-render we should always reset the selected list *)
     let items =
       let$ filter_text = filter_text_var |> Lwd.get
-      and$ items = items  in
+      and$ items = items in
       items |> List.filter (fun x -> filter_predicate filter_text x.data)
     in
     selection_list_custom

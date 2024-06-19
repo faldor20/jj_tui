@@ -1,7 +1,6 @@
 (** The JJ_commands module defines all the tools we need to create and execute keymappings
     It allows us to define a command list: A list of keys, commands and descriptions
-    We can then run a command matching a key or generate a documentation UI element showing all available commands
-     *)
+    We can then run a command matching a key or generate a documentation UI element showing all available commands *)
 
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
 module Shared = struct

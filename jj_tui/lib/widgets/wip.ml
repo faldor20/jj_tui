@@ -4,6 +4,7 @@ open Lwd_infix
 open! Util
 open! Widgets_citty
 open Border_box
+
 (*
    design for a windowing system:
    fundinmental primative:

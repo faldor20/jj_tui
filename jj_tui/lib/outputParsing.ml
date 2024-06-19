@@ -1,5 +1,6 @@
 open Angstrom
 open Util
+
 let parse_descriptions str =
   let true_key = string "::true::" in
   let other_key = string "::false::" in
@@ -131,8 +132,7 @@ hi2
   in
   (match data |> parse_descriptions with
    | Ok (fst, snd) ->
-     (fst |> String.concat ";") ^"]["^
-     (snd |> String.concat ";") |> print_endline
+     (fst |> String.concat ";") ^ "][" ^ (snd |> String.concat ";") |> print_endline
    | Error e ->
      print_endline e);
   [%expect {|

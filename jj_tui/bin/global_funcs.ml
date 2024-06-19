@@ -21,14 +21,10 @@ let list_files ?(rev = "@") () =
     else None)
 ;;
 
-
-
 (**Updates the status windows; Without snapshotting the working copy by default
-This should be called after any command that performs a change
- *)
+   This should be called after any command that performs a change *)
 let update_status ?(cause_snapshot = false) () =
   Eio.Switch.run @@ fun sw ->
-
   let log_res =
     jj_no_log ~snapshot:cause_snapshot [ "show"; "-s"; "--color-words" ] |> colored_string
   in
@@ -41,10 +37,7 @@ let update_status ?(cause_snapshot = false) () =
   and branches =
     Eio.Fiber.fork_promise ~sw (fun _ ->
       jj_no_log ~snapshot:false [ "branch"; "list"; "-a" ] |> colored_string)
-  and files_list =
-    Eio.Fiber.fork_promise ~sw (fun _ ->
-  list_files ())
-  in
+  and files_list = Eio.Fiber.fork_promise ~sw (fun _ -> list_files ()) in
   (*wait for all our tasks*)
   let tree = Eio.Promise.await_exn tree
   and files_list = Eio.Promise.await_exn files_list
@@ -53,5 +46,5 @@ let update_status ?(cause_snapshot = false) () =
   Vars.ui_state.jj_show $= log_res;
   Vars.ui_state.jj_branches $= branches;
   Vars.ui_state.jj_tree $= tree;
-  Vars.ui_state.jj_change_files $= files_list;
+  Vars.ui_state.jj_change_files $= files_list
 ;;
