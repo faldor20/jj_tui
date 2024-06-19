@@ -4,18 +4,18 @@ on:
   push:
     branches:
       - master
+    tags:        
+      - '**' 
   pull_request:
   workflow_dispatch:
 
 permissions: read-all
 
 jobs:
-  nix:
+  linux:
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15 # NOTE (aseipp): keep in-sync with the build.yml timeout limit
 
     name: flake build
@@ -33,12 +33,10 @@ jobs:
           path: |
             result/bin/jj_tui
             
-  nix2:
+  macos:
     strategy:
       fail-fast: false
-      matrix:
-        os: [macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     timeout-minutes: 15 # NOTE (aseipp): keep in-sync with the build.yml timeout limit
 
     name: flake build macos
@@ -58,7 +56,12 @@ jobs:
 
 
   release:
+  #Needed to let the job make the release
+    permissions:
+      contents: write
+      discussions: write
     runs-on: ubuntu-latest
+    needs: [macos, linux]
     name: release if tag
     steps:
       - name: Download artifacts
