@@ -521,7 +521,7 @@ struct
   let pack ~max ~fixed ~stretch total g1 g2 =
     (*flex is the space we should expand into if we stretch*)
     let flex = total - fixed in
-    if stretch > 0 && flex > 0 && max >total then
+    if stretch > 0 && flex >= 0 && max >total then
       (0, total)
     else
     (* If we can stretch and we got here we must have wanted to stretch beyond the max which means we should stretch to max and recalculate the flex*)
