@@ -192,7 +192,9 @@ let border_box_custom_border
     @param input The input widget to be bordered.
     @param border_attr Style for the border, defaults to [A.empty].
     @param focus Focus handle for the box .
-    @param focus_attr Style for the border when focused, defaults to [A.fg A.blue]. *)
+    @param focus_attr Style for the border when focused, defaults to [A.fg A.blue]. 
+    @param on_key Callback called when a key is pressed while the box is focused. Useful for performing actions when the box is selected .
+    *)
 let border_box_focusable
   ?scaling
   ?pad
@@ -203,13 +205,14 @@ let border_box_focusable
   ?(border_attr = A.empty)
   ?(focus_attr = A.fg A.blue)
   ?(focus = Focus.make ())
+  ?(on_key=(fun _->`Unhandled))
   input
   =
   let attr = Lwd.var border_attr in
   let input =
     input
     |> Lwd.map2 (focus |> Focus.status) ~f:(fun focus ui ->
-      ui |> Ui.keyboard_area ~focus (fun _ -> `Unhandled))
+      ui |> Ui.keyboard_area ~focus on_key)
   in
   border_box_custom_border
     ?scaling

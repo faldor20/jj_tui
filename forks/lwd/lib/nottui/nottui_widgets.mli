@@ -54,7 +54,7 @@ val v_pane : ui Lwd.t -> ui Lwd.t -> ui Lwd.t
 (** horizontal pane that can be dragged to be bigger or smaller *)
 val h_pane : ?splitter_color:(Notty.A.color)-> ui Lwd.t -> ui Lwd.t -> ui Lwd.t
 
-(** A simple editable text field.
+(** An editable text field.
  Supports navigating with arrow keys  *)
 val edit_field :
   ?focus:Focus.handle ->

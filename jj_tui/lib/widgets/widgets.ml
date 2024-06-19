@@ -34,15 +34,6 @@ let size_logger ui =
     ]
 ;;
 
-let monitor ui =
-  ui |> Ui.layout_spec |> Ui.pp_layout_spec Format.str_formatter;
-  let str = Format.flush_str_formatter () in
-  let log =
-    str |> String.split_on_char '\n' |> List.map (I.string A.empty) |> I.vcat |> Ui.atom
-  in
-  Ui.vcat [ ui; log ]
-;;
-
 (**clears anything behind the given area*)
 let set_bg attr ui =
   let size = Lwd.var (0, 0) in
