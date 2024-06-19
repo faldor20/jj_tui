@@ -3,9 +3,9 @@ name: nix
 on:
   push:
     branches:
-      - master
-    tags:        
-      - '**' 
+    - master
+    tags:
+    - '**'
   pull_request:
   workflow_dispatch:
 
@@ -16,9 +16,8 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # NOTE (aseipp): keep in-sync with the build.yml timeout limit
+    timeout-minutes: 15
 
-    name: flake build
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
         with:
@@ -26,20 +25,20 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@8cdf194da984e4f12b2f8c36d1fa107c1dd67f5c
       - uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e
       - run: nix build .#static
+      - name: Create tar.gz
+        run: tar -czvf jj_tui_linux.tar.gz result/bin/jj_tui
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jj_tui_linux
-          path: |
-            result/bin/jj_tui
-            
+          path: jj_tui_linux.tar.gz
+
   macos:
     strategy:
       fail-fast: false
     runs-on: macos-latest
-    timeout-minutes: 15 # NOTE (aseipp): keep in-sync with the build.yml timeout limit
+    timeout-minutes: 15
 
-    name: flake build macos
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
         with:
@@ -47,16 +46,15 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@8cdf194da984e4f12b2f8c36d1fa107c1dd67f5c
       - uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e
       - run: nix build
+      - name: Create tar.gz
+        run: tar -czvf jj_tui_macos.tar.gz result/bin/jj_tui
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jj_tui_macos
-          path: |
-            result/bin/jj_tui
-
+          path: jj_tui_macos.tar.gz
 
   release:
-  #Needed to let the job make the release
     permissions:
       contents: write
       discussions: write
@@ -64,14 +62,12 @@ jobs:
     needs: [macos, linux]
     name: release if tag
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4.1.7    
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: | 
-            jj_tui_macos
-            jj_tui_linux
-          
-            
+    - name: Download artifacts
+      uses: actions/download-artifact@v4.1.7
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          jj_tui_macos/jj_tui_macos.tar.gz
+          jj_tui_linux/jj_tui_linux.tar.gz
