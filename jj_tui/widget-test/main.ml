@@ -59,7 +59,7 @@ let w_2 =
             (let og =
                W.string "123456789000000000000000000000000000000000000000000000000000end"
              in
-             og |> Lwd.pure |> Wd.scroll_area |> Wd.border_box_focusable ~focus:focus1
+             og |> Lwd.pure |> Wd.v_scroll_area |> Wd.border_box_focusable ~focus:focus1
              (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *))
           ; "shrinkable" |> pString |>$ Ui.resize ~sw:1
           ]
@@ -71,8 +71,8 @@ let w_2 =
              in
              og
              |> Lwd.pure
-             |> Wd.scroll_area
-             |> Wd.border_box_focusable
+|>Wd.v_scroll_area
+              |> Wd.border_box_focusable
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ]
       ; pString "Same as above but centered"

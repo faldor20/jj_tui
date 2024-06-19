@@ -250,7 +250,7 @@ let scroll_area_intern ?focus ~state ~change t =
     let tw, th = Ui.layout_width t, Ui.layout_height t in
     (* let mw, mh = if max then Some tw, Some th else None, None in *)
     t
-    |> Ui.resize ~w:5 ~sw:1 ~h:2 ~sh:1
+    |> Ui.resize ~w:0 ~sw:1 ~h:0 ~sh:1
     |> Ui.shift_area state_w.position state_h.position
     (* |>Ui.join_y (Ui.atom (I.string A.empty (string_of_int state_w.visible))) *)
     (*TODO: make an alternative that has this already set*)
@@ -314,16 +314,23 @@ let popup ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let prompt_field = content in
-      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label |> clear_bg
+      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label|> clear_bg
     | None ->
       Ui.empty |> Lwd.pure
   in
   W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
 ;;
 
-
-
 (** [on_focus f ui]
 
     Transforms the Ui with function [f] if the Ui is focused *)
-let on_focus f ui = if ui |> Ui.has_focus then ui |> f else ui
+let on_ui_focus f ui = if ui |> Ui.has_focus then ui |> f else ui
+
+let on_focus ~focus f ui =
+  Lwd.map2 ui (focus |> Focus.status) ~f:(fun ui focus ->
+    if focus |> Focus.has_focus then ui |> f else ui)
+;;
+
+let is_focused ~focus f ui =
+  Lwd.map2 ui (focus |> Focus.status) ~f:(fun ui focus -> f ui (focus |> Focus.has_focus) )
+;;
