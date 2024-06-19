@@ -3,11 +3,10 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
   open Notty
-  open Jj_tui
   module W = Nottui_widgets
   open Nottui
   open! Jj_tui.Util
-  module Wd = Widgets
+  module Wd = Jj_tui.Widgets
   open Jj_commands.Make (Vars)
 
   let selected_file = Lwd.var ""

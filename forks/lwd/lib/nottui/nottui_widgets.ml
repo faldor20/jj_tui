@@ -198,49 +198,6 @@ let vscroll_area ~state ~change t =
     |> Ui.keyboard_area (focus_handler state))
 ;;
 
-(** FIXME:!!! The only solution to a scroll area inside a box is to integrate the two. The size sensor should be the same for both Ui and box
-    This isn't working right now because the size sensor is too deep, the box can crop the UI that it surrounds and this will fuck up the size sensor for the scroll box.
-    I could either make the box not effect the cropping of the UI element that is inside it or integrate the scroll and the box together.
-    Perhaps I should add a new type of object in nottui that handles borders? would that solve my problems?? *)
-let scroll_area ?focus ?(offset = 0, 0) t =
-  let offset = Lwd.var offset in
-  let rendered_w = ref 0 in
-  let rendered_h = ref 0 in
-  let scroll w h d_x d_y =
-    let s_x, s_y = Lwd.peek offset in
-    let s_x = mini (maxi 0 (s_x + d_x)) (w - !rendered_w) in
-    let s_y = mini (maxi 0 (s_y + d_y)) (h - !rendered_h) in
-    Lwd.set offset (s_x, s_y);
-    `Handled
-  in
-  let focus_handler w h = function
-    | `Arrow `Left, [] -> scroll w h (-scroll_step) 0
-    | `Arrow `Right, [] -> scroll w h (+scroll_step) 0
-    | `Arrow `Up, [] -> scroll w h 0 (-scroll_step)
-    | `Arrow `Down, [] -> scroll w h 0 (+scroll_step)
-    | `Page `Up, [] -> scroll w h 0 (-scroll_step * 8)
-    | `Page `Down, [] -> scroll w h 0 (+scroll_step * 8)
-    | _ -> `Unhandled
-  in
-  let scroll_handler w h ~x:_ ~y:_ = function
-    | `Scroll `Up -> scroll w h 0 (-scroll_step)
-    | `Scroll `Down -> scroll w h 0 (+scroll_step)
-    | _ -> `Unhandled
-  in
-  Lwd.map2 t (Lwd.get offset) ~f:(fun t (s_x, s_y) ->
-    let h = Ui.layout_height t in
-    let w = Ui.layout_width t in
-    t
-    |> Ui.resize ~w:5 ~sw:1 ~h:2 ~sh:1
-    |> Ui.size_sensor (fun ~w ~h ->
-      rendered_w := w;
-      rendered_h := h)
-    |> Ui.join_y (Ui.atom (I.string A.empty (string_of_int !rendered_w)))
-    |> Ui.shift_area s_x s_y
-    |> Ui.mouse_area (scroll_handler w h)
-    |> Ui.keyboard_area ?focus (focus_handler w h))
-;;
-
 let main_menu_item wm text f =
   let text = string ~attr:attr_menu_main (" " ^ text ^ " ") in
   let refresh = Lwd.var () in

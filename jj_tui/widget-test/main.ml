@@ -25,7 +25,7 @@ let w_0 =
        in
        og
        |> Lwd.pure
-       |> W.scroll_area
+       |> Wd.scroll_area
        |> Wd.border_box ~scaling:(`Expand 1)
        |>$ Ui.resize ~sh:1 ~mh:1000
        |> Wd.size_logger)
@@ -41,7 +41,7 @@ let w_1 =
           (let og =
              W.string "123456789000000000000000000000000000000000000000000000000000end"
            in
-           og |> Lwd.pure |> W.scroll_area |> Wd.border_box
+           og |> Lwd.pure |> Wd.scroll_area |> Wd.border_box
            (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *))
         ; "shrinkable" |> pString |>$ Ui.resize ~sw:1
         ]
@@ -59,7 +59,7 @@ let w_2 =
             (let og =
                W.string "123456789000000000000000000000000000000000000000000000000000end"
              in
-             og |> Lwd.pure |> W.scroll_area |> Wd.border_box_focusable ~focus:focus1
+             og |> Lwd.pure |> Wd.scroll_area |> Wd.border_box_focusable ~focus:focus1
              (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *))
           ; "shrinkable" |> pString |>$ Ui.resize ~sw:1
           ]
@@ -71,7 +71,7 @@ let w_2 =
              in
              og
              |> Lwd.pure
-             |> W.scroll_area
+             |> Wd.scroll_area
              |> Wd.border_box_focusable
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ]
@@ -127,7 +127,7 @@ let w_2 =
             (let og =
                W.string "123456789000000000000000000000000000000000000000000000000000end"
              in
-             og |> Lwd.pure |> W.scroll_area)
+             og |> Lwd.pure |> Wd.scroll_area)
           ]
       ]
     |>$ Ui.keyboard_area (function
@@ -180,27 +180,27 @@ let w_3 =
           is_focused_widget ()
         ; W.string "hi this is the first level"
           |> Lwd.pure
-          |> W.scroll_area
+          |> Wd.scroll_area
           |> Wd.border_box_focusable
         ; Wd.v_window_stack2
             [
               W.string "hi this is the first level"
               |> Lwd.pure
-              |> W.scroll_area
+              |> Wd.scroll_area
               |> Wd.border_box_focusable
             ; W.string "hi this is the second level"
               |> Lwd.pure
-              |> W.scroll_area
+              |> Wd.scroll_area
               |> Wd.border_box_focusable ~focus:start
             ; Wd.v_window_stack2
                 [
                   W.string "hi this is the first level"
                   |> Lwd.pure
-                  |> W.scroll_area
+                  |> Wd.scroll_area
                   |> Wd.border_box_focusable
                 ; W.string "hi this is the second level"
                   |> Lwd.pure
-                  |> W.scroll_area
+                  |> Wd.scroll_area
                   |> Wd.border_box_focusable
                 ]
             ]
@@ -209,11 +209,11 @@ let w_3 =
          [
           W.string "hi this is the first level"
           |> Lwd.pure
-          |> W.scroll_area
+          |> Wd.scroll_area
           |> Wd.border_box_focusable
         ; W.string "hi this is the second level"
           |> Lwd.pure
-          |> W.scroll_area
+          |> Wd.scroll_area
           |> Wd.border_box_focusable
         ]
       *) ]

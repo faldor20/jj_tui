@@ -34,16 +34,15 @@ end
 
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
 module Intern (Vars : Global_vars.Vars) = struct
+  open Shared
   open Lwd_infix
   open Vars
   open Jj_process.Make (Vars)
   open Notty
-  open Jj_tui
   module W = Nottui_widgets
   open Nottui
   open! Jj_tui.Util
-  module Wd = Widgets
-  open Shared
+  module Wd = Jj_tui.Widgets
 
   exception Handled
 
@@ -168,11 +167,10 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
   open Notty
-  open Jj_tui
   module W = Nottui_widgets
   open! Jj_tui.Util
   open Intern (Vars)
-  module Wd = Widgets
+  module Wd = Jj_tui.Widgets
   include Shared
 
   (**Generate a UI object with all the commands nicely formatted and layed out. Useful for help text*)
