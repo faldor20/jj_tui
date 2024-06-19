@@ -245,7 +245,8 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (*Renders the commit graph from the UI state*)
   let graph_view =
-    Wd.scroll_area (ui_state.jj_tree $-> Ui.atom)
+    (*pad one on the left because it's hard to see the graph if it's too close*)
+    Wd.scroll_area (ui_state.jj_tree $-> (I.pad ~l:1 >> Ui.atom))
     |>$ Ui.keyboard_area (function
       | `ASCII k, [] ->
         handleInputs command_mapping k

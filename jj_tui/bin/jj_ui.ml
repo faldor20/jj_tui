@@ -70,34 +70,34 @@ module Make (Vars : Global_vars.Vars) = struct
           [
             File_view.file_view sw ()
             |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000
-            |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0
+            |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
           ; Graph_view.graph_view
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
-            |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0
-          ;   Wd.scroll_area (ui_state.jj_branches $-> Ui.atom)
-          |>Wd.is_focused ~focus:branch_focus(fun ui focused-> 
-             ui
-             |> Ui.resize
-                  ~w:5
-                  ~sw:1
-                  ~sh:(if focused then 3 else 0)
-                  ~h:2
-                  ~mh:1000
-                  ~mw:1000)
-            |> Wd.border_box_focusable ~focus:branch_focus ~pad_h:0
+            |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
+          ; Wd.scroll_area (ui_state.jj_branches $-> Ui.atom)
+            |> Wd.is_focused ~focus:branch_focus (fun ui focused ->
+              ui
+              |> Ui.resize
+                   ~w:5
+                   ~sw:1
+                   ~sh:(if focused then 3 else 0)
+                   ~h:2
+                   ~mh:1000
+                   ~mw:1000)
+            |> Wd.border_box_focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
           ]
       ; (*Right side summary/status/fileinfo view*)
         (let$* file_focus = file_focus |> Focus.status in
          if file_focus |> Focus.has_focus
          then
            let$ status = File_view.file_status () in
-           status |> AnsiReverse.colored_string |> I.pad ~l:1 ~r:1 |> Ui.atom
-         else (fun x -> x |> I.pad ~l:1 ~r:1 |> Ui.atom) <-$ ui_state.jj_show)
+           status |> AnsiReverse.colored_string |> Ui.atom
+         else (fun x -> x |> Ui.atom) <-$ ui_state.jj_show)
         |> Wd.scroll_area
         (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
         |>$ Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:100 ~mh:10000
         |> Wd.on_focus ~focus:summary_focus (Ui.resize ~sw:3 ~mw:1000)
-        |> Wd.border_box_focusable ~focus:summary_focus
+        |> Wd.border_box_focusable ~focus:summary_focus ~pad_h:0 ~pad_w:1
       ]
     (*These outer prompts can popup and show them selves over the main view*)
     |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
