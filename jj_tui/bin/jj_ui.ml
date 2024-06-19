@@ -56,6 +56,30 @@ module Make (Vars : Global_vars.Vars) = struct
          `Unhandled
   ;;
 
+  (* shows a pretty box in the middle of the screen with our error in it*)
+  let render_startup_error error =
+    let message =
+      match error with
+      | `NotInRepo ->
+        "Not in a jj repo."
+      | `OtherError str ->
+        str
+      | `CantStartProcess ->
+        "Can't start jj process, maybe it's not installed?"
+    in
+    W.string message
+    |> Lwd.pure
+    |> Wd.border_box
+    |>$ Ui.resize
+          ~sw:1
+          ~sh:1
+          ~mw:10000
+          ~mh:10000
+          ~crop:Wd.neutral_grav
+          ~pad:Wd.neutral_grav
+    |> inputs
+  ;;
+
   (** The primary view for the UI with the file_view graph_view and summary*)
   let main_view ~sw =
     let file_focus = Focus.make () in
@@ -107,21 +131,8 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let mainUi ~sw env =
     (*we want to initialize our states and keep them up to date*)
-    let is_jj_repo = is_jj_repo () in
-    if not is_jj_repo
-    then
-      W.string "Not in a jj repo."
-      |> Lwd.pure
-      |> Wd.border_box
-      |>$ Ui.resize
-            ~sw:1
-            ~sh:1
-            ~mw:10000
-            ~mh:10000
-            ~crop:Wd.neutral_grav
-            ~pad:Wd.neutral_grav
-      |> inputs
-    else (
+    match check_startup () with
+    | `Good ->
       update_status ~cause_snapshot:true ();
       Eio.Fiber.fork_daemon ~sw (fun _ ->
         let clock = Eio.Stdenv.clock env in
@@ -134,14 +145,16 @@ module Make (Vars : Global_vars.Vars) = struct
         done;
         `Stop_daemon);
       let$* running = Lwd.get ui_state.view in
-      match running with
-      | `Cmd_I cmd ->
-        (*We have this extra step to paint the terminal empty for one step*)
-        Lwd.set ui_state.view @@ `RunCmd cmd;
-        full_term_sized_background
-      | `RunCmd cmd ->
-        Jj_widgets.interactive_process env ("jj" :: cmd)
-      | `Main ->
-        main_view ~sw)
+      (match running with
+       | `Cmd_I cmd ->
+         (*We have this extra step to paint the terminal empty for one step*)
+         Lwd.set ui_state.view @@ `RunCmd cmd;
+         full_term_sized_background
+       | `RunCmd cmd ->
+         Jj_widgets.interactive_process env ("jj" :: cmd)
+       | `Main ->
+         main_view ~sw)
+    | (`CantStartProcess | `NotInRepo | `OtherError _) as other ->
+      render_startup_error other
   ;;
 end

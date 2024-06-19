@@ -2,7 +2,9 @@
 [![nix](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml/badge.svg)](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml)
 A TUI for the new version control system Jujutsu 
 
-![screenshot](./screenshot.jpg)
+
+![jj_tui-ezgif com-optimize](https://github.com/faldor20/jj_tui/assets/26968035/fb053320-484a-4d6f-9b66-e5b9d0d49e5d)
+
 
 Press `h` to show the help.
 Press `Alt+Up`and`Alt+Down` to navigate windows
