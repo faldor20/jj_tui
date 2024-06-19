@@ -60,9 +60,9 @@ module Make (Vars : Global_vars.Vars) = struct
         "jj"
         (List.concat
            [
-             args;
-             (if snapshot then [] else [ "--ignore-working-copy" ]);
-             (if color then [ "--color"; "always" ] else [ "--color"; "never" ]);
+             args
+           ; (if snapshot then [] else [ "--ignore-working-copy" ])
+           ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
            ])
     in
     if locked then Mutex.unlock access_lock;
@@ -83,10 +83,10 @@ module Make (Vars : Global_vars.Vars) = struct
     let output =
       jj
         [
-          "log";
-          "--no-graph";
-          "-T";
-          {|"::"++current_working_copy++"::\n"++description++"\n::end::\n"|};
+          "log"
+        ; "--no-graph"
+        ; "-T"
+        ; {|"::"++current_working_copy++"::\n"++description++"\n::end::\n"|}
         ]
       |> String.trim
     in

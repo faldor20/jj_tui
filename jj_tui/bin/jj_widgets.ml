@@ -4,9 +4,12 @@ open Lwd_infix
 open Jj_tui
 open! Util
 module W = Nottui_widgets
+
+(** Collection of JJ specific widgets*)
 module Wd = Widgets
 
 module Make (Vars : Global_vars.Vars) = struct
+  open Vars
   open Jj_process.Make (Vars)
 
   exception Found
@@ -165,8 +168,8 @@ module Make (Vars : Global_vars.Vars) = struct
       in
       I.hcat
         [
-          prefix;
-          x ^ "\n" |> unsafe_blit_start_if "@" "◉" |> Jj_tui.AnsiReverse.colored_string;
+          prefix
+        ; x ^ "\n" |> unsafe_blit_start_if "@" "◉" |> Jj_tui.AnsiReverse.colored_string
         ]
       |> Ui.atom)
     |> Lwd.pure
@@ -185,12 +188,48 @@ module Make (Vars : Global_vars.Vars) = struct
       in
       I.hcat
         [
-          prefix;
-          x ^ "\n" |> unsafe_blit_start_if "@" "◉" |> Jj_tui.AnsiReverse.colored_string;
+          prefix
+        ; x ^ "\n" |> unsafe_blit_start_if "@" "◉" |> Jj_tui.AnsiReverse.colored_string
         ]
       |> Ui.atom)
     |> List.map2 (fun rev ui -> Wd.{ ui; data = rev }) revs
-    |> Wd.filterable_selection_list ~on_confirm:(fun _->()) ~filter_predicate:(fun input rev ->
-      rev |> String.starts_with ~prefix:input)
+    |> Lwd.pure
+    |> Wd.filterable_selection_list
+         ~on_confirm:(fun _ -> ())
+         ~filter_predicate:(fun input rev -> rev |> String.starts_with ~prefix:input)
+  ;;
+
+  (** Start a process that will take full control of both stdin and stdout.
+      This is used for interactive diffs and such*)
+  let interactive_process env cmd =
+    let post_change new_view =
+      Global_funcs.update_status ();
+      Lwd.set ui_state.view new_view
+    in
+    let exit_status_to_str y =
+      match match y with `Exited x -> x | `Signaled x -> x with
+      | 0 ->
+        "success"
+      | 1 ->
+        "failure%s"
+      | a ->
+        Printf.sprintf "unknown code %d" a
+    in
+    let res = switch_to_process env cmd in
+    let$ ui =
+      W.vbox
+        [
+          W.string (Printf.sprintf "exit code:%s" (res |> exit_status_to_str)) |> Lwd.pure
+        ; W.button "back to main UI" (fun _ -> post_change `Main) |> Lwd.pure
+        ]
+    in
+    ui
+    |> Ui.keyboard_area (fun event ->
+      match event with
+      | `ASCII ' ', _ ->
+        post_change `Main;
+        `Handled
+      | _ ->
+        `Unhandled)
   ;;
 end

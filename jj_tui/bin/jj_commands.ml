@@ -1,4 +1,40 @@
-module Make (Vars : Global_vars.Vars) = struct
+(** The JJ_commands module defines all the tools we need to create and execute keymappings
+    It allows us to define a command list: A list of keys, commands and descriptions
+    We can then run a command matching a key or generate a documentation UI element showing all available commands
+     *)
+
+(** Internal to this module. I'm trying this out as a way to avoid .mli files*)
+module Shared = struct
+  type cmd_args = string list
+
+  (** Regular jj command *)
+  type command_variant =
+    | Cmd of cmd_args (** Regular jj command *)
+    | Dynamic of (unit -> command_variant)
+    (** Wraps a command so that the content will be regenerated each time it's run. Usefull if you wish to read some peice of ui state *)
+    | Cmd_I of cmd_args
+    (** Command that will open interactively. Used for diff editing to hand control over to the jj process *)
+    | Prompt of string * cmd_args
+    (** Creates a prompt and then runs the command with the prompt result appended as the last arg *)
+    | PromptThen of string * (string -> command_variant)
+    (** Same as prompt except you can run another command after. Useful if you want multiple prompts *)
+    | Prompt_I of string * cmd_args
+    (** Same as prompt but expects the command to be interactive same as [Cmd_I] *)
+    | SubCmd of command list
+    (** Allows nesting of commands, shows a popup with command options and waits for the user to press the appropriate key*)
+    | Fun of (unit -> unit)
+    (** Execute an arbitrary function. Prefer other command types if possible *)
+
+  (** A command that should be run when it's key is pressed*)
+  and command = {
+      key : char
+    ; description : string
+    ; cmd : command_variant
+  }
+end
+
+(** Internal to this module. I'm trying this out as a way to avoid .mli files*)
+module Intern (Vars : Global_vars.Vars) = struct
   open Lwd_infix
   open Vars
   open Jj_process.Make (Vars)
@@ -8,28 +44,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open Nottui
   open! Jj_tui.Util
   module Wd = Widgets
-
-  type cmd_args = string list
-
-  (**`Prompt`:Allows running one command and then running another using the input of the first*)
-  type command_variant =
-    | Cmd of cmd_args
-    | Dynamic of (unit -> command_variant)
-    | Cmd_I of cmd_args
-    | Prompt of string * cmd_args
-    | PromptThen of string * (string -> command_variant)
-    | Prompt_I of string * cmd_args
-    | Prompt_Fn of string * (unit -> cmd_args)
-    | SubCmd of command list
-    | Fun of (unit -> unit)
-
-  and command = {
-      key : char
-    ; description : string
-    ; cmd : command_variant
-  }
-
-  type command_list = command list
+  open Shared
 
   exception Handled
 
@@ -50,15 +65,7 @@ module Make (Vars : Global_vars.Vars) = struct
        | {
          key
        ; description
-       ; cmd =
-           ( Cmd _
-           | Cmd_I _
-           | Prompt _
-           | Prompt_I _
-           | Fun _
-           | PromptThen _
-           | Prompt_Fn _
-           | Dynamic _ )
+       ; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _ | Dynamic _
        } ->
          [ line key description ]
        | { key; description; cmd = SubCmd subs } ->
@@ -67,243 +74,6 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let commands_list_ui commands =
     commands |> render_commands |> I.vcat |> Ui.atom |> Lwd.pure |> Wd.scroll_area
-  ;;
-
-  let confirm_prompt prompt cmd =
-    SubCmd [ { key = 'y'; description = "Yes I want to " ^ prompt; cmd } ]
-  ;;
-
-  let rec command_mapping =
-    [
-      {
-        key = 'h'
-      ; description = "Show help"
-      ; cmd =
-          Fun
-            (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
-              ui_state.input $= `Mode (fun _ -> `Unhandled))
-      }
-    ; {
-        key = '5'
-      ; description = "Show help2"
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = '1'
-              ; description = "Show help2"
-              ; cmd =
-                  Fun
-                    (fun _ ->
-                      ui_state.show_popup
-                      $= Some (commands_list_ui command_mapping, "Help");
-                      ui_state.input $= `Mode (fun _ -> `Unhandled))
-              }
-            ]
-      }
-    ; {
-        key = 'P'
-      ; description = "Move the working copy to the previous child "
-      ; cmd = Cmd [ "prev" ]
-      }
-    ; {
-        key = 'p'
-      ; description = "Edit the previous child change"
-      ; cmd = Cmd [ "prev"; "--edit" ]
-      }
-    ; {
-        key = 'N'
-      ; description = "Move the working copy to the next child "
-      ; cmd = Cmd [ "next" ]
-      }
-    ; {
-        key = 'n'
-      ; description = "Edit the next child change"
-      ; cmd = Cmd [ "next"; "--edit" ]
-      }
-    ; {
-        key = 'i'
-      ; cmd =
-          SubCmd
-            [
-              { key = 'i'; description = "Make a new empty change"; cmd = Cmd [ "new" ] }
-            ; {
-                key = 'a'
-              ; description = "Insert a new empty change after a specific revision"
-              ; cmd = Prompt ("New change after commit:", [ "new" ])
-              }
-            ]
-      ; description = "Make a new empty change"
-      }
-    ; {
-        key = 'c'
-      ; description = "Describe this change and move on (same as `describe` then `new`) "
-      ; cmd = Prompt ("commit msg", [ "commit"; "-m" ])
-      }
-    ; {
-        key = 'S'
-      ; description = "Split the current commit interacively"
-      ; cmd = Cmd_I [ "split"; "-i" ]
-      }
-    ; {
-        key = 's'
-      ; description = "Squash/unsquash (has subcommands)"
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = 'S'
-              ; cmd = Cmd_I [ "unsquash"; "-i" ]
-              ; description = "Interactivaly unsquash"
-              }
-            ; {
-                key = 's'
-              ; description = "Squash into parent"
-              ; cmd =
-                  Fun
-                    (fun _ ->
-                      let curr_msg, prev_msg = get_messages () in
-                      let new_msg = prev_msg ^ curr_msg in
-                      jj [ "squash"; "--quiet"; "-m"; new_msg ] |> ignore)
-              }
-            ; {
-                key = 'S'
-              ; description = "Squash into any commit"
-              ; cmd =
-                  PromptThen
-                    ( "target revision"
-                    , fun str ->
-                        let curr_msg, prev_msg = get_messages () in
-                        let new_msg = prev_msg ^ curr_msg in
-                        Cmd [ "squash"; "--quiet"; "-m"; new_msg; "--into"; str ] )
-              }
-            ; {
-                key = 'i'
-              ; description = "Interactively choose what to squash into parent"
-              ; cmd = Cmd_I [ "squash"; "-i" ]
-              }
-            ; {
-                key = 'I'
-              ; description = "Interactively choose what to squash into a commit"
-              ; cmd = Prompt_I ("target revision", [ "squash"; "-i"; "--into" ])
-              }
-            ]
-      }
-    ; {
-        key = 'e'
-      ; cmd = Prompt ("revision", [ "edit" ])
-      ; description = "Edit a particular revision"
-      }
-    ; {
-        key = 'd'
-      ; cmd = Prompt ("description", [ "describe"; "-m" ])
-      ; description = "Describe this revision"
-      }
-    ; {
-        key = 'R'
-      ; cmd = Cmd_I [ "resolve" ]
-      ; description = "Resolve conflicts at this revision"
-      }
-    ; {
-        key = 'r'
-      ; description = "Rebase revision "
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = 'r'
-              ; description = "Rebase single revision"
-              ; cmd =
-                  Prompt ("destination for revision rebase", [ "rebase"; "-r"; "@"; "-d" ])
-              }
-            ; {
-                key = 's'
-              ; description = "Rebase revision and its decendents"
-              ; cmd =
-                  Prompt
-                    ("Destination for decendent rebase", [ "rebase"; "-s"; "@"; "-d" ])
-              }
-            ; {
-                key = 'b'
-              ; description = "Rebase revision and all other revissions on its branch"
-              ; cmd =
-                  Prompt ("Destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ])
-              }
-            ]
-      }
-    ; {
-        key = 'g'
-      ; description = "Git commands"
-      ; cmd =
-          SubCmd
-            [
-              { key = 'p'; description = "git push branch"; cmd = Cmd [ "git"; "push" ] }
-            ; { key = 'f'; description = "git fetch"; cmd = Cmd [ "git"; "fetch" ] }
-            ]
-      }
-    ; {
-        key = 'z'
-      ; description =
-          "Parallelize commits. Takes 2 commits and makes them have the\n\
-           same parent and child. Run `jj parallelize` --help for details"
-      ; cmd =
-          PromptThen
-            ( "list commits to parallelize"
-            , fun x -> Cmd ([ "paralellize" ] @ (x |> String.split_on_char ' ')) )
-      }
-    ; {
-        key = 'a'
-      ; description = "Abandon this change(removes just this change and rebases parents)"
-      ; cmd = Cmd [ "abandon" ] |> confirm_prompt "abandon the change"
-      }
-    ; {
-        key = 'b'
-      ; description = "Branch commands"
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = 'c'
-              ; description = "Create new branches"
-              ; cmd =
-                  PromptThen
-                    ( "Branch names to create"
-                    , fun x ->
-                        Cmd ([ "branch"; "create" ] @ (x |> String.split_on_char ' ')) )
-              }
-            ; {
-                key = 'd'
-              ; description = "Delete branches"
-              ; cmd = Prompt ("Branch names to delete", [ "branch"; "delete" ])
-              }
-            ; {
-                key = 'r'
-              ; description = "Rename branch"
-              ; cmd =
-                  PromptThen
-                    ( "Branch to rename"
-                    , fun curr_name ->
-                        Prompt ("New branch name", [ "branch"; "rename"; curr_name ]) )
-              }
-            ; {
-                key = 's'
-              ; description = "set branch to this change"
-              ; cmd = Prompt ("Branch to set to this commit ", [ "branch"; "set"; "-B" ])
-              }
-            ; {
-                key = 't'
-              ; description = "track given remote branch"
-              ; cmd = Prompt ("Branch to track 'branch@remote'", [ "branch"; "track" ])
-              }
-            ; {
-                key = 'u'
-              ; description = "untrack given remote branch"
-              ; cmd = Prompt ("Branch to untrack 'branch@remote'", [ "branch"; "untrack" ])
-              }
-            ]
-      }
-    ]
   ;;
 
   let rec handleCommand description cmd =
@@ -356,10 +126,6 @@ module Make (Vars : Global_vars.Vars) = struct
       ui_state.show_popup $= None;
       prompt str (`Cmd_I args);
       raise Handled
-    | Prompt_Fn (str, fn) ->
-      ui_state.show_popup $= None;
-      prompt str (`Cmd (fn ()));
-      raise Handled
     | Fun func ->
       ui_state.show_popup $= None;
       func ();
@@ -372,7 +138,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | Dynamic f ->
       f () |> handleCommand description
 
-  (** Try mapching the command mapping to the provided key and run the command if it matches*)
+  (** Try mapching the command mapping to the provided key and run the command if it matches *)
   and command_input ~is_sub keymap key =
     (* Use exceptions so we can break out of the list*)
     try
@@ -394,8 +160,31 @@ module Make (Vars : Global_vars.Vars) = struct
     | Handled ->
       ()
   ;;
+end
 
-  (** Handles input and sub_commands*)
+open Nottui
+
+module Make (Vars : Global_vars.Vars) = struct
+  open Lwd_infix
+  open Vars
+  open Jj_process.Make (Vars)
+  open Notty
+  open Jj_tui
+  module W = Nottui_widgets
+  open! Jj_tui.Util
+  open Intern (Vars)
+  module Wd = Widgets
+  include Shared
+
+  (**Generate a UI object with all the commands nicely formatted and layed out. Useful for help text*)
+  let commands_list_ui = commands_list_ui
+
+  (**`Prompt`:Allows running one command and then running another using the input of the first*)
+  let confirm_prompt prompt cmd =
+    SubCmd [ { key = 'y'; description = "Yes I want to " ^ prompt; cmd } ]
+  ;;
+
+  (** Handles input and sub_commands.*)
   let handleInputs command_mapping =
     match Lwd.peek ui_state.input with
     | `Mode mode ->

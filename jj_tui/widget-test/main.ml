@@ -174,9 +174,9 @@ let w_3 =
   let start = Focus.make () in
   Focus.request start;
   W.hbox
-    [
-      Wd.v_window_stack2
-        [
+    [ (*
+         Wd.v_window_stack2
+         [
           is_focused_widget ()
         ; W.string "hi this is the first level"
           |> Lwd.pure
@@ -205,8 +205,8 @@ let w_3 =
                 ]
             ]
         ]
-    ; Wd.v_window_stack2
-        [
+         ; Wd.v_window_stack2
+         [
           W.string "hi this is the first level"
           |> Lwd.pure
           |> W.scroll_area
@@ -216,35 +216,35 @@ let w_3 =
           |> W.scroll_area
           |> Wd.border_box_focusable
         ]
-    ]
+      *) ]
   |> navMode
 ;;
 
 let w_5 =
   let focus = Focus.make () in
   Focus.request focus;
-  Wd.v_window_stack
+  Wd.Wip.v_window_stack
     ~focus
     [
       is_focused_widget2
     ; is_focused_widget2
-    ; Wd.h_window_stack
+    ; Wd.Wip.h_window_stack
         [
           is_focused_widget2
         ; is_focused_widget2
-        ; Wd.v_window_stack
+        ; Wd.Wip.v_window_stack
             [
               is_focused_widget2
             ; is_focused_widget2
-            ; Wd.h_window_stack
+            ; Wd.Wip.h_window_stack
                 [
                   is_focused_widget2
                 ; is_focused_widget2
-                ; Wd.v_window_stack [ is_focused_widget2; is_focused_widget2 ]
+                ; Wd.Wip.v_window_stack [ is_focused_widget2; is_focused_widget2 ]
                 ]
             ]
         ]
-    ; Wd.h_window_stack [ is_focused_widget2 ]
+    ; Wd.Wip.h_window_stack [ is_focused_widget2 ]
     ]
 ;;
 
@@ -292,9 +292,9 @@ let w_6 =
 let w_7 =
   let state = Lwd.var (W.default_scroll_state, W.default_scroll_state) in
   W.vbox
-    [
-      Wd.h_window_stack2
-        [
+    [ (*
+         Wd.Wip.h_window_stack2
+         [
           Ui.vcat
             [
               W.string "hi"
@@ -307,8 +307,8 @@ let w_7 =
           |>$ Ui.resize ~mw:15
         ; W.string "|" |> Lwd.pure
         ]
-    ; Wd.h_window_stack2
-        [
+         ; Wd.Wip.h_window_stack2
+         [
           Ui.vcat
             [
               W.string "hi"
@@ -321,8 +321,8 @@ let w_7 =
           |>$ Ui.resize ~h:2 ~sh:0
         ; W.string "|" |> Lwd.pure
         ]
-    ; W.string "----" |> Lwd.pure
-    ]
+         ; W.string "----" |> Lwd.pure
+      *) ]
 ;;
 
 let w_8 =

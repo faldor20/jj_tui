@@ -6,8 +6,8 @@ type cmd_args = string list
 
 type ui_state_t = {
     view :
-      [ `Main
-      | `Cmd_I of cmd_args
+      [ `Main (**Normal Mode*)
+      | `Cmd_I of cmd_args (**Indicates we are running a JJ command that is interactive*)
       | `RunCmd of
         cmd_args
         (* | `Prompt of string * [ `Cmd of cmd_args | `Cmd_I of cmd_args ] *)
@@ -24,7 +24,7 @@ type ui_state_t = {
   ; jj_change_files : (string * string) list Lwd.var
 }
 
-(** Global variables for the ui*)
+(** Global variables for the ui. Here we keep anything that's just a pain to pipe around*)
 module type Vars = sig
   type eio_vars = {
       env : Eio_unix.Stdenv.base
@@ -40,8 +40,7 @@ module type Vars = sig
   val get_eio_vars : unit -> eio_vars
   val get_term : unit -> Notty_unix.Term.t
   val ui_state : ui_state_t
-  val update_ui_state: (ui_state_t->unit)->unit
-
+  val update_ui_state : (ui_state_t -> unit) -> unit
   val render_mutex : Eio.Mutex.t
 end
 
