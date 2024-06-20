@@ -20,7 +20,8 @@ let list_files ?(rev = "@") () =
            the start ")
     else None)
 ;;
-
+let is_jj_repo() = 
+    jj_no_log  ~color:false [ "log";"''" ] |> Base.String.is_substring ~substring:"There is no jj repo"|>not
 (**Updates the status windows; Without snapshotting the working copy by default
    This should be called after any command that performs a change *)
 let update_status ?(cause_snapshot = false) () =

@@ -107,26 +107,41 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let mainUi ~sw env =
     (*we want to initialize our states and keep them up to date*)
-    update_status ~cause_snapshot:true ();
-    Eio.Fiber.fork_daemon ~sw (fun _ ->
-      let clock = Eio.Stdenv.clock env in
-      while true do
-        Eio.Time.sleep clock 5.0;
-        (*we need to lock this becasue we could end up updating while the ui is rendering*)
-        Vars.render_mutex |> Eio.Mutex.lock;
-        update_status ~cause_snapshot:true ();
-        Vars.render_mutex |> Eio.Mutex.unlock
-      done;
-      `Stop_daemon);
-    let$* running = Lwd.get ui_state.view in
-    match running with
-    | `Cmd_I cmd ->
-      (*We have this extra step to paint the terminal empty for one step*)
-      Lwd.set ui_state.view @@ `RunCmd cmd;
-      full_term_sized_background
-    | `RunCmd cmd ->
-      Jj_widgets.interactive_process env ("jj" :: cmd)
-    | `Main ->
-      main_view ~sw
+    let is_jj_repo = is_jj_repo () in
+    if not is_jj_repo
+    then
+      W.string "Not in a jj repo."
+      |> Lwd.pure
+      |> Wd.border_box
+      |>$ Ui.resize
+            ~sw:1
+            ~sh:1
+            ~mw:10000
+            ~mh:10000
+            ~crop:Wd.neutral_grav
+            ~pad:Wd.neutral_grav
+      |> inputs
+    else (
+      update_status ~cause_snapshot:true ();
+      Eio.Fiber.fork_daemon ~sw (fun _ ->
+        let clock = Eio.Stdenv.clock env in
+        while true do
+          Eio.Time.sleep clock 5.0;
+          (*we need to lock this becasue we could end up updating while the ui is rendering*)
+          Vars.render_mutex |> Eio.Mutex.lock;
+          update_status ~cause_snapshot:true ();
+          Vars.render_mutex |> Eio.Mutex.unlock
+        done;
+        `Stop_daemon);
+      let$* running = Lwd.get ui_state.view in
+      match running with
+      | `Cmd_I cmd ->
+        (*We have this extra step to paint the terminal empty for one step*)
+        Lwd.set ui_state.view @@ `RunCmd cmd;
+        full_term_sized_background
+      | `RunCmd cmd ->
+        Jj_widgets.interactive_process env ("jj" :: cmd)
+      | `Main ->
+        main_view ~sw)
   ;;
 end
