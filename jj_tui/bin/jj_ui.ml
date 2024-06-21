@@ -83,8 +83,8 @@ module Make (Vars : Global_vars.Vars) = struct
   (** The primary view for the UI with the file_view graph_view and summary*)
   let main_view ~sw =
     let file_focus = Focus.make () in
-    Focus.request file_focus;
     let graph_focus = Focus.make () in
+    Focus.request graph_focus;
     let branch_focus = Focus.make () in
     let summary_focus = Focus.make () in
     W.hbox
