@@ -9,7 +9,8 @@ Press `Alt+Up`and`Alt+Down` to navigate windows
 
 Please provide any suggestions. I'm new to jujutsu so I'm sure people have workflows I couldn't even dream of.  
 ## Installing
-If you are on linux, just grab the latest release. It's statically linked and should work on any linux machine. It is also compiled for mac, but I don't have a mac to test on so, let me know if it doesn't work
+If you are on linux, just grab the latest release. It's statically linked and should work on any linux machine.
+If you are on mac, also grab a prebuild, let me know if you have any issues as I can't test on a mac.
 
 
 To open a shell with jj_tui on nix:`nix shell github:faldor20/jj_tui`
