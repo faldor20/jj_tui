@@ -261,7 +261,6 @@ let w_3 =
              `Unhandled)
        in
        let outerFocus = Focus.make () in
-
        (*We wrap the button in some more UI*)
        let$ outer = W.vbox [ button "I'm a button"; Lwd.get output |>$ W.string ]
        and$ focus = Focus.status outerFocus in

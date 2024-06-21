@@ -9,6 +9,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open! Jj_tui.Util
   module Wd = Widgets
   open Jj_commands.Make (Vars)
+  open Jj_widgets.Make (Vars)
 
   let rec command_mapping : command list =
     [
@@ -20,24 +21,6 @@ module Make (Vars : Global_vars.Vars) = struct
             (fun _ ->
               ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
-      }
-    ; {
-        key = '5'
-      ; description = "Show help2"
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = '1'
-              ; description = "Show help2"
-              ; cmd =
-                  Fun
-                    (fun _ ->
-                      ui_state.show_popup
-                      $= Some (commands_list_ui command_mapping, "Help");
-                      ui_state.input $= `Mode (fun _ -> `Unhandled))
-              }
-            ]
       }
     ; {
         key = 'P'
@@ -64,7 +47,11 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           SubCmd
             [
-              { key = 'i'; description = "Make a new empty change"; cmd = Cmd [ "new" ] }
+              {
+                key = 'i'
+              ; description = "Make a new empty change"
+              ; cmd = Cmd_r [ "new" ]
+              }
             ; {
                 key = 'a'
               ; description = "Insert a new empty change after a specific revision"
@@ -129,12 +116,27 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         key = 'e'
-      ; cmd = Prompt ("revision", [ "edit" ])
-      ; description = "Edit a particular revision"
+      ; cmd =
+          SubCmd
+            [
+              {
+                key = 'e'
+              ; cmd =
+                  Dynamic
+                    (fun () -> Cmd [ "edit"; Lwd.peek Vars.ui_state.selected_revision ])
+              ; description = "Edit the selected revision"
+              }
+            ; {
+                key = 'r'
+              ; cmd = Prompt ("revision", [ "edit" ])
+              ; description = "Edit a specific revision"
+              }
+            ]
+      ; description = "Edit a revision"
       }
     ; {
         key = 'd'
-      ; cmd = Prompt ("description", [ "describe"; "-m" ])
+      ; cmd = Prompt_r ("description", [ "describe"; "-m" ])
       ; description = "Describe this revision"
       }
     ; {
@@ -152,20 +154,37 @@ module Make (Vars : Global_vars.Vars) = struct
                 key = 'r'
               ; description = "Rebase single revision"
               ; cmd =
-                  Prompt ("destination for revision rebase", [ "rebase"; "-r"; "@"; "-d" ])
+                  Dynamic
+                    (fun () ->
+                      Prompt
+                        ( "destination for revision rebase"
+                        , [
+                            "rebase"; "-r"; Lwd.peek Vars.ui_state.selected_revision; "-d"
+                          ] ))
               }
             ; {
                 key = 's'
               ; description = "Rebase revision and its decendents"
               ; cmd =
-                  Prompt
-                    ("Destination for decendent rebase", [ "rebase"; "-s"; "@"; "-d" ])
+                  Dynamic
+                    (fun () ->
+                      Prompt
+                        ( "Destination for decendent rebase"
+                        , [
+                            "rebase"; "-s"; Lwd.peek Vars.ui_state.selected_revision; "-d"
+                          ] ))
               }
             ; {
                 key = 'b'
               ; description = "Rebase revision and all other revissions on its branch"
               ; cmd =
-                  Prompt ("Destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ])
+                  Dynamic
+                    (fun () ->
+                      Prompt
+                        ( "Destination for branch rebase"
+                        , [
+                            "rebase"; "-b"; Lwd.peek Vars.ui_state.selected_revision; "-d"
+                          ] ))
               }
             ]
       }
@@ -175,7 +194,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           SubCmd
             [
-              { key = 'p'; description = "git push branch"; cmd = Cmd [ "git"; "push" ] }
+              { key = 'p'; description = "git push"; cmd = Cmd [ "git"; "push" ] }
             ; { key = 'f'; description = "git fetch"; cmd = Cmd [ "git"; "fetch" ] }
             ]
       }
@@ -226,7 +245,7 @@ module Make (Vars : Global_vars.Vars) = struct
             ; {
                 key = 's'
               ; description = "set branch to this change"
-              ; cmd = Prompt ("Branch to set to this commit ", [ "branch"; "set"; "-B" ])
+              ; cmd = Dynamic(fun ()->Prompt ("Branch to set to this commit ", [ "branch"; "set";"-r";Lwd.peek Vars.ui_state.selected_revision; "-B" ]))
               }
             ; {
                 key = 't'
@@ -243,14 +262,60 @@ module Make (Vars : Global_vars.Vars) = struct
     ]
   ;;
 
-  (*Renders the commit graph from the UI state*)
-  let graph_view =
-    (*pad one on the left because it's hard to see the graph if it's too close*)
-    Wd.scroll_area (ui_state.jj_tree $-> (I.pad ~l:1 >> Ui.atom))
-    |>$ Ui.keyboard_area (function
-      | `ASCII k, [] ->
-        handleInputs command_mapping k
-      | _ ->
-        `Unhandled)
+  (*TODO:make a custom widget the renders the commit with and without selection.
+    with selection replace the dot with a blue version and slightly blue tint the background *)
+  let graph_view ~sw () =
+    let selectable_idx = ref 0 in
+    let graph, rev_ids = seperate_revs () in
+    let ui =
+      graph
+      |> Array.map (fun x ->
+        match x with
+        | `Selectable x ->
+          let ui is_focused =
+            (*hightlight blue when selection is true*)
+            let prefix =
+              if is_focused then I.char A.(bg A.blue) '>' 1 2 else I.char A.empty ' ' 1 2
+            in
+            I.hcat
+              [
+                prefix
+              ; x ^ "\n"
+                (* TODO This won't work if we are on a branch, because that puts the @ further out*)
+                |> unsafe_blit_start_if "@" "◉"
+                |> Jj_tui.AnsiReverse.colored_string
+              ]
+            |> Ui.atom
+          in
+          let data = Wd.{ ui; data = rev_ids.(!selectable_idx) } in
+          selectable_idx := !selectable_idx + 1;
+          Wd.(Selectable data)
+        | `Filler x ->
+          Wd.(Filler (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom)))
+      |> Lwd.pure
+      |> Wd.selection_list_exclusions
+           ~on_selection_change:(fun revision ->
+             Eio.Fiber.fork ~sw @@ fun _ ->
+             Vars.update_ui_state @@ fun _ ->
+             Lwd.set Vars.ui_state.selected_revision revision;
+             Global_funcs.update_status ())
+           ~custom_handler:(fun _ _ key ->
+             match key with
+             | `ASCII k, [] ->
+               handleInputs command_mapping k
+             | _ ->
+               `Unhandled)
+    in
+    W.vbox
+      [
+        ui
+      ; W.fmt
+          "graph_selectable:%d"
+          (graph
+           |> Array.to_list
+           |> List.filter (function `Selectable a -> true | _ -> false)
+           |> List.length)
+        |> Lwd.pure
+      ]
   ;;
 end

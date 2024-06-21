@@ -14,6 +14,15 @@ module Make (Vars : Global_vars.Vars) = struct
   let rec command_mapping =
     [
       {
+        key = 'h'
+      ; description = "Show help"
+      ; cmd =
+          Fun
+            (fun _ ->
+              ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
+              ui_state.input $= `Mode (fun _ -> `Unhandled))
+      }
+    ; {
         key = 'm'
       ; description = "Move file to other commit"
       ; cmd =
@@ -35,15 +44,6 @@ module Make (Vars : Global_vars.Vars) = struct
                 ("discard all changes to '" ^ selected ^ "' in this revision")
                 (Cmd [ "restore"; selected ]))
       }
-    ; {
-        key = 'h'
-      ; description = "Show help"
-      ; cmd =
-          Fun
-            (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
-              ui_state.input $= `Mode (fun _ -> `Unhandled))
-      }
     ]
   ;;
 
@@ -57,7 +57,9 @@ module Make (Vars : Global_vars.Vars) = struct
     Wd.selection_list_custom
       ~on_selection_change:(fun x ->
         Eio.Fiber.fork ~sw @@ fun _ ->
-        Vars.update_ui_state @@ fun _ -> Lwd.set selected_file x)
+        Vars.update_ui_state @@ fun _ -> 
+        Lwd.set selected_file x;
+        )
       ~custom_handler:(fun _ _ key ->
         match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
       file_uis

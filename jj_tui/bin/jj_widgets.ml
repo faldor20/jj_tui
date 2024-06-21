@@ -12,13 +12,57 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
 
-  exception Found
+  exception FoundStart
+  exception FoundFiller
 
-  let elieded_symbol =
-    let a = String.get_utf_8_uchar "◌" 0 in
+  let make_uchar str =
+    let a = String.get_utf_8_uchar str 0 in
     if a |> Uchar.utf_decode_is_valid
     then a |> Uchar.utf_decode_uchar
     else failwith "not a unicode string"
+  ;;
+
+  let elieded_symbol = make_uchar "◌"
+  let rev_symbol = make_uchar "◉"
+
+  let is_whitespace_char (code_point : int) : bool =
+    match code_point with
+    | 0x0009 (* Tab *)
+    | 0x000A (* Line Feed *)
+    | 0x000B (* Vertical Tab *)
+    | 0x000C (* Form Feed *)
+    | 0x000D (* Carriage Return *)
+    | 0x0020 (* Space *)
+    | 0x0085 (* Next Line *)
+    | 0x00A0 (* No-Break Space *)
+    | 0x1680 (* Ogham Space Mark *)
+    | 0x2000 (* En Quad *)
+    | 0x2001 (* Em Quad *)
+    | 0x2002 (* En Space *)
+    | 0x2003 (* Em Space *)
+    | 0x2004 (* Three-Per-Em Space *)
+    | 0x2005 (* Four-Per-Em Space *)
+    | 0x2006 (* Six-Per-Em Space *)
+    | 0x2007 (* Figure Space *)
+    | 0x2008 (* Punctuation Space *)
+    | 0x2009 (* Thin Space *)
+    | 0x200A (* Hair Space *)
+    | 0x2028 (* Line Separator *)
+    | 0x2029 (* Paragraph Separator *)
+    | 0x202F (* Narrow No-Break Space *)
+    | 0x205F (* Medium Mathematical Space *)
+    | 0x3000 (* Ideographic Space *) ->
+      true
+    | _ ->
+      false
+  ;;
+
+  let is_graph_start_char char =
+    let i = Uchar.to_int char in
+    (*chars like these: ├─╮*)
+    let is_pipe = i > 0x2500 && i < 0x259f in
+    let is_whitespace = is_whitespace_char i in
+    is_pipe || is_whitespace  
   ;;
 
   let test_data =
@@ -78,40 +122,61 @@ module Make (Vars : Global_vars.Vars) = struct
       [] (* If list is empty or has only one element, return empty list *)
   ;;
 
+  (*
+     1. Make the graph
+  *)
+  let is_line_filler line =
+    line
+    (* We will iterate through skipping any chars like pipes and whitespace untill we find either:
+       a) A rev start char,which would make the line a rev.
+       b) Nothing, which would make the the line filler
+    *)
+    |> String.iteri (fun i char ->
+      let uchar = String.get_utf_8_uchar line i |> Uchar.utf_decode_uchar in
+      (*I've removed the part that tries to precisely skip all the start chars. this is becasue it gets all stuffed up by the terminal escape codes
+      FIXME currently this will get stuffed up if a line has that rev symbol in it
+      *)
+
+      (* if not (uchar |> is_graph_start_char) *)
+      (* then *)
+        if uchar |> Uchar.equal rev_symbol || char == '@'
+        then raise FoundStart
+        (* else raise FoundFiller *)
+      (* else () *)
+      )
+  ;;
+
   let seperate_revs () =
     let graph =
       jj_no_log [ "log" ]
       |> String.split_on_char '\n'
       (* filter out any lines that contain *)
-      |> List.filter (fun x ->
+      |> Base.List.fold ~init:([], None) ~f:(fun (new_list, last) x ->
         if x |> String.length <= 1
-        then false
+        then `Filler x :: new_list, None
         else (
-          try
-            x
-            |> String.iteri (fun i char ->
-              let char = String.get_utf_8_uchar x i |> Uchar.utf_decode_uchar in
-              if char |> Uchar.equal elieded_symbol then raise Found else ());
-            true
-          with
-          | _ ->
-            false))
-      |> pairwise (fun (top, descr) -> top ^ "\n" ^ descr) ~f_last:(fun last -> [ last ])
+          match last with
+          | Some last_line ->
+            `Selectable (String.concat "\n" [ last_line; x ]) :: new_list, None
+          | None ->
+            (try
+               is_line_filler x;
+               `Filler x :: new_list, None
+             with
+             | FoundStart ->
+               new_list, Some x
+             | FoundFiller ->
+               `Filler x :: new_list, None)))
+      |> fst
+      |> List.rev
+      |> Array.of_list
     in
     let revs =
       jj_no_log ~color:false [ "log"; "--no-graph"; "-T"; {|change_id++"\n"|} ]
       |> String.split_on_char '\n'
       |> List.filter (fun x -> x |> String.trim <> "")
+      |> Array.of_list
     in
-    if List.length graph <> List.length revs
-    then
-      failwith
-      @@ "When getting list of revs the graph had a different number of items to the \
-          revs. This shouldn't be possible and is a bug. "
-      ^ Printf.sprintf "revs:%d graph:%d" (List.length revs) (List.length graph)
-      ^ "\n"
-      ^ String.concat "\n" revs
-      ^ String.concat "\n" graph;
     graph, revs
   ;;
 
@@ -156,48 +221,29 @@ module Make (Vars : Global_vars.Vars) = struct
     else string
   ;;
 
-  (*TODO:make a custom widget the renders the commit with and without selection.
-    with selection replace the dot with a blue version and slightly blue tint the background *)
-  let revs_list () =
-    seperate_revs ()
-    |> fst
-    |> List.map (fun x is_focused ->
-      (*hightlight blue when selection is true*)
-      let prefix =
-        if is_focused then I.char A.(bg A.blue) '>' 1 2 else I.char A.empty ' ' 1 2
-      in
-      I.hcat
-        [
-          prefix
-        ; x ^ "\n" |> unsafe_blit_start_if "@" "◉" |> Jj_tui.AnsiReverse.colored_string
-        ]
-      |> Ui.atom)
-    |> Lwd.pure
-    |> selection_list
-  ;;
 
-  (*TODO:make a custom widget the renders the commit with and without selection.
-    with selection replace the dot with a blue version and slightly blue tint the background *)
-  let revs_list_filtered () =
-    let graph_items, revs = seperate_revs () in
-    graph_items
-    |> List.map (fun x is_focused ->
-      (* hightlight blue when selection is true *)
-      let prefix =
-        if is_focused then I.char A.(bg A.blue) '>' 1 2 else I.char A.empty ' ' 1 2
-      in
-      I.hcat
-        [
-          prefix
-        ; x ^ "\n" |> unsafe_blit_start_if "@" "◉" |> Jj_tui.AnsiReverse.colored_string
-        ]
-      |> Ui.atom)
-    |> List.map2 (fun rev ui -> Wd.{ ui; data = rev }) revs
-    |> Lwd.pure
-    |> Wd.filterable_selection_list
-         ~on_confirm:(fun _ -> ())
-         ~filter_predicate:(fun input rev -> rev |> String.starts_with ~prefix:input)
-  ;;
+  (* (*TODO:make a custom widget the renders the commit with and without selection. *)
+     (* with selection replace the dot with a blue version and slightly blue tint the background *) *)
+  (* let revs_list_filtered () = *)
+  (* let graph_items, revs = seperate_revs () in *)
+  (* graph_items *)
+  (* |> List.map (fun x is_focused -> *)
+  (* hightlight blue when selection is true *)
+  (* let prefix = *)
+  (* if is_focused then I.char A.(bg A.blue) '>' 1 2 else I.char A.empty ' ' 1 2 *)
+  (* in *)
+  (* I.hcat *)
+  (* [ *)
+  (* prefix *)
+  (* ; x ^ "\n" |> unsafe_blit_start_if "@" "◉" |> Jj_tui.AnsiReverse.colored_string *)
+  (* ] *)
+  (* |> Ui.atom) *)
+  (* |> List.map2 (fun rev ui -> Wd.{ ui; data = rev }) revs *)
+  (* |> Lwd.pure *)
+  (* |> Wd.filterable_selection_list *)
+  (* ~on_confirm:(fun _ -> ()) *)
+  (* ~filter_predicate:(fun input rev -> rev |> String.starts_with ~prefix:input) *)
+  (* ;; *)
 
   (** Start a process that will take full control of both stdin and stdout.
       This is used for interactive diffs and such*)
