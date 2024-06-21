@@ -70,6 +70,23 @@ module Intern (Vars : Global_vars.Vars) = struct
          line key description :: render_commands ~sub_level:(sub_level + 1) subs
   ;;
 
+  (*handle exception from jj*)
+  let handle_jj_error error =
+    ui_state.show_prompt $= None;
+    ui_state.show_popup
+    $= Some
+         ( error
+           |> Jj_tui.AnsiReverse.colored_string
+           |> Ui.atom
+           |> Ui.resize ~sw:1 ~sh:1
+           |> Lwd.pure
+         , "An error occured running that command" );
+    ui_state.input $= `Mode (fun _ -> `Unhandled)
+  ;;
+
+  (*catch any exceptions from jj*)
+  let safe_jj f = try f () with JJError error -> handle_jj_error error
+
   let commands_list_ui commands =
     commands |> render_commands |> I.vcat |> Ui.atom |> Lwd.pure |> Wd.scroll_area
   ;;
@@ -87,16 +104,17 @@ module Intern (Vars : Global_vars.Vars) = struct
            , ""
            , function
              | `Finished str ->
-               (match cmd with
-                | `Cmd args ->
-                  let _result = jj (args @ [ str ]) in
-                  Global_funcs.update_status ();
-                  ()
-                  (* v_cmd_out $= jj (args @ [ str ]); *)
-                | `Cmd_I args ->
-                  Lwd.set ui_state.view (`Cmd_I (args @ [ str ]))
-                | `Fun func ->
-                  func str)
+               safe_jj (fun _ ->
+                 match cmd with
+                 | `Cmd args ->
+                   let _result = jj (args @ [ str ]) in
+                   Global_funcs.update_status ();
+                   ()
+                   (* v_cmd_out $= jj (args @ [ str ]); *)
+                 | `Cmd_I args ->
+                   Lwd.set ui_state.view (`Cmd_I (args @ [ str ]))
+                 | `Fun func ->
+                   func str)
              | `Closed ->
                () )
     in
@@ -148,6 +166,9 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Handled ->
       if is_sub then ui_state.input $= `Normal;
       `Handled
+    | JJError error ->
+      handle_jj_error error;
+      `Unhandled
 
   and command_no_input description cmd =
     (* Use exceptions so we can break out of the list*)

@@ -75,22 +75,23 @@ module Make (Vars : Global_vars.Vars) = struct
     res
   ;;
 
+  exception JJError of string
   (** Run a jj command without outputting to the command_log.
       @param ?snapshot=true
         When true snapshots the state when running the command and also aquires a lock before running it. Set to false for commands you wish to run concurrently. like those for generating content in the UI
       @param ?color=true When true output will have terminal escape codes for color *)
   let jj_no_log ?(snapshot = true) ?(color = true) args =
+
     match jj_no_log_errorable ~snapshot ~color args with
     | Ok a ->
       a
     | Error (`BadExit (code, str)) ->
-      failwith (Printf.sprintf "Exited with code %i; Message:\n%s" code str)
+      raise (JJError (Printf.sprintf "Exited with code %i; Message:\n%s" code str))
     | Error (`EioErr a) ->
-      failwith
-        (Printf.sprintf
+      raise (JJError        (Printf.sprintf
            "Error running jj process:\n%a"
            (fun _ -> Base.Error.to_string_hum)
-           a)
+           a))
   ;;
 
   let jj args =
