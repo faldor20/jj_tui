@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jj_tui_linux
-          path: jj_tui_linux.tar.gz
+          path: jj_tui_linux-x86_64.tar.gz
 
   macos:
     strategy:
@@ -52,7 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jj_tui_macos
-          path: jj_tui_macos.tar.gz
+          path: jj_tui_macos-aarch64.tar.gz
 
   release:
     permissions:
@@ -69,5 +69,5 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          jj_tui_macos/jj_tui_macos.tar.gz
-          jj_tui_linux/jj_tui_linux.tar.gz
+          jj_tui_macos/jj_tui_macos-aarch64.tar.gz
+          jj_tui_linux/jj_tui_linux-x86_64.tar.gz
