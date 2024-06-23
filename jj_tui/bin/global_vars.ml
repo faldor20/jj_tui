@@ -1,8 +1,18 @@
 open Notty
 open Nottui
 open Eio.Std
+open Lwd_infix
 
 type cmd_args = string list
+
+type rev_id = {
+    change_id : string
+  ; commit_id : string
+}
+
+type 'a maybe_unique =
+  | Unique of 'a
+  | Duplicate of 'a
 
 type ui_state_t = {
     view :
@@ -22,7 +32,7 @@ type ui_state_t = {
   ; jj_show : I.t Lwd.var
   ; jj_branches : I.t Lwd.var
   ; jj_change_files : (string * string) list Lwd.var
-  ; selected_revision : string Lwd.var
+  ; selected_revision : rev_id maybe_unique Lwd.var
   ; trigger_update : unit Lwd.var
 }
 
@@ -44,6 +54,12 @@ module type Vars = sig
   val ui_state : ui_state_t
   val update_ui_state : (ui_state_t -> unit) -> unit
   val render_mutex : Eio.Mutex.t
+
+  (**returns either a change_id or if their are change_id conflicts, a commit_id *)
+  val get_selected_rev : unit -> string
+
+  (**returns either a change_id or if their are change_id conflicts, a commit_id *)
+  val get_selected_rev_lwd : unit -> string Lwd.t
 end
 
 module Vars : Vars = struct
@@ -64,7 +80,7 @@ module Vars : Vars = struct
     ; jj_show = Lwd.var I.empty
     ; jj_branches = Lwd.var I.empty
     ; jj_change_files = Lwd.var []
-    ; selected_revision = Lwd.var "@"
+    ; selected_revision = Lwd.var (Unique { change_id = "@"; commit_id = "@" })
     ; input = Lwd.var `Normal
     ; show_popup = Lwd.var None
     ; show_prompt = Lwd.var None
@@ -92,4 +108,23 @@ module Vars : Vars = struct
   let get_eio_env () = (Option.get !eio).env
   let get_eio_vars () = Option.get !eio
   let get_term () = Option.get !term
+
+  (**Gets an id for the selected revision. If the change_id is unique we use that, if it's not we return a commit_id instead*)
+  let get_selected_rev () =
+    match Lwd.peek ui_state.selected_revision with
+    | Unique { change_id; _ } ->
+      change_id
+    | Duplicate { commit_id; _ } ->
+      commit_id
+  ;;
+
+  (**see [get_selected_rev]*)
+  let get_selected_rev_lwd () =
+    let$ a = Lwd.get ui_state.selected_revision in
+    match a with
+    | Unique { change_id; _ } ->
+      change_id
+    | Duplicate { commit_id; _ } ->
+      commit_id
+  ;;
 end

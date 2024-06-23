@@ -47,6 +47,7 @@ module Intern (Vars : Global_vars.Vars) = struct
   open! Jj_tui.Util
   module Wd = Jj_tui.Widgets
 
+
   exception Handled
 
   let render_command_line ~indent_level key desc =
@@ -75,22 +76,7 @@ module Intern (Vars : Global_vars.Vars) = struct
          :: render_commands ~indent_level:(indent_level + 1) subs
   ;;
 
-  (*handle exception from jj*)
-  let handle_jj_error error =
-    ui_state.show_prompt $= None;
-    ui_state.show_popup
-    $= Some
-         ( error
-           |> Jj_tui.AnsiReverse.colored_string
-           |> Ui.atom
-           |> Ui.resize ~sw:1 ~sh:1
-           |> Lwd.pure
-         , "An error occured running that command" );
-    ui_state.input $= `Mode (fun _ -> `Unhandled)
-  ;;
 
-  (*catch any exceptions from jj*)
-  let safe_jj f = try f () with JJError error -> handle_jj_error error
 
   let commands_list_ui commands =
     let move_command =
@@ -146,7 +132,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Cmd_r args ->
       ui_state.show_popup $= None;
-      noOut (args@["-r";Lwd.peek ui_state.selected_revision]);
+      noOut (args@["-r";Vars.get_selected_rev()]);
       raise Handled
     | Prompt (str, args) ->
       ui_state.show_popup $= None;
@@ -154,7 +140,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Prompt_r (str, args) ->
       ui_state.show_popup $= None;
-      prompt str (`Cmd (args@["-r";Lwd.peek ui_state.selected_revision]));
+      prompt str (`Cmd (args@["-r";Vars.get_selected_rev()]));
       raise Handled
     | PromptThen (label, next) ->
       ui_state.show_popup $= None;
@@ -177,7 +163,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Dynamic f ->
       f () |> handleCommand description
     | Dynamic_r f ->
-      f (Lwd.peek Vars.ui_state.selected_revision) |> handleCommand description
+      f (Vars.get_selected_rev()) |> handleCommand description
 
   (** Try mapching the command mapping to the provided key and run the command if it matches *)
   and command_input ~is_sub keymap key =
@@ -191,8 +177,8 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Handled ->
       if is_sub then ui_state.input $= `Normal;
       `Handled
-    | JJError error ->
-      handle_jj_error error;
+    | JJError (cmd,error) ->
+      handle_jj_error cmd error;
       `Unhandled
 
   and command_no_input description cmd =

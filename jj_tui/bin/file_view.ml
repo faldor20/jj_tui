@@ -34,7 +34,7 @@ module Make (Vars : Global_vars.Vars) = struct
                     "squash"
                   ; "-u"
                   ; "--from"
-                  ; Lwd.peek ui_state.selected_revision
+                  ; get_selected_rev()
                   ; "--into"
                   ; rev
                   ; Lwd.peek selected_file
@@ -73,7 +73,7 @@ module Make (Vars : Global_vars.Vars) = struct
   (**Get the status for the currently selected file*)
   let file_status () =
     let$ selected = Lwd.get selected_file
-    and$ rev = Lwd.get Vars.ui_state.selected_revision in
+    and$ rev = Vars.get_selected_rev_lwd()in
     if selected != "" then jj_no_log [ "diff"; "-r"; rev; selected ] else ""
   ;;
 end

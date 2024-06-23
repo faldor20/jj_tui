@@ -10,6 +10,7 @@ module Wd = Widgets
 
 module Make (Vars : Global_vars.Vars) = struct
   open Vars
+  open Global_vars
   open Jj_process.Make (Vars)
 
   exception FoundStart
@@ -62,7 +63,7 @@ module Make (Vars : Global_vars.Vars) = struct
     (*chars like these: ├─╮*)
     let is_pipe = i > 0x2500 && i < 0x259f in
     let is_whitespace = is_whitespace_char i in
-    is_pipe || is_whitespace  
+    is_pipe || is_whitespace
   ;;
 
   let test_data =
@@ -134,19 +135,49 @@ module Make (Vars : Global_vars.Vars) = struct
     |> String.iteri (fun i char ->
       let uchar = String.get_utf_8_uchar line i |> Uchar.utf_decode_uchar in
       (*I've removed the part that tries to precisely skip all the start chars. this is becasue it gets all stuffed up by the terminal escape codes
-      FIXME currently this will get stuffed up if a line has that rev symbol in it
+        FIXME currently this will get stuffed up if a line has that rev symbol in it
       *)
 
       (* if not (uchar |> is_graph_start_char) *)
       (* then *)
-        if uchar |> Uchar.equal rev_symbol || char == '@'
-        then raise FoundStart
-        (* else raise FoundFiller *)
-      (* else () *)
-      )
+      if uchar |> Uchar.equal rev_symbol || char == '@' then raise FoundStart
+      (* else raise FoundFiller *)
+      (* else () *))
   ;;
 
-  let seperate_revs () =
+(** Function to tag duplicated items in a list *)
+let tag_duplicates lst =
+  (* Create a frequency map to count occurrences of each element *)
+  let freq_map =
+    List.fold_left (fun acc {change_id;_} ->
+      let count = try List.assoc change_id acc with Not_found -> 0 in
+      (change_id, count + 1) :: List.remove_assoc change_id acc
+    ) [] lst
+  in
+  (* Tag each item in the list based on the frequency map *)
+  List.map (fun ({change_id;_} as x) ->
+    if List.assoc change_id freq_map > 1 then Duplicate x else Unique x 
+  ) lst
+
+  (**Returns a list of revs with both the change_id and commit_id*)
+  let get_revs () =
+    jj_no_log
+      ~color:false
+      [ "log";  "-T"; {|"|"++change_id++"|"++commit_id++"\n"|} ]
+    |> String.split_on_char '\n'
+    |> List.filter_map (fun x ->
+      let items = x |> String.split_on_char '|' in
+      match items with
+      | [ _graph; change_id; commit_id ] ->
+        Some { change_id; commit_id }
+      | _ ->
+        None)
+    |>tag_duplicates
+    |> Array.of_list
+  ;;
+
+  (** returns the graph and a list of revs within that graph*)
+  let graph_and_revs () =
     let graph =
       jj_no_log [ "log" ]
       |> String.split_on_char '\n'
@@ -171,12 +202,7 @@ module Make (Vars : Global_vars.Vars) = struct
       |> List.rev
       |> Array.of_list
     in
-    let revs =
-      jj_no_log ~color:false [ "log"; "--no-graph"; "-T"; {|change_id++"\n"|} ]
-      |> String.split_on_char '\n'
-      |> List.filter (fun x -> x |> String.trim <> "")
-      |> Array.of_list
-    in
+    let revs = get_revs () in
     graph, revs
   ;;
 
@@ -220,7 +246,6 @@ module Make (Vars : Global_vars.Vars) = struct
       string)
     else string
   ;;
-
 
   (* (*TODO:make a custom widget the renders the commit with and without selection. *)
      (* with selection replace the dot with a blue version and slightly blue tint the background *) *)

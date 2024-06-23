@@ -56,11 +56,6 @@ module Make (Vars : Global_vars.Vars) = struct
           SubCmd
             [
               {
-                key = 'S'
-              ; cmd = Dynamic_r (fun rev -> Cmd_I [ "unsquash"; "-r"; rev; "-i" ])
-              ; description = "Interactivaly unsquash"
-              }
-            ; {
                 key = 's'
               ; description = "Squash into parent"
               ; cmd =
@@ -68,7 +63,7 @@ module Make (Vars : Global_vars.Vars) = struct
                     (fun _ ->
                       let curr_msg, prev_msg = get_messages () in
                       let new_msg = prev_msg ^ curr_msg in
-                      let rev = Lwd.peek Vars.ui_state.selected_revision in
+                      let rev = Vars.get_selected_rev () in
                       jj [ "squash"; "--quiet"; "-r"; rev; "-m"; new_msg ] |> ignore)
               }
             ; {
@@ -80,7 +75,12 @@ module Make (Vars : Global_vars.Vars) = struct
                     , fun str ->
                         let curr_msg, prev_msg = get_messages () in
                         let new_msg = prev_msg ^ curr_msg in
-                        Cmd_r [ "squash"; "--quiet"; "-m"; new_msg; "--into"; str ] )
+                        Dynamic_r(fun rev->Cmd [ "squash"; "--quiet"; "-m"; new_msg;"--from";rev; "--into"; str ] ))
+              }
+            ; {
+                key = 'u'
+              ; cmd = Dynamic_r (fun rev -> Cmd_I [ "unsquash"; "-r"; rev; "-i" ])
+              ; description = "Interactivaly unsquash"
               }
             ; {
                 key = 'i'
@@ -239,7 +239,7 @@ module Make (Vars : Global_vars.Vars) = struct
     let ui =
       let$ graph, rev_ids =
         (*TODO I think this ads a slight delay to everything becasue it makes things need to be renedered twice. maybe I could try getting rid of it*)
-        Vars.ui_state.trigger_update |> Lwd.get |> Lwd.map ~f:(fun _ -> seperate_revs ())
+        Vars.ui_state.trigger_update |> Lwd.get |> Lwd.map ~f:(fun _ -> graph_and_revs ())
       in
       let selectable_idx = ref 0 in
       graph
