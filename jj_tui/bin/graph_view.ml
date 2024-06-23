@@ -9,6 +9,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open! Jj_tui.Util
   module Wd = Widgets
   open Jj_commands.Make (Vars)
+  open Jj_widgets.Make (Vars)
 
   let rec command_mapping : command list =
     [
@@ -22,32 +23,9 @@ module Make (Vars : Global_vars.Vars) = struct
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
-        key = '5'
-      ; description = "Show help2"
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = '1'
-              ; description = "Show help2"
-              ; cmd =
-                  Fun
-                    (fun _ ->
-                      ui_state.show_popup
-                      $= Some (commands_list_ui command_mapping, "Help");
-                      ui_state.input $= `Mode (fun _ -> `Unhandled))
-              }
-            ]
-      }
-    ; {
         key = 'P'
       ; description = "Move the working copy to the previous child "
       ; cmd = Cmd [ "prev" ]
-      }
-    ; {
-        key = 'p'
-      ; description = "Edit the previous child change"
-      ; cmd = Cmd [ "prev"; "--edit" ]
       }
     ; {
         key = 'N'
@@ -56,32 +34,20 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         key = 'n'
-      ; description = "Edit the next child change"
-      ; cmd = Cmd [ "next"; "--edit" ]
-      }
-    ; {
-        key = 'i'
-      ; cmd =
-          SubCmd
-            [
-              { key = 'i'; description = "Make a new empty change"; cmd = Cmd [ "new" ] }
-            ; {
-                key = 'a'
-              ; description = "Insert a new empty change after a specific revision"
-              ; cmd = Prompt ("New change after commit:", [ "new" ])
-              }
-            ]
-      ; description = "Make a new empty change"
+      ; cmd = Dynamic_r (fun rev -> Cmd [ "new"; rev ])
+      ; description = "Make a new empty change as a child of the selected rev"
       }
     ; {
         key = 'c'
-      ; description = "Describe this change and move on (same as `describe` then `new`) "
+      ; description =
+          "Describe this change and start working on a new rev (same as `describe` then \
+           `new`) "
       ; cmd = Prompt ("commit msg", [ "commit"; "-m" ])
       }
     ; {
         key = 'S'
       ; description = "Split the current commit interacively"
-      ; cmd = Cmd_I [ "split"; "-i" ]
+      ; cmd = Dynamic_r (fun rev -> Cmd_I [ "split"; "-r"; rev; "-i" ])
       }
     ; {
         key = 's'
@@ -91,7 +57,7 @@ module Make (Vars : Global_vars.Vars) = struct
             [
               {
                 key = 'S'
-              ; cmd = Cmd_I [ "unsquash"; "-i" ]
+              ; cmd = Dynamic_r (fun rev -> Cmd_I [ "unsquash"; "-r"; rev; "-i" ])
               ; description = "Interactivaly unsquash"
               }
             ; {
@@ -102,7 +68,8 @@ module Make (Vars : Global_vars.Vars) = struct
                     (fun _ ->
                       let curr_msg, prev_msg = get_messages () in
                       let new_msg = prev_msg ^ curr_msg in
-                      jj [ "squash"; "--quiet"; "-m"; new_msg ] |> ignore)
+                      let rev = Lwd.peek Vars.ui_state.selected_revision in
+                      jj [ "squash"; "--quiet"; "-r"; rev; "-m"; new_msg ] |> ignore)
               }
             ; {
                 key = 'S'
@@ -113,33 +80,38 @@ module Make (Vars : Global_vars.Vars) = struct
                     , fun str ->
                         let curr_msg, prev_msg = get_messages () in
                         let new_msg = prev_msg ^ curr_msg in
-                        Cmd [ "squash"; "--quiet"; "-m"; new_msg; "--into"; str ] )
+                        Cmd_r [ "squash"; "--quiet"; "-m"; new_msg; "--into"; str ] )
               }
             ; {
                 key = 'i'
               ; description = "Interactively choose what to squash into parent"
-              ; cmd = Cmd_I [ "squash"; "-i" ]
+              ; cmd = Dynamic_r (fun rev -> Cmd_I [ "squash"; "-r"; rev; "-i" ])
               }
             ; {
                 key = 'I'
               ; description = "Interactively choose what to squash into a commit"
-              ; cmd = Prompt_I ("target revision", [ "squash"; "-i"; "--into" ])
+              ; cmd =
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt_I
+                        ("target revision", [ "squash"; "-i"; "--from"; rev; "--into" ]))
               }
             ]
       }
     ; {
         key = 'e'
-      ; cmd = Prompt ("revision", [ "edit" ])
-      ; description = "Edit a particular revision"
+      ; cmd = Dynamic_r (fun rev -> Cmd [ "edit"; rev ])
+      ; description = "Edit the selected revision"
       }
     ; {
         key = 'd'
-      ; cmd = Prompt ("description", [ "describe"; "-m" ])
+      ; cmd =
+          Dynamic_r (fun rev -> Prompt ("description", [ "describe"; "-r"; rev; "-m" ]))
       ; description = "Describe this revision"
       }
     ; {
         key = 'R'
-      ; cmd = Cmd_I [ "resolve" ]
+      ; cmd = Dynamic_r (fun rev -> Cmd_I [ "resolve"; "-r"; rev ])
       ; description = "Resolve conflicts at this revision"
       }
     ; {
@@ -150,22 +122,31 @@ module Make (Vars : Global_vars.Vars) = struct
             [
               {
                 key = 'r'
-              ; description = "Rebase single revision"
+              ; description = "Rebase single revision "
               ; cmd =
-                  Prompt ("destination for revision rebase", [ "rebase"; "-r"; "@"; "-d" ])
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt ("Dest rev for " ^ rev, [ "rebase"; "-r"; rev; "-d" ]))
               }
             ; {
                 key = 's'
               ; description = "Rebase revision and its decendents"
               ; cmd =
-                  Prompt
-                    ("Destination for decendent rebase", [ "rebase"; "-s"; "@"; "-d" ])
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt
+                        ( Printf.sprintf "Dest rev for %s and it's decendents" rev
+                        , [ "rebase"; "-s"; rev; "-d" ] ))
               }
             ; {
                 key = 'b'
               ; description = "Rebase revision and all other revissions on its branch"
               ; cmd =
-                  Prompt ("Destination for branch rebase", [ "rebase"; "-b"; "@"; "-d" ])
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt
+                        ( "Dest rev for branch including " ^ rev
+                        , [ "rebase"; "-b"; rev; "-d" ] ))
               }
             ]
       }
@@ -175,7 +156,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           SubCmd
             [
-              { key = 'p'; description = "git push branch"; cmd = Cmd [ "git"; "push" ] }
+              { key = 'p'; description = "git push"; cmd = Cmd [ "git"; "push" ] }
             ; { key = 'f'; description = "git fetch"; cmd = Cmd [ "git"; "fetch" ] }
             ]
       }
@@ -192,7 +173,10 @@ module Make (Vars : Global_vars.Vars) = struct
     ; {
         key = 'a'
       ; description = "Abandon this change(removes just this change and rebases parents)"
-      ; cmd = Cmd [ "abandon" ] |> confirm_prompt "abandon the change"
+      ; cmd =
+          Dynamic_r
+            (fun rev ->
+              Cmd_r [ "abandon" ] |> confirm_prompt ("abandon the revision:" ^ rev))
       }
     ; {
         key = 'b'
@@ -207,7 +191,8 @@ module Make (Vars : Global_vars.Vars) = struct
                   PromptThen
                     ( "Branch names to create"
                     , fun x ->
-                        Cmd ([ "branch"; "create" ] @ (x |> String.split_on_char ' ')) )
+                        Cmd_r ([ "branch"; "create" ] @ (x |> String.split_on_char ' '))
+                    )
               }
             ; {
                 key = 'd'
@@ -226,7 +211,12 @@ module Make (Vars : Global_vars.Vars) = struct
             ; {
                 key = 's'
               ; description = "set branch to this change"
-              ; cmd = Prompt ("Branch to set to this commit ", [ "branch"; "set"; "-B" ])
+              ; cmd =
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt
+                        ( "Branch to set to this commit "
+                        , [ "branch"; "set"; "-r"; rev; "-B" ] ))
               }
             ; {
                 key = 't'
@@ -243,14 +233,51 @@ module Make (Vars : Global_vars.Vars) = struct
     ]
   ;;
 
-  (*Renders the commit graph from the UI state*)
-  let graph_view =
-    (*pad one on the left because it's hard to see the graph if it's too close*)
-    Wd.scroll_area (ui_state.jj_tree $-> (I.pad ~l:1 >> Ui.atom))
-    |>$ Ui.keyboard_area (function
-      | `ASCII k, [] ->
-        handleInputs command_mapping k
-      | _ ->
-        `Unhandled)
+  (*TODO:make a custom widget the renders the commit with and without selection.
+    with selection replace the dot with a blue version and slightly blue tint the background *)
+  let graph_view ~sw () =
+    let ui =
+      let$ graph, rev_ids =
+        (*TODO I think this ads a slight delay to everything becasue it makes things need to be renedered twice. maybe I could try getting rid of it*)
+        Vars.ui_state.trigger_update |> Lwd.get |> Lwd.map ~f:(fun _ -> seperate_revs ())
+      in
+      let selectable_idx = ref 0 in
+      graph
+      |> Array.map (fun x ->
+        match x with
+        | `Selectable x ->
+          let ui is_focused =
+            (*hightlight blue when selection is true*)
+            let prefix =
+              if is_focused then I.char A.(bg A.blue) '>' 1 2 else I.char A.empty ' ' 1 2
+            in
+            I.hcat
+              [
+                prefix
+              ; x ^ "\n"
+                (* TODO This won't work if we are on a branch, because that puts the @ further out*)
+                |> Jj_tui.AnsiReverse.colored_string
+              ]
+            |> Ui.atom
+          in
+          let data = Wd.{ ui; data = rev_ids.(!selectable_idx) } in
+          selectable_idx := !selectable_idx + 1;
+          Wd.(Selectable data)
+        | `Filler x ->
+          Wd.(Filler (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom)))
+    in
+    ui
+    |> Wd.selection_list_exclusions
+         ~on_selection_change:(fun revision ->
+           Eio.Fiber.fork ~sw @@ fun _ ->
+           Vars.update_ui_state @@ fun _ ->
+           Lwd.set Vars.ui_state.selected_revision revision;
+           Global_funcs.update_views ())
+         ~custom_handler:(fun _ _ key ->
+           match key with
+           | `ASCII k, [] ->
+             handleInputs command_mapping k
+           | _ ->
+             `Unhandled)
   ;;
 end

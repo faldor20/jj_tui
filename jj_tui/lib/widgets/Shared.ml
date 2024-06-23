@@ -1,4 +1,3 @@
-
 open Notty
 open Nottui
 open Lwd_infix
@@ -47,4 +46,3 @@ let input_field ?(focus = Focus.make ()) start_state ~on_change ~on_submit =
   let node = Lwd.map2 ~f:(update focus) (Focus.status focus) start_state in
   node
 ;;
-

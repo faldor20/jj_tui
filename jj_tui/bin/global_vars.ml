@@ -22,6 +22,8 @@ type ui_state_t = {
   ; jj_show : I.t Lwd.var
   ; jj_branches : I.t Lwd.var
   ; jj_change_files : (string * string) list Lwd.var
+  ; selected_revision : string Lwd.var
+  ; trigger_update : unit Lwd.var
 }
 
 (** Global variables for the ui. Here we keep anything that's just a pain to pipe around*)
@@ -62,10 +64,12 @@ module Vars : Vars = struct
     ; jj_show = Lwd.var I.empty
     ; jj_branches = Lwd.var I.empty
     ; jj_change_files = Lwd.var []
+    ; selected_revision = Lwd.var "@"
     ; input = Lwd.var `Normal
     ; show_popup = Lwd.var None
     ; show_prompt = Lwd.var None
     ; command_log = Lwd.var []
+    ; trigger_update = Lwd.var ()
     }
   ;;
 

@@ -305,7 +305,7 @@ let popup ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let prompt_field = content in
-      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label|> clear_bg
+      prompt_field |>$ Ui.resize ~w:5 |> border_box ~label_top:label |> clear_bg
     | None ->
       Ui.empty |> Lwd.pure
   in
@@ -323,5 +323,5 @@ let on_focus ~focus f ui =
 ;;
 
 let is_focused ~focus f ui =
-  Lwd.map2 ui (focus |> Focus.status) ~f:(fun ui focus -> f ui (focus |> Focus.has_focus) )
+  Lwd.map2 ui (focus |> Focus.status) ~f:(fun ui focus -> f ui (focus |> Focus.has_focus))
 ;;

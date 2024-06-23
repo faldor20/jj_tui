@@ -95,12 +95,17 @@ module Make (Vars : Global_vars.Vars) = struct
             File_view.file_view sw ()
             |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000
             |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
-          ; Graph_view.graph_view
+          ; Graph_view.graph_view ~sw ()
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
             |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
           ; Wd.scroll_area (ui_state.jj_branches $-> Ui.atom)
             |> Wd.is_focused ~focus:branch_focus (fun ui focused ->
               ui
+              |> Ui.keyboard_area (function
+                | `ASCII k, [] ->
+                  Jj_commands.handleInputs Jj_commands.default_list k
+                | _ ->
+                  `Unhandled)
               |> Ui.resize
                    ~w:5
                    ~sw:1

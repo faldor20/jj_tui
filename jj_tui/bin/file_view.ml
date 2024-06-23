@@ -14,28 +14,6 @@ module Make (Vars : Global_vars.Vars) = struct
   let rec command_mapping =
     [
       {
-        key = 'm'
-      ; description = "Move file to other commit"
-      ; cmd =
-          PromptThen
-            ( "Revision to move file to"
-            , fun rev ->
-                Cmd
-                  [ "squash"; "-u"; "--from"; "@"; "--into"; rev; Lwd.peek selected_file ]
-            )
-      }
-    ; {
-        key = 'd'
-      ; description = "Restore to previous revision (git discard)"
-      ; cmd =
-          Dynamic
-            (fun _ ->
-              let selected = Lwd.peek selected_file in
-              confirm_prompt
-                ("discard all changes to '" ^ selected ^ "' in this revision")
-                (Cmd [ "restore"; selected ]))
-      }
-    ; {
         key = 'h'
       ; description = "Show help"
       ; cmd =
@@ -43,6 +21,35 @@ module Make (Vars : Global_vars.Vars) = struct
             (fun _ ->
               ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
+      }
+    ; {
+        key = 'm'
+      ; description = "Move file to other commit"
+      ; cmd =
+          PromptThen
+            ( "Revision to move file to"
+            , fun rev ->
+                Cmd
+                  [
+                    "squash"
+                  ; "-u"
+                  ; "--from"
+                  ; Lwd.peek ui_state.selected_revision
+                  ; "--into"
+                  ; rev
+                  ; Lwd.peek selected_file
+                  ] )
+      }
+    ; {
+        key = 'd'
+      ; description = "Restore to previous revision (git discard)"
+      ; cmd =
+          Dynamic_r
+            (fun rev ->
+              let selected = Lwd.peek selected_file in
+              confirm_prompt
+                ("discard all changes to '" ^ selected ^ "' in rev " ^ rev)
+                (Cmd [ "restore"; "--to"; rev; "--from"; rev ^ "-"; selected ]))
       }
     ]
   ;;
@@ -65,7 +72,8 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (**Get the status for the currently selected file*)
   let file_status () =
-    let$ selected = Lwd.get selected_file in
-    if selected != "" then jj_no_log [ "diff"; selected ] else ""
+    let$ selected = Lwd.get selected_file
+    and$ rev = Lwd.get Vars.ui_state.selected_revision in
+    if selected != "" then jj_no_log [ "diff"; "-r"; rev; selected ] else ""
   ;;
 end
