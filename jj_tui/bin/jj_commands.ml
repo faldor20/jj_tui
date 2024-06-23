@@ -66,7 +66,7 @@ module Intern (Vars : Global_vars.Vars) = struct
        | {
          key
        ; description
-       ; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _ | Dynamic _
+       ; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _ | Dynamic _ |Cmd_r _|Prompt_r _
        } ->
          [ render_command_line ~indent_level [| key |> Uchar.of_char |] description ]
        | { key; description; cmd = SubCmd subs } ->

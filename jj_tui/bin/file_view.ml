@@ -30,7 +30,7 @@ module Make (Vars : Global_vars.Vars) = struct
             ( "Revision to move file to"
             , fun rev ->
                 Cmd
-                  [ "squash"; "-u"; "--from"; "@"; "--into"; rev; Lwd.peek selected_file ]
+                  [ "squash"; "-u"; "--from"; Lwd.peek ui_state.selected_revision; "--into"; rev; Lwd.peek selected_file ]
             )
       }
     ; {
@@ -40,9 +40,10 @@ module Make (Vars : Global_vars.Vars) = struct
           Dynamic
             (fun _ ->
               let selected = Lwd.peek selected_file in
+              let rev=Lwd.peek Vars.ui_state.selected_revision in
               confirm_prompt
-                ("discard all changes to '" ^ selected ^ "' in this revision")
-                (Cmd [ "restore"; selected ]))
+                ("discard all changes to '" ^ selected ^ "' in rev "^ rev)
+                (Cmd [ "restore";"--to";rev;"--from";rev^"-"; selected ]))
       }
     ]
   ;;
@@ -67,7 +68,8 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (**Get the status for the currently selected file*)
   let file_status () =
-    let$ selected = Lwd.get selected_file in
-    if selected != "" then jj_no_log [ "diff"; selected ] else ""
+    let$ selected = Lwd.get selected_file 
+    and$rev = Lwd.get Vars.ui_state.selected_revision in
+    if selected != "" then jj_no_log [ "diff";"-r";rev ; selected ] else ""
   ;;
 end

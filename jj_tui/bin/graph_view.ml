@@ -157,14 +157,15 @@ module Make (Vars : Global_vars.Vars) = struct
             [
               {
                 key = 'r'
-              ; description = "Rebase single revision"
+              ; description = "Rebase single revision "
               ; cmd =
                   Dynamic
                     (fun () ->
+                    let rev=Lwd.peek Vars.ui_state.selected_revision  in
                       Prompt
-                        ( "destination for revision rebase"
+                        ( "Dest rev for " ^rev
                         , [
-                            "rebase"; "-r"; Lwd.peek Vars.ui_state.selected_revision; "-d"
+                            "rebase"; "-r"; rev; "-d"
                           ] ))
               }
             ; {
@@ -173,10 +174,11 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Dynamic
                     (fun () ->
+                    let rev=Lwd.peek Vars.ui_state.selected_revision  in
                       Prompt
-                        ( "Destination for decendent rebase"
+                        ( Printf.sprintf "Dest rev for %s and it's decendents" rev 
                         , [
-                            "rebase"; "-s"; Lwd.peek Vars.ui_state.selected_revision; "-d"
+                            "rebase"; "-s"; rev; "-d"
                           ] ))
               }
             ; {
@@ -185,10 +187,11 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Dynamic
                     (fun () ->
+                    let rev=Lwd.peek Vars.ui_state.selected_revision  in
                       Prompt
-                        ( "Destination for branch rebase"
+                        ( "Dest rev for branch including "^rev 
                         , [
-                            "rebase"; "-b"; Lwd.peek Vars.ui_state.selected_revision; "-d"
+                            "rebase"; "-b"; rev; "-d"
                           ] ))
               }
             ]
@@ -288,6 +291,7 @@ module Make (Vars : Global_vars.Vars) = struct
   let graph_view ~sw () =
     let ui =
       let$ graph, rev_ids =
+        (*TODO I think this ads a slight delay to everything becasue it makes things need to be renedered twice. maybe I could try getting rid of it*)
         Vars.ui_state.trigger_update |> Lwd.get |> Lwd.map ~f:(fun _ -> seperate_revs ())
       in
       let selectable_idx = ref 0 in
@@ -305,7 +309,6 @@ module Make (Vars : Global_vars.Vars) = struct
                 prefix
               ; x ^ "\n"
                 (* TODO This won't work if we are on a branch, because that puts the @ further out*)
-                |> unsafe_blit_start_if "@" "◉"
                 |> Jj_tui.AnsiReverse.colored_string
               ]
             |> Ui.atom

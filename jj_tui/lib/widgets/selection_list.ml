@@ -185,11 +185,6 @@ let selection_list_exclusions
             if (x, y) <> Lwd.peek selected_position then selected_position $= (x, y))
         else x.ui false)
     |> Array.to_list
-    |> List.cons
-         (W.fmt
-            "items:%d selectable:%d"
-            (items |> Array.length)
-            (selectable_item_indexes |> Array.length))
     |> Ui.vcat
     |> Ui.keyboard_area ~focus (function
       | `Arrow `Up, [] ->

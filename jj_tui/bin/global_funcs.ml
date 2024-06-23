@@ -45,7 +45,7 @@ let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
 ;;
 (**Updates the status windows; Without snapshotting the working copy by default
    This should be called after any command that performs a change *)
-let update_views ?(update_graph = true) ?(cause_snapshot = false) () =
+let update_views  ?(cause_snapshot = false) () =
   let rev = Lwd.peek Vars.ui_state.selected_revision in
   Eio.Switch.run @@ fun sw ->
   let log_res =
