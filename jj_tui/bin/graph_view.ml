@@ -89,7 +89,7 @@ module Make (Vars : Global_vars.Vars) = struct
                     (fun _ ->
                       let curr_msg, prev_msg = get_messages () in
                       let new_msg = prev_msg ^ curr_msg in
-                      jj [ "squash"; "--quiet"; "-m"; new_msg ] |> ignore)
+                      jj [ "squash"; "--quiet"; "-r";Lwd.peek Vars.ui_state.selected_revision; "-m"; new_msg ] |> ignore)
               }
             ; {
                 key = 'S'
@@ -136,7 +136,12 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         key = 'd'
-      ; cmd = Prompt_r ("description", [ "describe"; "-m" ])
+      ; cmd =
+          Dynamic
+            (fun () ->
+              Prompt
+                ( "description"
+                , [ "describe"; "-r"; Lwd.peek Vars.ui_state.selected_revision; "-m" ] ))
       ; description = "Describe this revision"
       }
     ; {
@@ -211,7 +216,12 @@ module Make (Vars : Global_vars.Vars) = struct
     ; {
         key = 'a'
       ; description = "Abandon this change(removes just this change and rebases parents)"
-      ; cmd = Cmd [ "abandon" ] |> confirm_prompt "abandon the change"
+      ; cmd =
+          Dynamic
+            (fun () ->
+              Cmd_r [ "abandon" ]
+              |> confirm_prompt
+                   ("abandon the revision:" ^ Lwd.peek Vars.ui_state.selected_revision))
       }
     ; {
         key = 'b'
@@ -245,7 +255,18 @@ module Make (Vars : Global_vars.Vars) = struct
             ; {
                 key = 's'
               ; description = "set branch to this change"
-              ; cmd = Dynamic(fun ()->Prompt ("Branch to set to this commit ", [ "branch"; "set";"-r";Lwd.peek Vars.ui_state.selected_revision; "-B" ]))
+              ; cmd =
+                  Dynamic
+                    (fun () ->
+                      Prompt
+                        ( "Branch to set to this commit "
+                        , [
+                            "branch"
+                          ; "set"
+                          ; "-r"
+                          ; Lwd.peek Vars.ui_state.selected_revision
+                          ; "-B"
+                          ] ))
               }
             ; {
                 key = 't'
@@ -265,9 +286,11 @@ module Make (Vars : Global_vars.Vars) = struct
   (*TODO:make a custom widget the renders the commit with and without selection.
     with selection replace the dot with a blue version and slightly blue tint the background *)
   let graph_view ~sw () =
-    let selectable_idx = ref 0 in
-    let graph, rev_ids = seperate_revs () in
     let ui =
+      let$ graph, rev_ids =
+        Vars.ui_state.trigger_update |> Lwd.get |> Lwd.map ~f:(fun _ -> seperate_revs ())
+      in
+      let selectable_idx = ref 0 in
       graph
       |> Array.map (fun x ->
         match x with
@@ -292,30 +315,19 @@ module Make (Vars : Global_vars.Vars) = struct
           Wd.(Selectable data)
         | `Filler x ->
           Wd.(Filler (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom)))
-      |> Lwd.pure
-      |> Wd.selection_list_exclusions
-           ~on_selection_change:(fun revision ->
-             Eio.Fiber.fork ~sw @@ fun _ ->
-             Vars.update_ui_state @@ fun _ ->
-             Lwd.set Vars.ui_state.selected_revision revision;
-             Global_funcs.update_status ())
-           ~custom_handler:(fun _ _ key ->
-             match key with
-             | `ASCII k, [] ->
-               handleInputs command_mapping k
-             | _ ->
-               `Unhandled)
     in
-    W.vbox
-      [
-        ui
-      ; W.fmt
-          "graph_selectable:%d"
-          (graph
-           |> Array.to_list
-           |> List.filter (function `Selectable a -> true | _ -> false)
-           |> List.length)
-        |> Lwd.pure
-      ]
+    ui
+    |> Wd.selection_list_exclusions
+         ~on_selection_change:(fun revision ->
+           Eio.Fiber.fork ~sw @@ fun _ ->
+           Vars.update_ui_state @@ fun _ ->
+           Lwd.set Vars.ui_state.selected_revision revision;
+           Global_funcs.update_views ())
+         ~custom_handler:(fun _ _ key ->
+           match key with
+           | `ASCII k, [] ->
+             handleInputs command_mapping k
+           | _ ->
+             `Unhandled)
   ;;
 end
