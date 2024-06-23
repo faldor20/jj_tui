@@ -28,47 +28,26 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd = Cmd [ "prev" ]
       }
     ; {
-        key = 'p'
-      ; description = "Edit the previous child change"
-      ; cmd = Cmd [ "prev"; "--edit" ]
-      }
-    ; {
         key = 'N'
       ; description = "Move the working copy to the next child "
       ; cmd = Cmd [ "next" ]
       }
     ; {
         key = 'n'
-      ; description = "Edit the next child change"
-      ; cmd = Cmd [ "next"; "--edit" ]
-      }
-    ; {
-        key = 'i'
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = 'i'
-              ; description = "Make a new empty change"
-              ; cmd = Cmd_r [ "new" ]
-              }
-            ; {
-                key = 'a'
-              ; description = "Insert a new empty change after a specific revision"
-              ; cmd = Prompt ("New change after commit:", [ "new" ])
-              }
-            ]
-      ; description = "Make a new empty change"
+      ; cmd = Dynamic_r (fun rev -> Cmd [ "new"; rev ])
+      ; description = "Make a new empty change as a child of the selected rev"
       }
     ; {
         key = 'c'
-      ; description = "Describe this change and move on (same as `describe` then `new`) "
+      ; description =
+          "Describe this change and start working on a new rev (same as `describe` then \
+           `new`) "
       ; cmd = Prompt ("commit msg", [ "commit"; "-m" ])
       }
     ; {
         key = 'S'
       ; description = "Split the current commit interacively"
-      ; cmd = Cmd_I [ "split"; "-i" ]
+      ; cmd = Dynamic_r (fun rev -> Cmd_I [ "split"; "-r"; rev; "-i" ])
       }
     ; {
         key = 's'
@@ -78,7 +57,7 @@ module Make (Vars : Global_vars.Vars) = struct
             [
               {
                 key = 'S'
-              ; cmd = Cmd_I [ "unsquash"; "-i" ]
+              ; cmd = Dynamic_r (fun rev -> Cmd_I [ "unsquash"; "-r"; rev; "-i" ])
               ; description = "Interactivaly unsquash"
               }
             ; {
@@ -89,7 +68,8 @@ module Make (Vars : Global_vars.Vars) = struct
                     (fun _ ->
                       let curr_msg, prev_msg = get_messages () in
                       let new_msg = prev_msg ^ curr_msg in
-                      jj [ "squash"; "--quiet"; "-r";Lwd.peek Vars.ui_state.selected_revision; "-m"; new_msg ] |> ignore)
+                      let rev = Lwd.peek Vars.ui_state.selected_revision in
+                      jj [ "squash"; "--quiet"; "-r"; rev; "-m"; new_msg ] |> ignore)
               }
             ; {
                 key = 'S'
@@ -100,53 +80,38 @@ module Make (Vars : Global_vars.Vars) = struct
                     , fun str ->
                         let curr_msg, prev_msg = get_messages () in
                         let new_msg = prev_msg ^ curr_msg in
-                        Cmd [ "squash"; "--quiet"; "-m"; new_msg; "--into"; str ] )
+                        Cmd_r [ "squash"; "--quiet"; "-m"; new_msg; "--into"; str ] )
               }
             ; {
                 key = 'i'
               ; description = "Interactively choose what to squash into parent"
-              ; cmd = Cmd_I [ "squash"; "-i" ]
+              ; cmd = Dynamic_r (fun rev -> Cmd_I [ "squash"; "-r"; rev; "-i" ])
               }
             ; {
                 key = 'I'
               ; description = "Interactively choose what to squash into a commit"
-              ; cmd = Prompt_I ("target revision", [ "squash"; "-i"; "--into" ])
+              ; cmd =
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt_I
+                        ("target revision", [ "squash"; "-i"; "--from"; rev; "--into" ]))
               }
             ]
       }
     ; {
         key = 'e'
-      ; cmd =
-          SubCmd
-            [
-              {
-                key = 'e'
-              ; cmd =
-                  Dynamic
-                    (fun () -> Cmd [ "edit"; Lwd.peek Vars.ui_state.selected_revision ])
-              ; description = "Edit the selected revision"
-              }
-            ; {
-                key = 'r'
-              ; cmd = Prompt ("revision", [ "edit" ])
-              ; description = "Edit a specific revision"
-              }
-            ]
-      ; description = "Edit a revision"
+      ; cmd = Dynamic_r (fun rev -> Cmd [ "edit"; rev ])
+      ; description = "Edit the selected revision"
       }
     ; {
         key = 'd'
       ; cmd =
-          Dynamic
-            (fun () ->
-              Prompt
-                ( "description"
-                , [ "describe"; "-r"; Lwd.peek Vars.ui_state.selected_revision; "-m" ] ))
+          Dynamic_r (fun rev -> Prompt ("description", [ "describe"; "-r"; rev; "-m" ]))
       ; description = "Describe this revision"
       }
     ; {
         key = 'R'
-      ; cmd = Cmd_I [ "resolve" ]
+      ; cmd = Dynamic_r (fun rev -> Cmd_I [ "resolve"; "-r"; rev ])
       ; description = "Resolve conflicts at this revision"
       }
     ; {
@@ -159,40 +124,29 @@ module Make (Vars : Global_vars.Vars) = struct
                 key = 'r'
               ; description = "Rebase single revision "
               ; cmd =
-                  Dynamic
-                    (fun () ->
-                    let rev=Lwd.peek Vars.ui_state.selected_revision  in
-                      Prompt
-                        ( "Dest rev for " ^rev
-                        , [
-                            "rebase"; "-r"; rev; "-d"
-                          ] ))
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt ("Dest rev for " ^ rev, [ "rebase"; "-r"; rev; "-d" ]))
               }
             ; {
                 key = 's'
               ; description = "Rebase revision and its decendents"
               ; cmd =
-                  Dynamic
-                    (fun () ->
-                    let rev=Lwd.peek Vars.ui_state.selected_revision  in
+                  Dynamic_r
+                    (fun rev ->
                       Prompt
-                        ( Printf.sprintf "Dest rev for %s and it's decendents" rev 
-                        , [
-                            "rebase"; "-s"; rev; "-d"
-                          ] ))
+                        ( Printf.sprintf "Dest rev for %s and it's decendents" rev
+                        , [ "rebase"; "-s"; rev; "-d" ] ))
               }
             ; {
                 key = 'b'
               ; description = "Rebase revision and all other revissions on its branch"
               ; cmd =
-                  Dynamic
-                    (fun () ->
-                    let rev=Lwd.peek Vars.ui_state.selected_revision  in
+                  Dynamic_r
+                    (fun rev ->
                       Prompt
-                        ( "Dest rev for branch including "^rev 
-                        , [
-                            "rebase"; "-b"; rev; "-d"
-                          ] ))
+                        ( "Dest rev for branch including " ^ rev
+                        , [ "rebase"; "-b"; rev; "-d" ] ))
               }
             ]
       }
@@ -220,11 +174,9 @@ module Make (Vars : Global_vars.Vars) = struct
         key = 'a'
       ; description = "Abandon this change(removes just this change and rebases parents)"
       ; cmd =
-          Dynamic
-            (fun () ->
-              Cmd_r [ "abandon" ]
-              |> confirm_prompt
-                   ("abandon the revision:" ^ Lwd.peek Vars.ui_state.selected_revision))
+          Dynamic_r
+            (fun rev ->
+              Cmd_r [ "abandon" ] |> confirm_prompt ("abandon the revision:" ^ rev))
       }
     ; {
         key = 'b'
@@ -239,7 +191,8 @@ module Make (Vars : Global_vars.Vars) = struct
                   PromptThen
                     ( "Branch names to create"
                     , fun x ->
-                        Cmd ([ "branch"; "create" ] @ (x |> String.split_on_char ' ')) )
+                        Cmd_r ([ "branch"; "create" ] @ (x |> String.split_on_char ' '))
+                    )
               }
             ; {
                 key = 'd'
@@ -259,17 +212,11 @@ module Make (Vars : Global_vars.Vars) = struct
                 key = 's'
               ; description = "set branch to this change"
               ; cmd =
-                  Dynamic
-                    (fun () ->
+                  Dynamic_r
+                    (fun rev ->
                       Prompt
                         ( "Branch to set to this commit "
-                        , [
-                            "branch"
-                          ; "set"
-                          ; "-r"
-                          ; Lwd.peek Vars.ui_state.selected_revision
-                          ; "-B"
-                          ] ))
+                        , [ "branch"; "set"; "-r"; rev; "-B" ] ))
               }
             ; {
                 key = 't'

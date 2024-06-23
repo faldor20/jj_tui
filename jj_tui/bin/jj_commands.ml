@@ -11,6 +11,7 @@ module Shared = struct
     | Cmd of cmd_args (** Regular jj command *)
     | Cmd_r of cmd_args (** Regular jj command that should operate on the selected revison *)
     | Dynamic of (unit -> command_variant)
+    | Dynamic_r of (string-> command_variant)
     (** Wraps a command so that the content will be regenerated each time it's run. Usefull if you wish to read some peice of ui state *)
     | Cmd_I of cmd_args
     (** Command that will open interactively. Used for diff editing to hand control over to the jj process *)
@@ -66,7 +67,7 @@ module Intern (Vars : Global_vars.Vars) = struct
        | {
          key
        ; description
-       ; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _ | Dynamic _ |Cmd_r _|Prompt_r _
+       ; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _ | Dynamic _ |Cmd_r _|Prompt_r _|Dynamic_r _
        } ->
          [ render_command_line ~indent_level [| key |> Uchar.of_char |] description ]
        | { key; description; cmd = SubCmd subs } ->
@@ -175,6 +176,8 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Dynamic f ->
       f () |> handleCommand description
+    | Dynamic_r f ->
+      f (Lwd.peek Vars.ui_state.selected_revision) |> handleCommand description
 
   (** Try mapching the command mapping to the provided key and run the command if it matches *)
   and command_input ~is_sub keymap key =
