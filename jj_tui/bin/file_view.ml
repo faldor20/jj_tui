@@ -30,20 +30,26 @@ module Make (Vars : Global_vars.Vars) = struct
             ( "Revision to move file to"
             , fun rev ->
                 Cmd
-                  [ "squash"; "-u"; "--from"; Lwd.peek ui_state.selected_revision; "--into"; rev; Lwd.peek selected_file ]
-            )
+                  [
+                    "squash"
+                  ; "-u"
+                  ; "--from"
+                  ; Lwd.peek ui_state.selected_revision
+                  ; "--into"
+                  ; rev
+                  ; Lwd.peek selected_file
+                  ] )
       }
     ; {
         key = 'd'
       ; description = "Restore to previous revision (git discard)"
       ; cmd =
-          Dynamic
-            (fun _ ->
+          Dynamic_r
+            (fun rev ->
               let selected = Lwd.peek selected_file in
-              let rev=Lwd.peek Vars.ui_state.selected_revision in
               confirm_prompt
-                ("discard all changes to '" ^ selected ^ "' in rev "^ rev)
-                (Cmd [ "restore";"--to";rev;"--from";rev^"-"; selected ]))
+                ("discard all changes to '" ^ selected ^ "' in rev " ^ rev)
+                (Cmd [ "restore"; "--to"; rev; "--from"; rev ^ "-"; selected ]))
       }
     ]
   ;;
@@ -58,9 +64,7 @@ module Make (Vars : Global_vars.Vars) = struct
     Wd.selection_list_custom
       ~on_selection_change:(fun x ->
         Eio.Fiber.fork ~sw @@ fun _ ->
-        Vars.update_ui_state @@ fun _ -> 
-        Lwd.set selected_file x;
-        )
+        Vars.update_ui_state @@ fun _ -> Lwd.set selected_file x)
       ~custom_handler:(fun _ _ key ->
         match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
       file_uis
@@ -68,8 +72,8 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (**Get the status for the currently selected file*)
   let file_status () =
-    let$ selected = Lwd.get selected_file 
-    and$rev = Lwd.get Vars.ui_state.selected_revision in
-    if selected != "" then jj_no_log [ "diff";"-r";rev ; selected ] else ""
+    let$ selected = Lwd.get selected_file
+    and$ rev = Lwd.get Vars.ui_state.selected_revision in
+    if selected != "" then jj_no_log [ "diff"; "-r"; rev; selected ] else ""
   ;;
 end
