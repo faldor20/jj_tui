@@ -11,7 +11,11 @@ let bit n b = b land (1 lsl n) > 0
 let max (a : int) b = if a > b then a else b
 let min (a : int) b = if a < b then a else b
 
-let is_C0 x = (x < 0x20 || x = 0x7f) && x!= 0x09
+(**
+checks to see if x is any of the early control codes, excluding some whitespace like
+0x09 = lf
+*)
+let is_C0 x = (x < 0x20 || x = 0x7f) && x!= 0x09 
 and is_C1 x = 0x80 <= x && x < 0xa0
 let is_ctrl x = is_C0 x || is_C1 x
 and is_ascii x = x < 0x80

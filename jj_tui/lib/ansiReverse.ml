@@ -140,6 +140,12 @@ let fold_left_pre (f : 'acc -> 'a -> 'acc) (init : 'a -> 'acc) (input : 'a list)
 ;;
 
 let string_to_image ?(extra_attr = A.empty) str =
+  let str=
+    (* replace any carrriage returns becasue notty doesn't know what to do with them*)
+    Base.String.Search_pattern.replace_all (Base.String.Search_pattern.create "\r\n") ~in_:str ~with_:"\n"
+    |>
+    Base.String.Search_pattern.replace_all (Base.String.Search_pattern.create "\r")  ~with_:"\n"
+    in
   match parse_ansi_escape_codes str with
   | Error a ->
     Printf.printf "restut: %s" a;
