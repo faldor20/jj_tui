@@ -325,3 +325,45 @@ let on_focus ~focus f ui =
 let is_focused ~focus f ui =
   Lwd.map2 ui (focus |> Focus.status) ~f:(fun ui focus -> f ui (focus |> Focus.has_focus))
 ;;
+
+(** Gets an int that a char represents*)
+let char_to_int c =
+  if c >= '0' && c <= '9' then Some (int_of_char c - int_of_char '0') else None
+;;
+
+(** Tab view, where exactly one element of [l] is shown at a time. *)
+let mouse_tabs (tabs : (string * (unit -> Ui.t Lwd.t)) list) : Ui.t Lwd.t =
+  match tabs with
+  | [] ->
+    Lwd.return Ui.empty
+  | _ ->
+    let cur = Lwd.var 0 in
+    let$* idx_sel = Lwd.get cur in
+    let _, f = List.nth tabs idx_sel in
+    let tab_bar =
+      tabs
+      |> List.mapi (fun i (s, _) ->
+        let attr = if i = idx_sel then A.(st underline) else A.empty in
+        let tab_annot = W.printf ~attr "%s [%d]" s (i + 1) in
+        tab_annot)
+      |> Base.List.intersperse ~sep:(W.string " | ")
+      |> Ui.hcat
+      |> Ui.resize ~sw:1 ~mw:10000
+      |> Lwd.pure
+      |> border_box ~pad_w:1 ~pad_h:0
+    in
+    W.vbox [ tab_bar; f () ]
+        |>$ Ui.keyboard_area (function
+          | `ASCII key, _ ->
+            key
+            |> char_to_int
+            |> Option.map (fun i ->
+              if i >= 1 && i <= List.length tabs
+              then (
+                cur $= i-1;
+                `Handled)
+              else `Unhandled)
+            |> Option.value ~default:`Unhandled
+          | _ ->
+            `Unhandled)
+;;

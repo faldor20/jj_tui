@@ -158,7 +158,11 @@ module Make (Vars : Global_vars.Vars) = struct
        | `RunCmd cmd ->
          Jj_widgets.interactive_process env ("jj" :: cmd)
        | `Main ->
-         main_view ~sw)
+         Wd.mouse_tabs
+           [
+             ("main", fun _ -> main_view ~sw)
+           ; ("other", fun _ -> W.string "they" |> Lwd.pure)
+           ])
     | (`CantStartProcess | `NotInRepo | `OtherError _) as other ->
       render_startup_error other
   ;;

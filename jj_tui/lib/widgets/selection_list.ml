@@ -20,10 +20,13 @@ type 'a selectable_item = {
 let selectable_item ui is_focused =
   let height = Ui.layout_height ui in
   let prefix =
-    if is_focused then I.char A.(bg A.blue) '>' 1 height else I.char A.empty ' ' 1 height
+    if is_focused
+    then I.char A.(st bold++ bg (blue)) '>' 1 height
+    else I.char A.empty ' ' 1 height
   in
   Ui.hcat [ prefix |> Ui.atom; ui ]
 ;;
+
 
 (** Selection list that allows for custom handling of keyboard events.
     Scrolls when the selection reaches the lower third
@@ -124,8 +127,8 @@ let selection_list_exclusions
   (*
      The rough overview is:
      1. Make a lookup list that has the indexes of all the selectable items within the overall list, we will be selecting from those
-     2. Render the items, making sure to tell the selected one to render as selected. 
-     3. Calculate how much we should scroll by. 
+     2. Render the items, making sure to tell the selected one to render as selected.
+     3. Calculate how much we should scroll by.
      4. offset by the scroll amount, apply size sensors and output final ui
   *)
   let selected_var = Lwd.var 0 in

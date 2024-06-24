@@ -75,7 +75,19 @@ module Make (Vars : Global_vars.Vars) = struct
                     , fun str ->
                         let curr_msg, prev_msg = get_messages () in
                         let new_msg = prev_msg ^ curr_msg in
-                        Dynamic_r(fun rev->Cmd [ "squash"; "--quiet"; "-m"; new_msg;"--from";rev; "--into"; str ] ))
+                        Dynamic_r
+                          (fun rev ->
+                            Cmd
+                              [
+                                "squash"
+                              ; "--quiet"
+                              ; "-m"
+                              ; new_msg
+                              ; "--from"
+                              ; rev
+                              ; "--into"
+                              ; str
+                              ]) )
               }
             ; {
                 key = 'u'
@@ -246,19 +258,12 @@ module Make (Vars : Global_vars.Vars) = struct
       |> Array.map (fun x ->
         match x with
         | `Selectable x ->
-          let ui is_focused =
-            (*hightlight blue when selection is true*)
-            let prefix =
-              if is_focused then I.char A.(bg A.blue) '>' 1 2 else I.char A.empty ' ' 1 2
-            in
-            I.hcat
-              [
-                prefix
-              ; x ^ "\n"
-                (* TODO This won't work if we are on a branch, because that puts the @ further out*)
-                |> Jj_tui.AnsiReverse.colored_string
-              ]
-            |> Ui.atom
+          let ui =
+            Wd.selectable_item
+              (x ^ "\n"
+               (* TODO This won't work if we are on a branch, because that puts the @ further out*)
+               |> Jj_tui.AnsiReverse.colored_string
+               |> Ui.atom)
           in
           let data = Wd.{ ui; data = rev_ids.(!selectable_idx) } in
           selectable_idx := !selectable_idx + 1;
