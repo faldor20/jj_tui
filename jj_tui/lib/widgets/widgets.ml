@@ -331,8 +331,8 @@ let char_to_int c =
   if c >= '0' && c <= '9' then Some (int_of_char c - int_of_char '0') else None
 ;;
 
-(** Tab view, where exactly one element of [l] is shown at a time. *)
-let mouse_tabs (tabs : (string * (unit -> Ui.t Lwd.t)) list) : Ui.t Lwd.t =
+(** Tab view, where exactly one element of [l] is shown at a time. Naviagted using number keys on the keyboard *)
+let keyboard_tabs (tabs : (string * (unit -> Ui.t Lwd.t)) list) : Ui.t Lwd.t =
   match tabs with
   | [] ->
     Lwd.return Ui.empty
