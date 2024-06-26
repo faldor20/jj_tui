@@ -79,7 +79,6 @@ module Make (Vars : Global_vars.Vars) = struct
           ~pad:Wd.neutral_grav
     |> inputs
   ;;
-
   (** The primary view for the UI with the file_view graph_view and summary*)
   let main_view ~sw =
     let file_focus = Focus.make () in
@@ -134,6 +133,18 @@ module Make (Vars : Global_vars.Vars) = struct
     |> inputs
   ;;
 
+  (** Shows the op log *)
+  let log_view () =
+    jj_no_log [ "op"; "log"; "--limit";"200" ]
+    |> AnsiReverse.colored_string
+    |> Ui.atom
+|>Ui.resize ~mh:1000 ~mw:10000
+    |> Lwd.pure
+    |>Wd.scroll_area
+    |> Wd.border_box ~pad_w:1 ~pad_h:0
+  |>inputs
+  ;;
+
   let mainUi ~sw env =
     (*we want to initialize our states and keep them up to date*)
     match check_startup () with
@@ -158,11 +169,7 @@ module Make (Vars : Global_vars.Vars) = struct
        | `RunCmd cmd ->
          Jj_widgets.interactive_process env ("jj" :: cmd)
        | `Main ->
-         Wd.mouse_tabs
-           [
-             ("main", fun _ -> main_view ~sw)
-           ; ("other", fun _ -> W.string "they" |> Lwd.pure)
-           ])
+         Wd.keyboard_tabs [ ("Main", fun _ -> main_view ~sw); "Op log", log_view ])
     | (`CantStartProcess | `NotInRepo | `OtherError _) as other ->
       render_startup_error other
   ;;
