@@ -145,25 +145,27 @@ module Make (Vars : Global_vars.Vars) = struct
       (* else () *))
   ;;
 
-(** Function to tag duplicated items in a list *)
-let tag_duplicates lst =
-  (* Create a frequency map to count occurrences of each element *)
-  let freq_map =
-    List.fold_left (fun acc {change_id;_} ->
-      let count = try List.assoc change_id acc with Not_found -> 0 in
-      (change_id, count + 1) :: List.remove_assoc change_id acc
-    ) [] lst
-  in
-  (* Tag each item in the list based on the frequency map *)
-  List.map (fun ({change_id;_} as x) ->
-    if List.assoc change_id freq_map > 1 then Duplicate x else Unique x 
-  ) lst
+  (** Function to tag duplicated items in a list *)
+  let tag_duplicates lst =
+    (* Create a frequency map to count occurrences of each element *)
+    let freq_map =
+      List.fold_left
+        (fun acc { change_id; _ } ->
+          let count = try List.assoc change_id acc with Not_found -> 0 in
+          (change_id, count + 1) :: List.remove_assoc change_id acc)
+        []
+        lst
+    in
+    (* Tag each item in the list based on the frequency map *)
+    List.map
+      (fun ({ change_id; _ } as x) ->
+        if List.assoc change_id freq_map > 1 then Duplicate x else Unique x)
+      lst
+  ;;
 
   (**Returns a list of revs with both the change_id and commit_id*)
   let get_revs () =
-    jj_no_log
-      ~color:false
-      [ "log";  "-T"; {|"|"++change_id++"|"++commit_id++"\n"|} ]
+    jj_no_log ~color:false [ "log"; "-T"; {|"|"++change_id++"|"++commit_id++"\n"|} ]
     |> String.split_on_char '\n'
     |> List.filter_map (fun x ->
       let items = x |> String.split_on_char '|' in
@@ -172,7 +174,7 @@ let tag_duplicates lst =
         Some { change_id; commit_id }
       | _ ->
         None)
-    |>tag_duplicates
+    |> tag_duplicates
     |> Array.of_list
   ;;
 

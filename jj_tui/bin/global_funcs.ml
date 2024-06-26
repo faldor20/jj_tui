@@ -46,7 +46,7 @@ let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
    This should be called after any command that performs a change *)
 let update_views ?(cause_snapshot = false) () =
   safe_jj (fun () ->
-    let rev = Vars.get_selected_rev() in
+    let rev = Vars.get_selected_rev () in
     Eio.Switch.run @@ fun sw ->
     let log_res =
       jj_no_log ~snapshot:cause_snapshot [ "show"; "-s"; "--color-words"; "-r"; rev ]

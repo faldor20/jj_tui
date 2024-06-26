@@ -80,52 +80,52 @@ module Intern = struct
   let make_label max_width label_str =
     I.strf " %s " (truncate_string (max_width - 2) label_str)
   ;;
-
 end
 
 open Intern
-  (** Internal function for rendering a border box with known dimensions and padding.*)
-  let border_box_intern
-    ?(border_attr = A.empty)
-    ?(label_top = I.empty)
-    ?(label_bottom = I.empty)
-    w
-    h
-    pad
-    pad_w
-    pad_h
-    input
-    =
-    (*can't go below 1 internal width or things get weird*)
-    let h = if pad_h < 1 then Int.max h 1 else h in
-    let w = if pad_w < 1 then Int.max w 1 else w in
-    (* this is a weird quirk, but we have to be careful of runaway size expansion.
-       If we increase the width of the space by making the vbar longer than the input ui element it will be able to expand to fill that space.
-       That will then increase the vbar and increase the height etc etc untill the max height is reached*)
-    let vbar =
-      I.uchar border_attr (Uchar.of_int 0x2502) 1 (h + (pad_h * 2))
-      |> Ui.atom
-      |> Ui.resize ~h:0
-    in
-    Ui.vcat
-      [
-        outline_top border_attr w label_top |> Ui.atom |> Ui.resize ~w:0
-      ; Ui.hcat
-          [
-            vbar
-          ; I.void pad_w 1 |> Ui.atom
-          ; Ui.vcat
-              [
-                I.void 1 pad_h |> Ui.atom
-              ; input |> Ui.resize ~pad
-              ; I.void 1 pad_h |> Ui.atom
-              ]
-          ; I.void pad_w 1 |> Ui.atom
-          ; vbar
-          ]
-      ; outline_bot border_attr w label_bottom |> Ui.atom |> Ui.resize ~w:0
-      ]
-  ;;
+
+(** Internal function for rendering a border box with known dimensions and padding.*)
+let border_box_intern
+  ?(border_attr = A.empty)
+  ?(label_top = I.empty)
+  ?(label_bottom = I.empty)
+  w
+  h
+  pad
+  pad_w
+  pad_h
+  input
+  =
+  (*can't go below 1 internal width or things get weird*)
+  let h = if pad_h < 1 then Int.max h 1 else h in
+  let w = if pad_w < 1 then Int.max w 1 else w in
+  (* this is a weird quirk, but we have to be careful of runaway size expansion.
+     If we increase the width of the space by making the vbar longer than the input ui element it will be able to expand to fill that space.
+     That will then increase the vbar and increase the height etc etc untill the max height is reached*)
+  let vbar =
+    I.uchar border_attr (Uchar.of_int 0x2502) 1 (h + (pad_h * 2))
+    |> Ui.atom
+    |> Ui.resize ~h:0
+  in
+  Ui.vcat
+    [
+      outline_top border_attr w label_top |> Ui.atom |> Ui.resize ~w:0
+    ; Ui.hcat
+        [
+          vbar
+        ; I.void pad_w 1 |> Ui.atom
+        ; Ui.vcat
+            [
+              I.void 1 pad_h |> Ui.atom
+            ; input |> Ui.resize ~pad
+            ; I.void 1 pad_h |> Ui.atom
+            ]
+        ; I.void pad_w 1 |> Ui.atom
+        ; vbar
+        ]
+    ; outline_bot border_attr w label_bottom |> Ui.atom |> Ui.resize ~w:0
+    ]
+;;
 
 let border_box_custom_border
   ?(scaling = `Static)
@@ -192,7 +192,9 @@ let border_box_custom_border
     @param input The input widget to be bordered.
     @param border_attr Style for the border, defaults to [A.empty].
     @param focus Focus handle for the box .
-    @param focus_attr Style for the border when focused, defaults to [A.fg A.blue]. *)
+    @param focus_attr Style for the border when focused, defaults to [A.fg A.blue].
+    @param on_key
+      Callback called when a key is pressed while the box is focused. Useful for performing actions when the box is selected . *)
 let border_box_focusable
   ?scaling
   ?pad
@@ -203,13 +205,14 @@ let border_box_focusable
   ?(border_attr = A.empty)
   ?(focus_attr = A.fg A.blue)
   ?(focus = Focus.make ())
+  ?(on_key = fun _ -> `Unhandled)
   input
   =
   let attr = Lwd.var border_attr in
   let input =
     input
     |> Lwd.map2 (focus |> Focus.status) ~f:(fun focus ui ->
-      ui |> Ui.keyboard_area ~focus (fun _ -> `Unhandled))
+      ui |> Ui.keyboard_area ~focus on_key)
   in
   border_box_custom_border
     ?scaling
@@ -255,6 +258,4 @@ let border_box
     ?label_bottom
     (border_attr |> Lwd.pure)
     input
-;;
-
 ;;

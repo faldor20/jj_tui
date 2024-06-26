@@ -3,7 +3,7 @@ open Nottui
 open Lwd_infix
 open! Util
 open! Widgets_citty
-include Box_widget
+include Border_box
 include Shared
 include Selection_list
 module Wip = Wip
@@ -353,17 +353,17 @@ let keyboard_tabs (tabs : (string * (unit -> Ui.t Lwd.t)) list) : Ui.t Lwd.t =
       |> border_box ~pad_w:1 ~pad_h:0
     in
     W.vbox [ tab_bar; f () ]
-        |>$ Ui.keyboard_area (function
-          | `ASCII key, _ ->
-            key
-            |> char_to_int
-            |> Option.map (fun i ->
-              if i >= 1 && i <= List.length tabs
-              then (
-                cur $= i-1;
-                `Handled)
-              else `Unhandled)
-            |> Option.value ~default:`Unhandled
-          | _ ->
-            `Unhandled)
+    |>$ Ui.keyboard_area (function
+      | `ASCII key, _ ->
+        key
+        |> char_to_int
+        |> Option.map (fun i ->
+          if i >= 1 && i <= List.length tabs
+          then (
+            cur $= i - 1;
+            `Handled)
+          else `Unhandled)
+        |> Option.value ~default:`Unhandled
+      | _ ->
+        `Unhandled)
 ;;

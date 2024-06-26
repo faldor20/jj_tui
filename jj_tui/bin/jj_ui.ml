@@ -79,6 +79,7 @@ module Make (Vars : Global_vars.Vars) = struct
           ~pad:Wd.neutral_grav
     |> inputs
   ;;
+
   (** The primary view for the UI with the file_view graph_view and summary*)
   let main_view ~sw =
     let file_focus = Focus.make () in
@@ -135,14 +136,14 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (** Shows the op log *)
   let log_view () =
-    jj_no_log [ "op"; "log"; "--limit";"200" ]
+    jj_no_log [ "op"; "log"; "--limit"; "200" ]
     |> AnsiReverse.colored_string
     |> Ui.atom
-|>Ui.resize ~mh:1000 ~mw:10000
+    |> Ui.resize ~mh:1000 ~mw:10000
     |> Lwd.pure
-    |>Wd.scroll_area
+    |> Wd.scroll_area
     |> Wd.border_box ~pad_w:1 ~pad_h:0
-  |>inputs
+    |> inputs
   ;;
 
   let mainUi ~sw env =

@@ -60,7 +60,7 @@ module Make (Vars : Global_vars.Vars) = struct
         Mutex.lock access_lock;
         true)
       else false
-   in
+    in
     let res =
       cmdArgs
         "jj"
@@ -75,24 +75,29 @@ module Make (Vars : Global_vars.Vars) = struct
     res
   ;;
 
-  exception JJError of string*string
+  exception JJError of string * string
 
   (** Run a jj command without outputting to the command_log.
       @param ?snapshot=true
         When true snapshots the state when running the command and also aquires a lock before running it. Set to false for commands you wish to run concurrently. like those for generating content in the UI
       @param ?color=true When true output will have terminal escape codes for color *)
   let jj_no_log ?(snapshot = true) ?(color = true) args =
-
     match jj_no_log_errorable ~snapshot ~color args with
     | Ok a ->
       a
     | Error (`BadExit (code, str)) ->
-      raise (JJError( "jj"::args|>String.concat " " ,Printf.sprintf "Exited with code %i; Message:\n%s" code str))
+      raise
+        (JJError
+           ( "jj" :: args |> String.concat " "
+           , Printf.sprintf "Exited with code %i; Message:\n%s" code str ))
     | Error (`EioErr a) ->
-      raise (JJError        ("jj"::args|>String.concat " ",Printf.sprintf
-           "Error running jj process:\n%a"
-           (fun _ -> Base.Error.to_string_hum)
-           a))
+      raise
+        (JJError
+           ( "jj" :: args |> String.concat " "
+           , Printf.sprintf
+               "Error running jj process:\n%a"
+               (fun _ -> Base.Error.to_string_hum)
+               a ))
   ;;
 
   let jj args =
@@ -115,14 +120,18 @@ module Make (Vars : Global_vars.Vars) = struct
         ; "-T"
         ; {|"::"++current_working_copy++"::\n"++description++"\n::end::\n"|}
         ]
-      |>String.trim
+      |> String.trim
     in
-    let current, prev = output |>Jj_tui.OutputParsing.parse_descriptions|>Result.get_ok in
+    let current, prev =
+      output |> Jj_tui.OutputParsing.parse_descriptions |> Result.get_ok
+    in
     current |> String.concat "", prev |> String.concat ""
   ;;
+
   open Vars
   open Nottui
   open Lwd_infix
+
   (*handle exception from jj*)
   let handle_jj_error cmd error =
     ui_state.show_prompt $= None;
@@ -133,9 +142,10 @@ module Make (Vars : Global_vars.Vars) = struct
            |> Ui.atom
            |> Ui.resize ~sw:1 ~sh:1
            |> Lwd.pure
-         , Printf.sprintf"An error occured running %s" cmd );
+         , Printf.sprintf "An error occured running %s" cmd );
     ui_state.input $= `Mode (fun _ -> `Unhandled)
   ;;
+
   (*catch any exceptions from jj*)
-  let safe_jj f = try f () with JJError (cmd,error) -> handle_jj_error cmd error
+  let safe_jj f = try f () with JJError (cmd, error) -> handle_jj_error cmd error
 end

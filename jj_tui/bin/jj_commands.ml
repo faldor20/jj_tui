@@ -9,9 +9,10 @@ module Shared = struct
   (** Regular jj command *)
   type command_variant =
     | Cmd of cmd_args (** Regular jj command *)
-    | Cmd_r of cmd_args (** Regular jj command that should operate on the selected revison *)
+    | Cmd_r of cmd_args
+    (** Regular jj command that should operate on the selected revison *)
     | Dynamic of (unit -> command_variant)
-    | Dynamic_r of (string-> command_variant)
+    | Dynamic_r of (string -> command_variant)
     (** Wraps a command so that the content will be regenerated each time it's run. Usefull if you wish to read some peice of ui state *)
     | Cmd_I of cmd_args
     (** Command that will open interactively. Used for diff editing to hand control over to the jj process *)
@@ -47,7 +48,6 @@ module Intern (Vars : Global_vars.Vars) = struct
   open! Jj_tui.Util
   module Wd = Jj_tui.Widgets
 
-
   exception Handled
 
   let render_command_line ~indent_level key desc =
@@ -68,15 +68,23 @@ module Intern (Vars : Global_vars.Vars) = struct
        | {
          key
        ; description
-       ; cmd = Cmd _ | Cmd_I _ | Prompt _ | Prompt_I _ | Fun _ | PromptThen _ | Dynamic _ |Cmd_r _|Prompt_r _|Dynamic_r _
+       ; cmd =
+           ( Cmd _
+           | Cmd_I _
+           | Prompt _
+           | Prompt_I _
+           | Fun _
+           | PromptThen _
+           | Dynamic _
+           | Cmd_r _
+           | Prompt_r _
+           | Dynamic_r _ )
        } ->
          [ render_command_line ~indent_level [| key |> Uchar.of_char |] description ]
        | { key; description; cmd = SubCmd subs } ->
          render_command_line ~indent_level [| key |> Uchar.of_char |] description
          :: render_commands ~indent_level:(indent_level + 1) subs
   ;;
-
-
 
   let commands_list_ui commands =
     let move_command =
@@ -132,7 +140,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Cmd_r args ->
       ui_state.show_popup $= None;
-      noOut (args@["-r";Vars.get_selected_rev()]);
+      noOut (args @ [ "-r"; Vars.get_selected_rev () ]);
       raise Handled
     | Prompt (str, args) ->
       ui_state.show_popup $= None;
@@ -140,7 +148,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Prompt_r (str, args) ->
       ui_state.show_popup $= None;
-      prompt str (`Cmd (args@["-r";Vars.get_selected_rev()]));
+      prompt str (`Cmd (args @ [ "-r"; Vars.get_selected_rev () ]));
       raise Handled
     | PromptThen (label, next) ->
       ui_state.show_popup $= None;
@@ -163,7 +171,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Dynamic f ->
       f () |> handleCommand description
     | Dynamic_r f ->
-      f (Vars.get_selected_rev()) |> handleCommand description
+      f (Vars.get_selected_rev ()) |> handleCommand description
 
   (** Try mapching the command mapping to the provided key and run the command if it matches *)
   and command_input ~is_sub keymap key =
@@ -177,7 +185,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Handled ->
       if is_sub then ui_state.input $= `Normal;
       `Handled
-    | JJError (cmd,error) ->
+    | JJError (cmd, error) ->
       handle_jj_error cmd error;
       `Unhandled
 
@@ -204,8 +212,9 @@ module Make (Vars : Global_vars.Vars) = struct
   open Intern (Vars)
   module Wd = Jj_tui.Widgets
   include Shared
-(** A handy command_list that just has this help command for areas that don't have any commands to still show help*)
-  let rec default_list=
+
+  (** A handy command_list that just has this help command for areas that don't have any commands to still show help*)
+  let rec default_list =
     [
       {
         key = 'h'
@@ -216,7 +225,8 @@ module Make (Vars : Global_vars.Vars) = struct
               ui_state.show_popup $= Some (commands_list_ui default_list, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
-        ]
+    ]
+  ;;
 
   (**Generate a UI object with all the commands nicely formatted and layed out. Useful for help text*)
   let commands_list_ui = commands_list_ui
