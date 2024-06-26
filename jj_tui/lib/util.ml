@@ -28,10 +28,11 @@ let parse_query parser s =
   state_to_verbose_result final_parser_state
 ;;
 
+Base.List.intersperse
 let ( <-$ ) f v = Lwd.map ~f (Lwd.get v)
 let ( $-> ) v f = Lwd.map ~f (Lwd.get v)
 let ( let$$ ) v f = Lwd.map ~f (Lwd.get v)
 let ( |>$ ) v f = Lwd.map ~f v
-let ( |>$$ ) v2 v f = Lwd.map2 ~f v v2
 let ( >> ) f g x = g (f x)
 let ( << ) f g x = f (g x)
+let ( |>$$ ) v2 v f = Lwd.map2 ~f v v2
