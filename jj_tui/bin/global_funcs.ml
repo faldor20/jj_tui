@@ -9,16 +9,7 @@ let list_files ?(rev = "@") () =
   jj_no_log ~snapshot:false ~color:false [ "diff"; "-r"; rev; "--summary" ]
   |> String.split_on_char '\n'
   |> List.filter_map (fun x ->
-    if x |> String.trim <> ""
-    then (
-      match String.split_on_char ' ' x with
-      | [ a; b ] ->
-        Some (a, b)
-      | _ ->
-        failwith
-          "Getting files should always return a list of file names with a modifier at \
-           the start ")
-    else None)
+    if x |> String.trim <> "" then Base.String.lsplit2 ~on:' ' x else None)
 ;;
 
 let check_startup () =
