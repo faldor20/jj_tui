@@ -239,9 +239,10 @@ let scroll_area_intern ?focus ~state ~change t =
   in
   Lwd.map2 t state ~f:(fun t (state_w, state_h) ->
     let tw, th = Ui.layout_width t, Ui.layout_height t in
+    let tmw, tmh = Ui.layout_max_width t, Ui.layout_max_height t in
     (* let mw, mh = if max then Some tw, Some th else None, None in *)
     t
-    |> Ui.resize ~w:0 ~sw:1 ~h:0 ~sh:1
+    |> Ui.resize ~w:0 ~sw:1 ~h:0 ~sh:1 ~mw:10000 ~mh:100000 
     |> Ui.shift_area state_w.position state_h.position
     (* |>Ui.join_y (Ui.atom (I.string A.empty (string_of_int state_w.visible))) *)
     (*TODO: make an alternative that has this already set*)
@@ -284,7 +285,10 @@ let scroll_area_intern ?focus ~state ~change t =
       | None, None ->
         ())
     |> Ui.mouse_area (scroll_handler state_w state_h)
-    |> Ui.keyboard_area ?focus (focus_handler state_w state_h))
+    |> Ui.keyboard_area ?focus (focus_handler state_w state_h)
+    (*restore original mw*)
+    |>Ui.resize ~mw:tmw ~mh:tmh
+    )
 ;;
 
 (** A scroll area that allows keyboard scrolling in both x and y directions*)
