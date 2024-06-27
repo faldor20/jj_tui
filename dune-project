@@ -20,17 +20,20 @@
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends 
- ocaml
+  lwd
+  ocaml
   dune
-    stdio
-     lwd base eio_main angstrom ppx_expect ppx_jane
- lwd
- eio-process
+  stdio
+  nottui
+  base 
+  eio_main 
+  angstrom 
+  ppx_expect 
+  ppx_jane
+  eio-process
 
  ;;for notty
  uutf
- 
-
  )
  (tags
   (topics "to describe" your project)))

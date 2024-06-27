@@ -3,7 +3,7 @@
 
  (name jj_tui)
  (inline_tests)
- (libraries stdio notty nottui angstrom bigstringaf eio_main eio-process lwd)
+ (libraries stdio notty nottui angstrom bigstringaf eio_main eio-process)
  (preprocess
   (pps ppx_expect))
   )

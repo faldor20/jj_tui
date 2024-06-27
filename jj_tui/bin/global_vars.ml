@@ -25,8 +25,7 @@ type ui_state_t = {
         Lwd.var
   ; input : [ `Normal | `Mode of char -> Ui.may_handle ] Lwd.var
   ; show_popup : (ui Lwd.t * string) option Lwd.var
-  ; show_prompt :
-      (string * string * ([ `Finished of string | `Closed ] -> unit)) option Lwd.var
+  ; show_prompt :W.Overlay.text_prompt_data option Lwd.var
   ; command_log : string list Lwd.var
   ; jj_tree : I.t Lwd.var
   ; jj_show : I.t Lwd.var

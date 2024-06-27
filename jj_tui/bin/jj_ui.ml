@@ -4,8 +4,7 @@ open Lwd_infix
 open Global_funcs
 open Jj_tui.Util
 open Jj_tui
-module W = Nottui_widgets
-module Wd = Widgets
+
 
 module Ui = struct
   include Nottui.Ui
@@ -28,6 +27,7 @@ module Make (Vars : Global_vars.Vars) = struct
   let full_term_sized_background =
     let$ term_width, term_height = Lwd.get Vars.term_width_height in
     Notty.I.void term_width term_height |> Nottui.Ui.atom
+  let blue= I.string A.((fg blue)++(bg blue)++(st bold)) "blue"
   ;;
 
   let _quitButton =
@@ -69,14 +69,14 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     W.string message
     |> Lwd.pure
-    |> Wd.border_box
+    |> W.Box.box
     |>$ Ui.resize
           ~sw:1
           ~sh:1
           ~mw:10000
           ~mh:10000
-          ~crop:Wd.neutral_grav
-          ~pad:Wd.neutral_grav
+          ~crop:W.neutral_grav
+          ~pad:W.neutral_grav
     |> inputs
   ;;
 
@@ -94,12 +94,12 @@ module Make (Vars : Global_vars.Vars) = struct
           [
             File_view.file_view sw ()
             |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000
-            |> Wd.border_box_focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
+            |> W.Box.focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
           ; Graph_view.graph_view ~sw ()
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
-            |> Wd.border_box_focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
-          ; Wd.scroll_area (ui_state.jj_branches $-> Ui.atom)
-            |> Wd.is_focused ~focus:branch_focus (fun ui focused ->
+            |> W.Box.focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
+          ; W.Scroll.area(ui_state.jj_branches $-> Ui.atom)
+            |> W.is_focused ~focus:branch_focus (fun ui focused ->
               ui
               |> Ui.keyboard_area (function
                 | `ASCII k, [] ->
@@ -113,7 +113,7 @@ module Make (Vars : Global_vars.Vars) = struct
                    ~h:2
                    ~mh:1000
                    ~mw:1000)
-            |> Wd.border_box_focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
+            |> W.Box.focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
           ]
       ; (*Right side summary/status/fileinfo view*)
         (let$* file_focus = file_focus |> Focus.status in
@@ -122,15 +122,15 @@ module Make (Vars : Global_vars.Vars) = struct
            let$ status = File_view.file_status () in
            status |> AnsiReverse.colored_string |> Ui.atom
          else (fun x -> x |> Ui.atom) <-$ ui_state.jj_show)
-        |> Wd.scroll_area
+        |> W.Scroll.area
         (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
         |>$ Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:100 ~mh:10000
-        |> Wd.on_focus ~focus:summary_focus (Ui.resize ~sw:3 ~mw:1000)
-        |> Wd.border_box_focusable ~focus:summary_focus ~pad_h:0 ~pad_w:1
+        |> W.on_focus ~focus:summary_focus (Ui.resize ~sw:3 ~mw:1000)
+        |> W.Box.focusable ~focus:summary_focus ~pad_h:0 ~pad_w:1
       ]
     (*These outer prompts can popup and show them selves over the main view*)
-    |> Widgets.general_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
-    |> Widgets.popup ~show_popup_var:ui_state.show_popup
+    |> W.Overlay.text_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
+    |> W.Overlay.popup ~show_popup_var:ui_state.show_popup
     |> inputs
   ;;
 
@@ -141,8 +141,8 @@ module Make (Vars : Global_vars.Vars) = struct
     |> Ui.atom
     |> Ui.resize ~mh:1000 ~mw:10000
     |> Lwd.pure
-    |> Wd.scroll_area
-    |> Wd.border_box ~pad_w:1 ~pad_h:0
+    |> W.Scroll.area
+    |> W.Box.box ~pad_w:1 ~pad_h:0
     |> inputs
   ;;
 
@@ -170,7 +170,7 @@ module Make (Vars : Global_vars.Vars) = struct
        | `RunCmd cmd ->
          Jj_widgets.interactive_process env ("jj" :: cmd)
        | `Main ->
-         Wd.keyboard_tabs [ ("Main", fun _ -> main_view ~sw); "Op log", log_view ])
+         W.keyboard_tabs [ ("Main", fun _ -> main_view ~sw); "Op log", log_view ])
     | (`CantStartProcess | `NotInRepo | `OtherError _) as other ->
       render_startup_error other
   ;;

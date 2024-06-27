@@ -1,0 +1,13 @@
+(executable
+ (name hackernews_1)
+ (libraries notty notty.unix nottui))
+
+(executable
+ (name hackernews_2)
+ (libraries notty notty.unix nottui))
+
+(executable
+ (name hackernews_3)
+ (libraries notty notty.unix nottui))
+
+

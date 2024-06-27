@@ -43,10 +43,8 @@ module Intern (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
   open Notty
-  module W = Nottui_widgets
   open Nottui
   open! Jj_tui.Util
-  module Wd = Jj_tui.Widgets
 
   exception Handled
 
@@ -97,7 +95,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     |> I.vcat
     |> Ui.atom
     |> Lwd.pure
-    |> Wd.scroll_area
+    |> W.Scroll.area
   ;;
 
   let rec handleCommand description cmd =
@@ -109,23 +107,27 @@ module Intern (Vars : Global_vars.Vars) = struct
     let prompt str cmd =
       ui_state.show_prompt
       $= Some
-           ( str
-           , ""
-           , function
-             | `Finished str ->
-               safe_jj (fun _ ->
-                 match cmd with
-                 | `Cmd args ->
-                   let _result = jj (args @ [ str ]) in
-                   Global_funcs.update_status ();
-                   ()
-                   (* v_cmd_out $= jj (args @ [ str ]); *)
-                 | `Cmd_I args ->
-                   Lwd.set ui_state.view (`Cmd_I (args @ [ str ]))
-                 | `Fun func ->
-                   func str)
-             | `Closed ->
-               () )
+           W.Overlay.
+             {
+               label = str
+             ; pre_fill = ""
+             ; on_exit =
+                 (function
+                   | `Finished str ->
+                     safe_jj (fun _ ->
+                       match cmd with
+                       | `Cmd args ->
+                         let _result = jj (args @ [ str ]) in
+                         Global_funcs.update_status ();
+                         ()
+                         (* v_cmd_out $= jj (args @ [ str ]); *)
+                       | `Cmd_I args ->
+                         Lwd.set ui_state.view (`Cmd_I (args @ [ str ]))
+                       | `Fun func ->
+                         func str)
+                   | `Closed ->
+                     ())
+             }
     in
     let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd_I args) in
@@ -207,10 +209,8 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
   open Notty
-  module W = Nottui_widgets
   open! Jj_tui.Util
   open Intern (Vars)
-  module Wd = Jj_tui.Widgets
   include Shared
 
   (** A handy command_list that just has this help command for areas that don't have any commands to still show help*)

@@ -3,10 +3,8 @@ module Make (Vars : Global_vars.Vars) = struct
   open Vars
   open Jj_process.Make (Vars)
   open Notty
-  module W = Nottui_widgets
   open Nottui
   open! Jj_tui.Util
-  module Wd = Jj_tui.Widgets
   open Jj_commands.Make (Vars)
 
   let selected_file = Lwd.var ""
@@ -59,13 +57,13 @@ module Make (Vars : Global_vars.Vars) = struct
       let$ files = Lwd.get Vars.ui_state.jj_change_files in
       files
       |> List.map (fun (_modifier, file) ->
-        Wd.{ data = file; ui = Wd.selectable_item (W.string file) })
+        W.Lists.{ data = file; ui = W.Lists.selectable_item (W.string file) })
     in
-    Wd.selection_list_custom
+    W.Lists.selection_list_custom
       ~on_selection_change:(fun x ->
         Eio.Fiber.fork ~sw @@ fun _ ->
         Vars.update_ui_state @@ fun _ -> Lwd.set selected_file x)
-      ~custom_handler:(fun _ _ key ->
+      ~custom_handler:(fun _ key ->
         match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
       file_uis
   ;;

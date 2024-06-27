@@ -2,8 +2,6 @@ open Lwd_infix
 open Nottui
 open Notty
 open Jj_tui.Util
-module W = Nottui_widgets
-module Wd = Jj_tui.Widgets
 (*
    thoughts on my layout
    1. I want my box to be at most the size of my content

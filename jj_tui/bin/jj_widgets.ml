@@ -3,10 +3,8 @@ open Nottui
 open Lwd_infix
 open Jj_tui
 open! Util
-module W = Nottui_widgets
 
 (** Collection of JJ specific widgets*)
-module Wd = Widgets
 
 module Make (Vars : Global_vars.Vars) = struct
   open Vars

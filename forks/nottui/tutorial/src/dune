@@ -1,0 +1,5 @@
+(executable
+ (name tangle)
+ (libraries re iter base angstrom)
+ (preprocess (pps ppx_let))
+ )

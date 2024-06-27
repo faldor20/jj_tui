@@ -20,9 +20,8 @@
       perSystem = { config, self', inputs', pkgs, system, ... }:
         let
           jj_tui = pkgs: ocamlPackages: profile:
-
             let
-              notty = ocamlPackages.notty.overrideAttrs
+              notty-mine = ocamlPackages.notty.overrideAttrs
                 (old: { src = ./forks/notty/.; });
               eio-process = ocamlPackages.buildDunePackage {
                 pname = "eio-process";
@@ -38,7 +37,6 @@
                 };
 
                 buildInputs = with ocamlPackages; [
-                  notty
                   base
                   eio
                   parsexp
@@ -53,9 +51,70 @@
 
                 strictDeps = true;
               };
+              lwd = ocamlPackages.buildDunePackage {
+                pname = "lwd";
+                version = "0.1.0";
+                duneVersion = "3";
+                src = pkgs.fetchFromGitHub {
+
+                  owner = "faldor20";
+                  repo = "lwd";
+                  rev = "c19bc2fd55c2de977cdd283458ce06402b08febe";
+                  sha256 =
+                    "sha256-8QwDzRgffA4wnE9vWLpLfy9MdQ5Yc8wBF5jgRamGMfA=";
+                };
+
+                buildInputs = with ocamlPackages; [
+                  seq
+                ];
+
+                strictDeps = true;
+              };
+              nottui =
+              let pname="nottui"; in
+               ocamlPackages.buildDunePackage {
+                pname = "nottui";
+                version = "dev";
+                duneVersion = "3";
+                src = pkgs.fetchFromGitHub {
+
+                  owner = "faldor20";
+                  repo = "nottui";
+                  rev = "e8d64738c00b22b85d1867414c02c61062fbfc1e";
+                  sha256 =
+                    "sha256-GgC0KX2LbCEqI3NC26J6e56QO27AFc2cv9Pz/9nQkEc=";
+                };
+
+                buildInputs = with ocamlPackages; [
+                  lwd
+                  notty-mine
+                  seq
+                ];
+                buildPhase = ''
+                  runHook preBuild
+                  rm -rf ./tutorial
+                  dune build -p ${pname}  ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
+                  runHook postBuild
+                '';
+                checkPhase = ''
+                  runHook preCheck
+                  dune runtest -p ${pname}''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
+                  runHook postCheck
+                '';
+                installPhase = ''
+                  runHook preInstall
+                  dune install --prefix $out --libdir $OCAMLFIND_DESTDIR ${pname}
+                  runHook postInstall
+                '';
+
+                strictDeps = true;
+              };
               jj_tui_build_pkgs =
 
                 [
+                  lwd
+                  notty-mine
+                  nottui
                   eio-process
                   ocamlPackages.parsexp
                   ocamlPackages.eio_main
@@ -79,6 +138,7 @@
 
                 buildPhase = ''
                   runHook preBuild
+                  rm -rf ./forks
                   dune build -p ${pname} --profile ${profile}  ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
                   runHook postBuild
                 '';
@@ -92,6 +152,7 @@
                   dune install --profile ${profile} --prefix $out --libdir $OCAMLFIND_DESTDIR ${pname}
                   runHook postInstall
                 '';
+                strictDeps = true;
 
               };
             in {

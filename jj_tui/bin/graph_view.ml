@@ -4,10 +4,8 @@ module Make (Vars : Global_vars.Vars) = struct
   open Jj_process.Make (Vars)
   open Notty
   open Jj_tui
-  module W = Nottui_widgets
   open Nottui
   open! Jj_tui.Util
-  module Wd = Widgets
   open Jj_commands.Make (Vars)
   open Jj_widgets.Make (Vars)
 
@@ -259,26 +257,26 @@ module Make (Vars : Global_vars.Vars) = struct
         match x with
         | `Selectable x ->
           let ui =
-            Wd.selectable_item
+            W.Lists.selectable_item
               (x ^ "\n"
                (* TODO This won't work if we are on a branch, because that puts the @ further out*)
                |> Jj_tui.AnsiReverse.colored_string
                |> Ui.atom)
           in
-          let data = Wd.{ ui; data = rev_ids.(!selectable_idx) } in
+          let data = W.Lists.{ ui; data = rev_ids.(!selectable_idx) } in
           selectable_idx := !selectable_idx + 1;
-          Wd.(Selectable data)
+          W.Lists.(Selectable data)
         | `Filler x ->
-          Wd.(Filler (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom)))
+          W.Lists.(Filler (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom|>Lwd.pure)))
     in
     ui
-    |> Wd.selection_list_exclusions
+    |> W.Lists.selection_list_exclusions
          ~on_selection_change:(fun revision ->
            Eio.Fiber.fork ~sw @@ fun _ ->
            Vars.update_ui_state @@ fun _ ->
            Lwd.set Vars.ui_state.selected_revision revision;
            Global_funcs.update_views ())
-         ~custom_handler:(fun _ _ key ->
+         ~custom_handler:(fun _  key ->
            match key with
            | `ASCII k, [] ->
              handleInputs command_mapping k

@@ -2099,3 +2099,29 @@ make[2]: Leaving directory '/build/ocaml-5.1.1'
 make[1]: *** [Makefile:370: world] Error 2
 make[1]: Leaving directory '/build/ocaml-5.1.1'
 // make: *** [/nix/store/0rawfy9g1y4c2h4s60sjm6m80cri92n3-Makefile.nixpkgs:14: nixpkgs_world_bootstrap_world_opt] Error 2
+@nix { "action": "setPhase", "phase": "unpackPhase" }
+Running phase: unpackPhase
+unpacking source archive /nix/store/yc6xa1xq75042vaaqv9vwj9zgg03zbpj-q1ip79qzn7xj5zkwdysl65vwv07yhqka-source
+source root is q1ip79qzn7xj5zkwdysl65vwv07yhqka-source
+@nix { "action": "setPhase", "phase": "patchPhase" }
+Running phase: patchPhase
+@nix { "action": "setPhase", "phase": "updateAutotoolsGnuConfigScriptsPhase" }
+Running phase: updateAutotoolsGnuConfigScriptsPhase
+@nix { "action": "setPhase", "phase": "configurePhase" }
+Running phase: configurePhase
+no configure script, doing nothing
+@nix { "action": "setPhase", "phase": "buildPhase" }
+Running phase: buildPhase
+Done: 80% (4/5, 1 left) (jobs: 0)                                 Done: 81% (13/16, 3 left) (jobs: 0)                                   Done: 72% (13/18, 5 left) (jobs: 0)                                   [1;31mError[0m: Conflict between the following libraries:
+- "notty" in _build/default/forks/notty/src
+- "notty" in
+  /nix/store/8qvjlw61pql9rmq9wajr87hgi0a1lbic-ocaml5.1.1-notty-0.2.3/lib/ocaml/5.1.1/site-lib/notty
+  -> required by library "nottui" in
+     /nix/store/hvl9n9szs8zhdx78nd96wszl66szlcgg-ocaml5.1.1-nottui-dev/lib/ocaml/5.1.1/site-lib/nottui
+  -> required by library "jj_tui" in _build/default/jj_tui/lib
+-> required by executable main in jj_tui/bin/dune:3
+-> required by _build/default/jj_tui/bin/main.exe
+-> required by _build/install/default/bin/jj_tui
+-> required by _build/default/jj_tui.install
+-> required by alias install
+Done: 72% (13/18, 5 left) (jobs: 0)                                   Done: 65% (15/23, 8 left, 1 failed) (jobs: 0)                                             Done: 65% (17/26, 9 left, 1 failed) (jobs: 1)                                             Done: 61% (46/75, 29 left, 1 failed) (jobs: 1)                                              

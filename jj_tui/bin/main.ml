@@ -1,9 +1,9 @@
 open Eio.Std
 open Lwd_infix
-module W = Nottui_widgets
 module Vars = Global_vars.Vars
 open Nottui
 module Jj_ui = Jj_ui.Make (Vars)
+
 
 let ui_loop ~quit ~term root =
   print_endline "starting loop";

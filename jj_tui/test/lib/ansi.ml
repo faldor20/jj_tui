@@ -31,7 +31,7 @@ let%expect_test "jj_test" =
   |}
   in
   jjtest
-  |> string_to_image
+  |> ansi_string_to_image
   |> Result.get_ok
   |> Notty.Render.pp_image @@ Format.str_formatter;
   let res = Format.flush_str_formatter () in
