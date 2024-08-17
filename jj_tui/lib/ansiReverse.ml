@@ -158,6 +158,10 @@ let ansi_string_to_image ?(extra_attr = A.empty) str =
     |> Base.String.Search_pattern.replace_all
          (Base.String.Search_pattern.create "\t")
          ~with_:"    "
+    (*replace form feed with a symbol: https://codepoints.net/U+000C?lang=en*)
+    |> Base.String.Search_pattern.replace_all
+         (Base.String.Search_pattern.create "")
+         ~with_:"↡"
   in
   match Parser.parse_ansi_escape_codes str with
   | Error a ->

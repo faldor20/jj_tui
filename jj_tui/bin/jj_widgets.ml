@@ -23,6 +23,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let elieded_symbol = make_uchar "◌"
   let rev_symbol = make_uchar "◉"
+  let merge_symbol = make_uchar "◆"
 
   let is_whitespace_char (code_point : int) : bool =
     match code_point with
@@ -103,6 +104,8 @@ module Make (Vars : Global_vars.Vars) = struct
 │  Update README.md|}
   ;;
 
+  let root_test = {|◆  zzzzzzzz root() 00000000|}
+
   let rec list_to_pairs lst =
     match lst with
     | [] | [ _ ] ->
@@ -125,22 +128,23 @@ module Make (Vars : Global_vars.Vars) = struct
      1. Make the graph
   *)
   let is_line_filler line =
-    line
-    (* We will iterate through skipping any chars like pipes and whitespace untill we find either:
-       a) A rev start char,which would make the line a rev.
-       b) Nothing, which would make the the line filler
-    *)
-    |> String.iteri (fun i char ->
-      let uchar = String.get_utf_8_uchar line i |> Uchar.utf_decode_uchar in
-      (*I've removed the part that tries to precisely skip all the start chars. this is becasue it gets all stuffed up by the terminal escape codes
-        FIXME currently this will get stuffed up if a line has that rev symbol in it
+    if line |> Base.String.is_substring ~substring:"root()"
+    then raise FoundStart
+    else
+      line
+      (* We will iterate through skipping any chars like pipes and whitespace untill we find either:
+         a) A rev start char,which would make the line a rev.
+         b) Nothing, which would make the the line filler
       *)
-
-      (* if not (uchar |> is_graph_start_char) *)
-      (* then *)
-      if uchar |> Uchar.equal rev_symbol || char == '@' then raise FoundStart
-      (* else raise FoundFiller *)
-      (* else () *))
+      |> String.iteri (fun i char ->
+        let uchar = String.get_utf_8_uchar line i |> Uchar.utf_decode_uchar in
+        (*I've removed the part that tries to precisely skip all the start chars. this is becasue it gets all stuffed up by the terminal escape codes
+          FIXME currently this will get stuffed up if a line has that rev symbol in it
+        *)
+        if uchar |> Uchar.equal merge_symbol
+           || uchar |> Uchar.equal rev_symbol
+           || char == '@'
+        then raise FoundStart)
   ;;
 
   (** Function to tag duplicated items in a list *)
@@ -162,8 +166,11 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   (**Returns a list of revs with both the change_id and commit_id*)
-  let get_revs () =
-    jj_no_log ~color:false [ "log"; "-T"; {|"|"++change_id++"|"++commit_id++"\n"|} ]
+  let get_revs ?revset () =
+    let revset_arg = match revset with Some revset -> [ "-r"; revset ] | None -> [] in
+    jj_no_log
+      ~color:false
+      ([ "log"; "-T"; {|"|"++change_id++"|"++commit_id++"\n"|} ] @ revset_arg)
     |> String.split_on_char '\n'
     |> List.filter_map (fun x ->
       let items = x |> String.split_on_char '|' in
@@ -176,33 +183,68 @@ module Make (Vars : Global_vars.Vars) = struct
     |> Array.of_list
   ;;
 
-  (** returns the graph and a list of revs within that graph*)
-  let graph_and_revs () =
+  let find_selectable_from_graph str =
+    let selectable_count = ref 0 in
+    let processLine new_list previous_line this_line =
+      match previous_line with
+      | Some previous_line ->
+        selectable_count := !selectable_count + 1;
+        `Selectable (String.concat "\n" [ previous_line; this_line ]) :: new_list, None
+      | None ->
+        (try
+           is_line_filler this_line;
+           `Filler this_line :: new_list, None
+         with
+         | FoundStart ->
+           new_list, Some this_line
+         | FoundFiller ->
+           `Filler this_line :: new_list, None)
+    in
     let graph =
-      jj_no_log [ "log" ]
+      str
       |> String.split_on_char '\n'
       (* filter out any lines that contain *)
-      |> Base.List.fold ~init:([], None) ~f:(fun (new_list, last) x ->
-        if x |> String.length <= 1
+      |> Base.List.fold ~init:([], None) ~f:(fun (new_list, previous) x ->
+      (*there is generally a final newline and we should just skip that *)
+        if String.length x = 0
+        then new_list, previous
+        else if String.length x <= 1
         then `Filler x :: new_list, None
-        else (
-          match last with
-          | Some last_line ->
-            `Selectable (String.concat "\n" [ last_line; x ]) :: new_list, None
-          | None ->
-            (try
-               is_line_filler x;
-               `Filler x :: new_list, None
-             with
-             | FoundStart ->
-               new_list, Some x
-             | FoundFiller ->
-               `Filler x :: new_list, None)))
-      |> fst
+        else processLine new_list previous x)
+      (*the root() commit only has one line and will always be last, so we will try to process the final line*)
+      |> (fun (list, final_line) ->
+           match final_line with
+           | Some line ->
+             selectable_count := !selectable_count + 1;
+             `Selectable line :: list
+           | None ->
+             list)
       |> List.rev
       |> Array.of_list
     in
-    let revs = get_revs () in
+    !selectable_count, graph
+  ;;
+
+  (* let test= *)
+  (* let count,graph=find_selectable_from_graph root_test *)
+  (* in *)
+  (* if count<=0 then failwith "no process root" *)
+  (* ;; *)
+
+  (** returns the graph and a list of revs within that graph*)
+  let graph_and_revs ?revset () =
+    let selectable_count, graph =
+      let revset_arg = match revset with Some revset -> [ "-r"; revset ] | None -> [] in
+      let output = jj_no_log ([ "log" ] @ revset_arg) in
+      output |> find_selectable_from_graph
+    in
+    let revs = get_revs ?revset () in
+    (*The graph should never have selectable items that don't also have a rev*)
+
+    (* TODO: remove this becasue it's just for debugging*)
+    let revs_len = revs |> Array.length in
+    if selectable_count <> revs_len
+    then failwith (Printf.sprintf "selectable:%d revs:%d" selectable_count revs_len);
     graph, revs
   ;;
 

@@ -5,6 +5,7 @@ module type t = sig
   val switch_to_process : Eio_unix.Stdenv.base -> string list -> Process.exit_status
 end
 
+exception JJError of string * string
 module Make (Vars : Global_vars.Vars) = struct
   (** Makes a new process that has acess to all input and output
       This should be used for running other tui sub-programs *)
@@ -75,7 +76,6 @@ module Make (Vars : Global_vars.Vars) = struct
     res
   ;;
 
-  exception JJError of string * string
 
   (** Run a jj command without outputting to the command_log.
       @param ?snapshot=true
@@ -132,8 +132,8 @@ module Make (Vars : Global_vars.Vars) = struct
   open Nottui
   open Lwd_infix
 
-  (*handle exception from jj*)
-  let handle_jj_error cmd error =
+  (**handle exception from jj by showing an error message*)
+  let handle_jj_error ~cmd ~error =
     ui_state.show_prompt $= None;
     ui_state.show_popup
     $= Some
@@ -147,5 +147,5 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   (*catch any exceptions from jj*)
-  let safe_jj f = try f () with JJError (cmd, error) -> handle_jj_error cmd error
+  let safe_jj f = try f () with JJError (cmd, error) -> handle_jj_error ~cmd ~error
 end

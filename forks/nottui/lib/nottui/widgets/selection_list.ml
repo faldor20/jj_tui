@@ -30,6 +30,9 @@ let selection_list_exclusions
   let selectable_items =
     let$ items = items in
     (*Array of selectable items and their idx in the original array*)
+    (*This impl uses obj.magic and could cause address boundy errors if anything goes wrong BE CAREFUL*)
+    
+    (*make an unallocated array for our new content*)
     let selectable_items = Array.make (Array.length items) (Obj.magic ()) in
     let _, final_len =
       items
@@ -37,9 +40,10 @@ let selection_list_exclusions
            (fun (i, selectable_count) item ->
              match item with
              | Selectable item ->
+               (*copy any seletable items to the new array*)
                Array.set selectable_items selectable_count (i, item);
                i + 1, selectable_count + 1
-             | Filler _ -> i + 1, selectable_count + 1)
+             | Filler _ -> i + 1, selectable_count )
            (0, 0)
     in
     Array.sub selectable_items 0 final_len

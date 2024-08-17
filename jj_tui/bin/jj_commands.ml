@@ -187,7 +187,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Handled ->
       if is_sub then ui_state.input $= `Normal;
       `Handled
-    | JJError (cmd, error) ->
+    | Jj_process.JJError (cmd, error) ->
       handle_jj_error cmd error;
       `Unhandled
 

@@ -25,13 +25,14 @@ type ui_state_t = {
         Lwd.var
   ; input : [ `Normal | `Mode of char -> Ui.may_handle ] Lwd.var
   ; show_popup : (ui Lwd.t * string) option Lwd.var
-  ; show_prompt :W.Overlay.text_prompt_data option Lwd.var
+  ; show_prompt : W.Overlay.text_prompt_data option Lwd.var
   ; command_log : string list Lwd.var
   ; jj_tree : I.t Lwd.var
   ; jj_show : I.t Lwd.var
   ; jj_branches : I.t Lwd.var
   ; jj_change_files : (string * string) list Lwd.var
   ; selected_revision : rev_id maybe_unique Lwd.var
+  ; revset : string option Lwd.var
   ; trigger_update : unit Lwd.var
 }
 
@@ -80,6 +81,7 @@ module Vars : Vars = struct
     ; jj_branches = Lwd.var I.empty
     ; jj_change_files = Lwd.var []
     ; selected_revision = Lwd.var (Unique { change_id = "@"; commit_id = "@" })
+    ; revset = Lwd.var None
     ; input = Lwd.var `Normal
     ; show_popup = Lwd.var None
     ; show_prompt = Lwd.var None

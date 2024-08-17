@@ -240,16 +240,49 @@ module Make (Vars : Global_vars.Vars) = struct
               }
             ]
       }
+    ; {
+        key = 'f'
+      ; description = "Filter using revset"
+      ; cmd =
+          PromptThen
+            ( "Filter using revset"
+            , fun revset ->
+                Fun
+                  (fun () ->
+                    if revset = ""
+                    then Vars.ui_state.revset $= None
+                    else Vars.ui_state.revset $= Some revset) )
+      }
     ]
   ;;
 
   (*TODO:make a custom widget the renders the commit with and without selection.
     with selection replace the dot with a blue version and slightly blue tint the background *)
   let graph_view ~sw () =
-    let ui =
+    (*We have a seperate error var here instead of using a result type. This allows us to avoid using Lwd.bind which would cause our list selection to get reset anytime the content changes *)
+    let error_var = Lwd.var None in
+    let revset_ui =
+      let$* rev_set = Vars.ui_state.revset |> Lwd.get |>$ Option.map W.string in
+      rev_set
+      |> Option.map (fun x ->
+        x |> Ui.resize ~mw:10000 ~sw:1 |> Lwd.pure |> W.Box.box ~pad_w:0 ~pad_h:0)
+      |> Option.value ~default:(Ui.empty |> Lwd.pure)
+    in
+    let items =
       let$ graph, rev_ids =
         (*TODO I think this ads a slight delay to everything becasue it makes things need to be renedered twice. maybe I could try getting rid of it*)
-        Vars.ui_state.trigger_update |> Lwd.get |> Lwd.map ~f:(fun _ -> graph_and_revs ())
+        Vars.ui_state.trigger_update
+        |> Lwd.get
+        |> Lwd.map2 (Lwd.get Vars.ui_state.revset) ~f:(fun revset _ ->
+          try
+            let res = graph_and_revs ?revset () in
+            error_var $= None;
+            res
+          with
+          | Jj_process.JJError (cmd, error) ->
+            (*If we have an error generating the graph,likely because the revset is wrong,just show the errror*)
+            error_var $= Some (error |> Jj_tui.AnsiReverse.colored_string |> Ui.atom);
+            [||], [||])
       in
       let selectable_idx = ref 0 in
       graph
@@ -267,20 +300,32 @@ module Make (Vars : Global_vars.Vars) = struct
           selectable_idx := !selectable_idx + 1;
           W.Lists.(Selectable data)
         | `Filler x ->
-          W.Lists.(Filler (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom|>Lwd.pure)))
+          W.Lists.(
+            Filler
+              (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom |> Lwd.pure)))
     in
-    ui
-    |> W.Lists.selection_list_exclusions
-         ~on_selection_change:(fun revision ->
-           Eio.Fiber.fork ~sw @@ fun _ ->
-           Vars.update_ui_state @@ fun _ ->
-           Lwd.set Vars.ui_state.selected_revision revision;
-           Global_funcs.update_views ())
-         ~custom_handler:(fun _  key ->
-           match key with
-           | `ASCII k, [] ->
-             handleInputs command_mapping k
-           | _ ->
-             `Unhandled)
+    (* run commands when there is keybaord input*)
+    let handleKeys = function
+      | `ASCII k, [] ->
+        handleInputs command_mapping k
+      | _ ->
+        `Unhandled
+    in
+    let list_ui =
+      items
+      |> W.Lists.selection_list_exclusions
+           ~on_selection_change:(fun revision ->
+             Eio.Fiber.fork ~sw @@ fun _ ->
+             Vars.update_ui_state @@ fun _ ->
+             Lwd.set Vars.ui_state.selected_revision revision;
+             Global_funcs.update_views ())
+           ~custom_handler:(fun _ key -> handleKeys key)
+    in
+    let final_ui =
+      let$ list_ui = list_ui
+      and$ error = Lwd.get error_var in
+      match error with Some e -> e |> Ui.keyboard_area handleKeys | None -> list_ui
+    in
+    W.vbox [ revset_ui; final_ui ]
   ;;
 end
