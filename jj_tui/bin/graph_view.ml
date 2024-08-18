@@ -20,7 +20,7 @@ module Make (Vars : Global_vars.Vars) = struct
   let rec command_mapping : 'acommand list =
     [
       {
-        key = 'h'
+        key = '?'
       ; description = "Show help"
       ; cmd =
           Fun
