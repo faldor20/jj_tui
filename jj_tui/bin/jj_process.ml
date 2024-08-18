@@ -6,6 +6,7 @@ module type t = sig
 end
 
 exception JJError of string * string
+
 module Make (Vars : Global_vars.Vars) = struct
   (** Makes a new process that has acess to all input and output
       This should be used for running other tui sub-programs *)
@@ -31,7 +32,7 @@ module Make (Vars : Global_vars.Vars) = struct
         ~f:(fun x ->
           (match x.exit_status with
            | `Exited i ->
-             if i == 0 then `Ok x.stdout else `BadExit (i, x.stderr)
+             if i == 0 then `Ok (x.stdout, x.stderr) else `BadExit (i, x.stderr)
            | `Signaled i ->
              `BadExit (i, x.stderr))
           |> Base.Or_error.return)
@@ -76,15 +77,14 @@ module Make (Vars : Global_vars.Vars) = struct
     res
   ;;
 
-
   (** Run a jj command without outputting to the command_log.
       @param ?snapshot=true
         When true snapshots the state when running the command and also aquires a lock before running it. Set to false for commands you wish to run concurrently. like those for generating content in the UI
       @param ?color=true When true output will have terminal escape codes for color *)
-  let jj_no_log ?(snapshot = true) ?(color = true) args =
+  let jj_no_log ?(get_stderr = false) ?(snapshot = true) ?(color = true) args =
     match jj_no_log_errorable ~snapshot ~color args with
     | Ok a ->
-      a
+      if get_stderr then a |> snd else a |> fst
     | Error (`BadExit (code, str)) ->
       raise
         (JJError

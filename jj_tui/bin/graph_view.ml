@@ -181,21 +181,33 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Fun
                     (fun _ ->
+                      let subcmds =
+                        [
+                          {
+                            key = 'y'
+                          ; description = "proceed"
+                          ; cmd = Cmd [ "git"; "push" ]
+                          }
+                        ; {
+                            key = 'n'
+                          ; description = "exit"
+                          ; cmd =
+                              Fun
+                                (fun _ ->
+                                  ui_state.input $= `Normal;
+                                  ui_state.show_popup $= None)
+                          }
+                        ]
+                      in
                       let log =
-                        jj_no_log [ "git"; "push"; "--dry-run" ]^"hi\n"
+                        jj_no_log   ~get_stderr:true [ "git"; "push"; "--dry-run" ]
                         |> AnsiReverse.colored_string
                         |> Ui.atom
                         |> Lwd.pure
                       in
-                      ui_state.show_popup $= Some (log, "Git push will:");
-                      let subcmd =
-                        {
-                          key = 'y'
-                        ; description = "proceed"
-                        ; cmd = Cmd [ "git"; "push" ]
-                        }
-                      in
-                      ui_state.input $= `Mode (command_input ~is_sub:true [subcmd]))
+                      let ui = W.vbox [ log; commands_list_ui subcmds ] in
+                      ui_state.show_popup $= Some (ui, "Git push will:");
+                      ui_state.input $= `Mode (command_input ~is_sub:true subcmds))
               }
             ; { key = 'f'; description = "git fetch"; cmd = Cmd [ "git"; "fetch" ] }
             ]
