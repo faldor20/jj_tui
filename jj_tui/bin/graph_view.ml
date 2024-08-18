@@ -27,8 +27,8 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         key = 'N'
-      ; description = "Move the working copy to the next child "
-      ; cmd = Cmd [ "next" ]
+      ; description = "Make a new change and insert it after the selected rev"
+      ; cmd = Dynamic_r (fun rev -> Cmd [ "new"; "--insert-after"; rev ])
       }
     ; {
         key = 'n'
