@@ -9,7 +9,15 @@ module Make (Vars : Global_vars.Vars) = struct
   open Jj_commands.Make (Vars)
   open Jj_widgets.Make (Vars)
 
-  let rec command_mapping : command list =
+  let branch_select_prompt get_branch_list name func =
+    Selection_prompt
+      ( name
+      , (fun () -> get_branch_list () |> Lwd.pure)
+      , (fun x branch_name -> branch_name |> Base.String.is_substring ~substring:x)
+      , func )
+  ;;
+
+  let rec command_mapping : 'acommand list =
     [
       {
         key = 'h'
@@ -17,7 +25,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
+              ui_state.show_popup $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
@@ -206,37 +214,74 @@ module Make (Vars : Global_vars.Vars) = struct
               }
             ; {
                 key = 'd'
-              ; description = "Delete branches"
-              ; cmd = Prompt ("Branch names to delete", [ "branch"; "delete" ])
+              ; description = "Delete branch"
+              ; cmd =
+                  branch_select_prompt
+                    branches_no_remote
+                    "Branch to delete"
+                    (fun branch ->
+                       Cmd [ "branch"; "delete"; branch ]
+                       |> confirm_prompt
+                            (Printf.sprintf
+                               "delete the branch: '%s' This will also delete it on \
+                                the remote next \"git push\"."
+                               branch))
+              }
+            ; {
+                key = 'f'
+              ; description = "Forget branch"
+              ; cmd =
+                  branch_select_prompt
+                    branches_no_remote
+                    "Branch to forget"
+                    (fun branch ->
+                       Cmd [ "branch"; "forget"; branch ]
+                       |> confirm_prompt
+                            (Printf.sprintf
+                               "orget the branch: '%s' . This will not delete it on \
+                                the remote."
+                               branch))
               }
             ; {
                 key = 'r'
               ; description = "Rename branch"
               ; cmd =
-                  PromptThen
-                    ( "Branch to rename"
-                    , fun curr_name ->
-                        Prompt ("New branch name", [ "branch"; "rename"; curr_name ]) )
+                  branch_select_prompt
+                    branches_no_remote
+                    "Select the branch to rename (only local/tracked branches are shown)"
+                    (fun curr_name ->
+                       Prompt ("New branch name", [ "branch"; "rename"; curr_name ]))
               }
             ; {
                 key = 's'
-              ; description = "set branch to this change"
+              ; description = "Set branch to this change"
               ; cmd =
                   Dynamic_r
                     (fun rev ->
-                      Prompt
-                        ( "Branch to set to this commit "
-                        , [ "branch"; "set"; "-r"; rev; "-B" ] ))
+                      branch_select_prompt
+                        branches_no_remote
+                        ("Select the branch to set to rev: " ^ rev)
+                        (fun branch ->
+                           Cmd
+                             [ "branch"; "set"; "-r"; get_selected_rev (); "-B"; branch ]))
               }
             ; {
                 key = 't'
               ; description = "track given remote branch"
-              ; cmd = Prompt ("Branch to track 'branch@remote'", [ "branch"; "track" ])
+              ; cmd =
+                  branch_select_prompt
+                    branches_remotes_not_tracked
+                    "Select the branch to begin tracking"
+                    (fun branch -> Cmd [ "branch"; "track"; "-B"; branch ])
               }
             ; {
                 key = 'u'
               ; description = "untrack given remote branch"
-              ; cmd = Prompt ("Branch to untrack 'branch@remote'", [ "branch"; "untrack" ])
+              ; cmd =
+                  branch_select_prompt
+                    branches_remotes_tracked
+                    "Select the branch to untrack"
+                    (fun branch -> Cmd [ "branch"; "untrack"; "-B"; branch ])
               }
             ]
       }
@@ -284,25 +329,37 @@ module Make (Vars : Global_vars.Vars) = struct
             error_var $= Some (error |> Jj_tui.AnsiReverse.colored_string |> Ui.atom);
             [||], [||])
       in
+      (*We will make two arrays, one with both selectable and filler and one with only selectable*)
       let selectable_idx = ref 0 in
-      graph
-      |> Array.map (fun x ->
-        match x with
-        | `Selectable x ->
-          let ui =
-            W.Lists.selectable_item
-              (x ^ "\n"
-               (* TODO This won't work if we are on a branch, because that puts the @ further out*)
-               |> Jj_tui.AnsiReverse.colored_string
-               |> Ui.atom)
-          in
-          let data = W.Lists.{ ui; data = rev_ids.(!selectable_idx) } in
-          selectable_idx := !selectable_idx + 1;
-          W.Lists.(Selectable data)
-        | `Filler x ->
-          W.Lists.(
-            Filler
-              (" " ^ x ^ "\n" |> Jj_tui.AnsiReverse.colored_string |> Ui.atom |> Lwd.pure)))
+      let selectable_items = Array.make (Array.length graph) (Obj.magic ()) in
+      let items =
+        graph
+        |> Array.map (fun x ->
+          match x with
+          | `Selectable x ->
+            let ui =
+              W.Lists.selectable_item
+                (x ^ "\n"
+                 (* TODO This won't work if we are on a branch, because that puts the @ further out*)
+                 |> Jj_tui.AnsiReverse.colored_string
+                 |> Ui.atom)
+            in
+            let data = W.Lists.{ ui; data = rev_ids.(!selectable_idx) } in
+            (*Add to our selectable array*)
+            Array.set selectable_items !selectable_idx data;
+            selectable_idx := !selectable_idx + 1;
+            W.Lists.(Selectable data)
+          | `Filler x ->
+            W.Lists.(
+              Filler
+                (" " ^ x ^ "\n"
+                 |> Jj_tui.AnsiReverse.colored_string
+                 |> Ui.atom
+                 |> Lwd.pure)))
+      in
+      (*This is then used in selection prompts*)
+      Vars.ui_state.graph_revs $= Array.sub selectable_items 0 !selectable_idx;
+      items
     in
     (* run commands when there is keybaord input*)
     let handleKeys = function

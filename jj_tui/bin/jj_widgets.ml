@@ -205,7 +205,7 @@ module Make (Vars : Global_vars.Vars) = struct
       |> String.split_on_char '\n'
       (* filter out any lines that contain *)
       |> Base.List.fold ~init:([], None) ~f:(fun (new_list, previous) x ->
-      (*there is generally a final newline and we should just skip that *)
+        (*there is generally a final newline and we should just skip that *)
         if String.length x = 0
         then new_list, previous
         else if String.length x <= 1
@@ -246,6 +246,68 @@ module Make (Vars : Global_vars.Vars) = struct
     if selectable_count <> revs_len
     then failwith (Printf.sprintf "selectable:%d revs:%d" selectable_count revs_len);
     graph, revs
+  ;;
+
+  (*We use this sepcial char as the seperator because it seems very unlikely anyone will ever use it in a branch name:
+    \u{1c}
+  *)
+
+  (*List of branches, containing the full output string as well as the string name*)
+  let get_branches template =
+    let log = jj_no_log ~snapshot:false [ "branch"; "list"; "-a"; "-T"; template ] in
+    let lines = String.split_on_char '\n' log in
+    lines
+    |> List.filter_map (fun line ->
+      if line |> String.length == 0
+      then None
+      else
+        line
+        |> Base.String.lsplit2 ~on:'\x1c'
+        |> Option.map (fun (name, rest) -> name, rest))
+  ;;
+
+  let get_branches_selectable template () =
+    get_branches template
+    |> List.map (fun (name, str) ->
+      W.Lists.
+        {
+          data = name
+        ; ui =
+            str ^ "\n"
+            |> Jj_tui.AnsiReverse.colored_string
+            |> Ui.atom
+            |> Ui.resize ~w:100 ~h:1 ~mw:100
+            |> W.Lists.selectable_item
+        })
+  ;;
+
+  let branches_no_remote =
+    get_branches_selectable
+      ({|if(!remote,name++"|}
+       ^ "\u{1C}"
+       ^ {|"++label("branch", name)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
+      )
+  ;;
+
+  let branches_remotes_no_git =
+    get_branches_selectable
+    @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")), name++"|}
+    ^ "\u{1C}"
+    ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
+  ;;
+
+  let branches_remotes_not_tracked =
+    get_branches_selectable
+    @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && !tracked, name++"|}
+    ^ "\u{1C}"
+    ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
+  ;;
+
+  let branches_remotes_tracked =
+    get_branches_selectable
+    @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && tracked, name++"|}
+    ^ "\u{1C}"
+    ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
   ;;
 
   let selection_list ?(focus = Focus.make ()) items =

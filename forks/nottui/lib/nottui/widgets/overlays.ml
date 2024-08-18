@@ -227,7 +227,7 @@ let popup ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let prompt_field = content in
-      prompt_field |>$ Ui.resize ~w:5 |> BB.box ~label_top:label |> clear_bg
+      prompt_field |>$ Ui.resize ~w:5 ~sw:1  |> BB.box ~label_top:label |> clear_bg
     | None -> Ui.empty |> Lwd.pure
   in
   W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]

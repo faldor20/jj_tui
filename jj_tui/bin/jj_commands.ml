@@ -7,32 +7,37 @@ module Shared = struct
   type cmd_args = string list
 
   (** Regular jj command *)
-  type command_variant =
+  type 'a command_variant =
     | Cmd of cmd_args (** Regular jj command *)
     | Cmd_r of cmd_args
     (** Regular jj command that should operate on the selected revison *)
-    | Dynamic of (unit -> command_variant)
-    | Dynamic_r of (string -> command_variant)
+    | Dynamic of (unit -> 'a command_variant)
+    | Dynamic_r of (string -> 'a command_variant)
     (** Wraps a command so that the content will be regenerated each time it's run. Usefull if you wish to read some peice of ui state *)
     | Cmd_I of cmd_args
     (** Command that will open interactively. Used for diff editing to hand control over to the jj process *)
     | Prompt of string * cmd_args
+    | Selection_prompt of
+        string
+        * (unit-> 'a Nottui.W.Lists.selectable_item list Lwd.t)
+        * (string -> 'a -> bool)
+        * ('a -> 'a command_variant)
     | Prompt_r of string * cmd_args
     (** Creates a prompt and then runs the command with the prompt result appended as the last arg *)
-    | PromptThen of string * (string -> command_variant)
+    | PromptThen of string * (string -> 'a command_variant)
     (** Same as prompt except you can run another command after. Useful if you want multiple prompts *)
     | Prompt_I of string * cmd_args
     (** Same as prompt but expects the command to be interactive same as [Cmd_I] *)
-    | SubCmd of command list
+    | SubCmd of 'a command list
     (** Allows nesting of commands, shows a popup with command options and waits for the user to press the appropriate key*)
     | Fun of (unit -> unit)
     (** Execute an arbitrary function. Prefer other command types if possible *)
 
   (** A command that should be run when it's key is pressed*)
-  and command = {
+  and 'a command = {
       key : char
     ; description : string
-    ; cmd : command_variant
+    ; cmd : 'a command_variant
   }
 end
 
@@ -74,6 +79,7 @@ module Intern (Vars : Global_vars.Vars) = struct
            | Fun _
            | PromptThen _
            | Dynamic _
+           | Selection_prompt _
            | Cmd_r _
            | Prompt_r _
            | Dynamic_r _ )
@@ -84,14 +90,14 @@ module Intern (Vars : Global_vars.Vars) = struct
          :: render_commands ~indent_level:(indent_level + 1) subs
   ;;
 
-  let commands_list_ui commands =
+  let commands_list_ui ?(include_arrows=false) commands =
     let move_command =
       render_command_line
         ~indent_level:0
         ("Alt+Arrows" |> String.to_seq |> Seq.map Uchar.of_char |> Array.of_seq)
         "navigation between windows"
     in
-    (commands |> render_commands) @ [ move_command ]
+    (commands |> render_commands) @  (if include_arrows  then [move_command] else[] )
     |> I.vcat
     |> Ui.atom
     |> Lwd.pure
@@ -129,6 +135,22 @@ module Intern (Vars : Global_vars.Vars) = struct
                      ())
              }
     in
+    let prompt_selection str items filter_predicate cmd =
+      ui_state.show_string_selection_prompt
+      $= Some
+           W.Overlay.
+             {
+               items=items()
+             ; filter_predicate
+             ; label = str
+             ; on_exit =
+                 (function
+                   | `Finished x ->
+                     safe_jj (fun _ -> cmd x |> command_no_input description)
+                   | `Closed ->
+                     ())
+             }
+    in
     let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd_I args) in
     match cmd with
@@ -160,6 +182,11 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Prompt_I (str, args) ->
       ui_state.show_popup $= None;
       prompt str (`Cmd_I args);
+      raise Handled
+    | Selection_prompt (str, items, predicate, cmd) ->
+      ui_state.show_popup $= None;
+      ui_state.show_prompt $= None;
+      prompt_selection str items predicate cmd;
       raise Handled
     | Fun func ->
       ui_state.show_popup $= None;
@@ -217,12 +244,12 @@ module Make (Vars : Global_vars.Vars) = struct
   let rec default_list =
     [
       {
-        key = 'h'
+        key = '?'
       ; description = "Show help"
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui default_list, "Help");
+              ui_state.show_popup $= Some (commands_list_ui ~include_arrows:true default_list, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ]

@@ -131,6 +131,7 @@ module Make (Vars : Global_vars.Vars) = struct
     (*These outer prompts can popup and show them selves over the main view*)
     |> W.Overlay.text_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
     |> W.Overlay.popup ~show_popup_var:ui_state.show_popup
+    |> W.Overlay.selection_list_prompt_filterable ~show_prompt_var:(ui_state.show_string_selection_prompt)
     |> inputs
   ;;
 

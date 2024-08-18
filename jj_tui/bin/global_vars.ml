@@ -26,6 +26,11 @@ type ui_state_t = {
   ; input : [ `Normal | `Mode of char -> Ui.may_handle ] Lwd.var
   ; show_popup : (ui Lwd.t * string) option Lwd.var
   ; show_prompt : W.Overlay.text_prompt_data option Lwd.var
+  (* ; show_graph_selection_prompt : *)
+      (* rev_id maybe_unique W.Overlay.filterable_selection_list_prompt_data option Lwd.var *)
+  ; show_string_selection_prompt :
+      string W.Overlay.filterable_selection_list_prompt_data option Lwd.var
+  ; graph_revs : rev_id maybe_unique W.Lists.selectable_item array Lwd.var
   ; command_log : string list Lwd.var
   ; jj_tree : I.t Lwd.var
   ; jj_show : I.t Lwd.var
@@ -35,6 +40,13 @@ type ui_state_t = {
   ; revset : string option Lwd.var
   ; trigger_update : unit Lwd.var
 }
+  let get_unique_id maybe_unique_rev =
+    match maybe_unique_rev with
+    | Unique { change_id; _ } ->
+      change_id
+    | Duplicate { commit_id; _ } ->
+      commit_id
+  ;;
 
 (** Global variables for the ui. Here we keep anything that's just a pain to pipe around*)
 module type Vars = sig
@@ -82,9 +94,11 @@ module Vars : Vars = struct
     ; jj_change_files = Lwd.var []
     ; selected_revision = Lwd.var (Unique { change_id = "@"; commit_id = "@" })
     ; revset = Lwd.var None
+    ; graph_revs = Lwd.var [||]
     ; input = Lwd.var `Normal
     ; show_popup = Lwd.var None
     ; show_prompt = Lwd.var None
+    ; show_string_selection_prompt = Lwd.var None
     ; command_log = Lwd.var []
     ; trigger_update = Lwd.var ()
     }
@@ -110,22 +124,13 @@ module Vars : Vars = struct
   let get_eio_vars () = Option.get !eio
   let get_term () = Option.get !term
 
+
   (**Gets an id for the selected revision. If the change_id is unique we use that, if it's not we return a commit_id instead*)
-  let get_selected_rev () =
-    match Lwd.peek ui_state.selected_revision with
-    | Unique { change_id; _ } ->
-      change_id
-    | Duplicate { commit_id; _ } ->
-      commit_id
-  ;;
+  let get_selected_rev () = Lwd.peek ui_state.selected_revision |> get_unique_id
 
   (**see [get_selected_rev]*)
   let get_selected_rev_lwd () =
     let$ a = Lwd.get ui_state.selected_revision in
-    match a with
-    | Unique { change_id; _ } ->
-      change_id
-    | Duplicate { commit_id; _ } ->
-      commit_id
+    a |> get_unique_id
   ;;
 end

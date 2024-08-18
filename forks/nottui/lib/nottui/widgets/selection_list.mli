@@ -61,7 +61,9 @@ val filterable_selection_list_custom
     @param ?on_esc Called when user presses esc
     @param list_items List of items to be displayed/selected/filtered *)
 val filterable_selection_list
-  :  ?focus:Nottui_main.Focus.handle
+  :  ?pad_w:int
+  -> ?pad_h:int
+  -> ?focus:Nottui_main.Focus.handle
   -> filter_predicate:(string -> 'a -> bool)
   -> ?on_esc:('a -> unit)
   -> on_confirm:('a -> unit)

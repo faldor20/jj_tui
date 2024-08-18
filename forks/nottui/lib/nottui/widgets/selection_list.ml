@@ -204,6 +204,8 @@ let filterable_selection_list_custom
 ;;
 
 let filterable_selection_list
+  ?(pad_w=1)
+  ?(pad_h=0)
   ?(focus = Focus.make ())
   ~filter_predicate
   ?(on_esc = fun _ -> ())
@@ -237,9 +239,9 @@ let filterable_selection_list
   in
   let max_width = Lwd.var 5 in
   vbox
-    [ filter_text_ui |> Border_box.box
+    [ filter_text_ui |> Border_box.box ~pad_w ~pad_h
     ; (list_ui
-       |> Border_box.box
+       |> Border_box.box  ~pad_w ~pad_h
        |>$ fun x ->
        let mw = (x |> Ui.layout_spec).mw in
        if mw > Lwd.peek max_width then max_width $= mw;

@@ -6,6 +6,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open Nottui
   open! Jj_tui.Util
   open Jj_commands.Make (Vars)
+  open Global_vars
 
   let selected_file = Lwd.var ""
 
@@ -17,16 +18,24 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui command_mapping, "Help");
+              ui_state.show_popup $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
         key = 'm'
       ; description = "Move file to other commit"
       ; cmd =
-          PromptThen
+          Selection_prompt
             ( "Revision to move file to"
-            , fun rev ->
+            , (ui_state.graph_revs|>Lwd.get|>$Array.to_list)
+            , (fun x y->
+
+            match y with
+              |Unique {change_id; commit_id} -> change_id|>String.starts_with ~prefix:x
+              |Duplicate{change_id; commit_id} ->true
+            ), 
+
+             (fun rev ->
                 Cmd
                   [
                     "squash"
@@ -35,9 +44,9 @@ module Make (Vars : Global_vars.Vars) = struct
                   ; "--from"
                   ; get_selected_rev ()
                   ; "--into"
-                  ; rev
+                  ; get_unique_id rev
                   ; Lwd.peek selected_file
-                  ] )
+                  ]) )
       }
     ; {
         key = 'N'
