@@ -31,7 +31,7 @@ let selection_list_exclusions
     let$ items = items in
     (*Array of selectable items and their idx in the original array*)
     (*This impl uses obj.magic and could cause address boundy errors if anything goes wrong BE CAREFUL*)
-    
+
     (*make an unallocated array for our new content*)
     let selectable_items = Array.make (Array.length items) (Obj.magic ()) in
     let _, final_len =
@@ -43,7 +43,7 @@ let selection_list_exclusions
                (*copy any seletable items to the new array*)
                Array.set selectable_items selectable_count (i, item);
                i + 1, selectable_count + 1
-             | Filler _ -> i + 1, selectable_count )
+             | Filler _ -> i + 1, selectable_count)
            (0, 0)
     in
     Array.sub selectable_items 0 final_len
@@ -59,8 +59,14 @@ let selection_list_exclusions
       (* First ensure if our list has gotten shorter we haven't selected off the list*)
       (* We do this here to ensure that the selected var is updated before we render to avoid double rendering*)
       let max_selected = Int.max 0 (Array.length selectable_items - 1) in
-      if Int.min selected max_selected <> selected then selected_var $= max_selected;
-      let selected = Lwd.peek selected_var in
+      let selected =
+        let selected = Lwd.peek selected_var in
+        if Int.min selected max_selected <> selected
+        then (
+          selected_var $= max_selected;
+          max_selected)
+        else selected
+      in
       if Array.length selectable_items > 0
       then (
         let item_idx, item = selectable_items.(selected) in
