@@ -262,6 +262,8 @@ module Make (Vars : Global_vars.Vars) = struct
   let confirm_prompt prompt cmd =
     SubCmd [ { key = 'y'; description = "Yes I want to " ^ prompt; cmd } ]
   ;;
+  (** Handles raw command mapping without regard for modes or the current intput state. Should be used when setting a new input mode*)
+  let command_input=command_input;;
 
   (** Handles input and sub_commands.*)
   let handleInputs command_mapping =

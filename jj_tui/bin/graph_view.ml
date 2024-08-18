@@ -25,7 +25,8 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
+              ui_state.show_popup
+              $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
@@ -174,7 +175,28 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           SubCmd
             [
-              { key = 'p'; description = "git push"; cmd = Cmd [ "git"; "push" ] }
+              {
+                key = 'p'
+              ; description = "git push"
+              ; cmd =
+                  Fun
+                    (fun _ ->
+                      let log =
+                        jj_no_log [ "git"; "push"; "--dry-run" ]^"hi\n"
+                        |> AnsiReverse.colored_string
+                        |> Ui.atom
+                        |> Lwd.pure
+                      in
+                      ui_state.show_popup $= Some (log, "Git push will:");
+                      let subcmd =
+                        {
+                          key = 'y'
+                        ; description = "proceed"
+                        ; cmd = Cmd [ "git"; "push" ]
+                        }
+                      in
+                      ui_state.input $= `Mode (command_input ~is_sub:true [subcmd]))
+              }
             ; { key = 'f'; description = "git fetch"; cmd = Cmd [ "git"; "fetch" ] }
             ]
       }
@@ -223,8 +245,8 @@ module Make (Vars : Global_vars.Vars) = struct
                        Cmd [ "branch"; "delete"; branch ]
                        |> confirm_prompt
                             (Printf.sprintf
-                               "delete the branch: '%s' This will also delete it on \
-                                the remote next \"git push\"."
+                               "delete the branch: '%s' This will also delete it on the \
+                                remote next \"git push\"."
                                branch))
               }
             ; {
@@ -238,8 +260,8 @@ module Make (Vars : Global_vars.Vars) = struct
                        Cmd [ "branch"; "forget"; branch ]
                        |> confirm_prompt
                             (Printf.sprintf
-                               "orget the branch: '%s' . This will not delete it on \
-                                the remote."
+                               "orget the branch: '%s' . This will not delete it on the \
+                                remote."
                                branch))
               }
             ; {
