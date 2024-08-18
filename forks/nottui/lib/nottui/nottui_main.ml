@@ -795,12 +795,14 @@ struct
           | X (a, b) | Y (a, b) | Z (a, b) ->
             (* Try left/top most branch first *)
             let st' =
-              if Focus.has_focus b.focus
+              if Focus.has_focus b.focus&&Focus.has_focus a.focus 
+              then b::a :: tl
+              else if Focus.has_focus b.focus
               then b :: tl
               else if Focus.has_focus a.focus
               then a :: tl
               (*If neither branch has focus we can just go down both*)
-              else a :: b :: tl
+              else  b::a :: tl
             in
             iter st'
           | Focus_area (t, f) ->

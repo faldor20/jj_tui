@@ -175,6 +175,52 @@ let selection_list_prompt
   prompt_internal ?pad_w ?pad_h ~focus ~show_prompt:prompt_args ui
 ;;
 
+type 'a filterable_selection_list_prompt_data =
+  { label : string
+  ; items : 'a Selection_list.selectable_item list Lwd.t
+  ;filter_predicate:(string-> 'a-> bool)
+  ; on_exit : [ `Closed | `Finished of 'a ] -> unit
+  }
+
+let selection_list_prompt_filterable
+  ?pad_w
+  ?pad_h
+  ?(modify_body = fun x -> x)
+  ?(focus = Focus.make ())
+  ~show_prompt_var
+  ui
+  =
+  (*Build the ui so that it is either the prompt or nothing depending on whether show prompt is enabled*)
+  let prompt_args =
+    let$ show_prompt_val = Lwd.get show_prompt_var in
+    show_prompt_val
+    |> Option.map
+       @@ fun { label; items;filter_predicate; on_exit } ->
+       let on_exit result =
+         Focus.release_reversable focus;
+         show_prompt_var $= None;
+         on_exit result
+       in
+       (*prefill the prompt if we want to *)
+       let prompt_field =
+         Selection_list.filterable_selection_list
+           ~filter_predicate
+           ~focus
+           ~on_confirm:(fun item ->
+               (`Finished item) |> on_exit;
+               )
+           items
+         |> modify_body
+       in
+       let label_bottom =
+         let$ items = items in
+         Some (items |> List.length |> Printf.sprintf "%d items")
+       in
+       label, label_bottom, on_exit, prompt_field
+  in
+  prompt_internal ?pad_w ?pad_h ~focus ~show_prompt:prompt_args ui
+;;
+
 let popup ~show_popup_var ui =
   let popup_ui =
     let$* show_popup = Lwd.get show_popup_var in

@@ -235,11 +235,5 @@ let filterable_selection_list
              `Handled
            | _ -> `Unhandled)
   in
-  vbox
-    [ filter_text_ui
-      (*Ensures the filter text box never expands beyond the size of the list elements*)
-      |> Border_box.box
-    ; list_ui |> Border_box.box
-    ]
-  |> Border_box.box
+  vbox [ filter_text_ui |> Border_box.box; list_ui |> Border_box.box ]
 ;;

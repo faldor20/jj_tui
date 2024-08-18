@@ -88,7 +88,8 @@ let input_field ?(focus = Focus.make ()) start_state ~on_change ~on_submit =
     let content =
       Ui.atom @@ I.hcat [ I.string A.(st underline) (if text = "" then " " else text) ]
     in
-    let handler = function
+    let handler = (fun x->
+      x|>function
       | `ASCII 'U', [ `Ctrl ] ->
         on_change "";
         `Handled (* clear *)
@@ -112,6 +113,7 @@ let input_field ?(focus = Focus.make ()) start_state ~on_change ~on_submit =
         `Handled
       | _ ->
         `Unhandled
+    )
     in
     Ui.keyboard_area ~focus handler content
   in

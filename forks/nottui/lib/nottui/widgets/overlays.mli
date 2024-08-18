@@ -52,6 +52,27 @@ val selection_list_prompt :
   show_prompt_var:'a selection_list_prompt_data option Lwd.var ->
   Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t
 
+
+type 'a filterable_selection_list_prompt_data =
+  { label : string
+  ; items : 'a Selection_list.selectable_item list Lwd.t
+  ;filter_predicate:(string-> 'a-> bool)
+  ; on_exit : [ `Closed | `Finished of 'a ] -> unit
+  }
+(** Selection_list prompt that is filterable.
+
+This will display ontop of any ui it is passed when show_prompt_var is [Some].
+@param modify_body Function that takes the completed body of the prompt, incase you want to resize it or otherwise change it 
+*)
+val selection_list_prompt_filterable :
+  ?pad_w:int ->
+  ?pad_h:int ->
+  ?modify_body:(Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t) ->
+  ?focus:Nottui_main.Focus.handle ->
+  show_prompt_var:'a filterable_selection_list_prompt_data option Lwd.var ->
+  Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t
+ 
+
   (**This is a simple popup that can show ontop of other ui elements *)
 val popup :
   show_popup_var:(Nottui_main.ui Lwd.t * string) option Lwd.var ->
