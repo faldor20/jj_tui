@@ -357,8 +357,6 @@ module Make (Vars : Global_vars.Vars) = struct
                  |> Ui.atom
                  |> Lwd.pure)))
       in
-      (*This is then used in selection prompts*)
-      Vars.ui_state.graph_revs $= Array.sub selectable_items 0 !selectable_idx;
       items
     in
     (* run commands when there is keybaord input*)

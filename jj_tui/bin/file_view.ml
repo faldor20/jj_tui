@@ -18,24 +18,17 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
+              ui_state.show_popup
+              $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
         key = 'm'
       ; description = "Move file to other commit"
       ; cmd =
-          Selection_prompt
+          PromptThen
             ( "Revision to move file to"
-            , (ui_state.graph_revs|>Lwd.get|>$Array.to_list)
-            , (fun x y->
-
-            match y with
-              |Unique {change_id; commit_id} -> change_id|>String.starts_with ~prefix:x
-              |Duplicate{change_id; commit_id} ->true
-            ), 
-
-             (fun rev ->
+            , fun rev ->
                 Cmd
                   [
                     "squash"
@@ -44,9 +37,9 @@ module Make (Vars : Global_vars.Vars) = struct
                   ; "--from"
                   ; get_selected_rev ()
                   ; "--into"
-                  ; get_unique_id rev
+                  ; rev
                   ; Lwd.peek selected_file
-                  ]) )
+                  ] )
       }
     ; {
         key = 'N'
