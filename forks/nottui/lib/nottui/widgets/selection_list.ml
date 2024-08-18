@@ -235,5 +235,15 @@ let filterable_selection_list
              `Handled
            | _ -> `Unhandled)
   in
-  vbox [ filter_text_ui |> Border_box.box; list_ui |> Border_box.box ]
+  let max_width = Lwd.var 5 in
+  vbox
+    [ filter_text_ui |> Border_box.box
+    ; (list_ui
+       |> Border_box.box
+       |>$ fun x ->
+       let mw = (x |> Ui.layout_spec).mw in
+       if mw > Lwd.peek max_width then max_width $= mw;
+       x)
+    ]
+  |> Lwd.map2 (Lwd.get max_width) ~f:(fun mw ui -> ui |> Ui.resize ~mw)
 ;;
