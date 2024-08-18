@@ -103,8 +103,6 @@ let text_prompt
          prompt_input $= ("", 0);
          on_exit result
        in
-       (*we need focus because the base ui is rendering first and so *)
-       Focus.request_reversable focus;
        (*prefill the prompt if we want to *)
        if prompt_input |> Lwd.peek |> fst == ""
        then prompt_input $= (pre_fill, pre_fill |> String.length);
@@ -155,8 +153,6 @@ let selection_list_prompt
          show_prompt_var $= None;
          on_exit result
        in
-       (*we need focus because the base ui is rendering first and so *)
-       Focus.request_reversable focus;
        (*prefill the prompt if we want to *)
        let prompt_field =
          Selection_list.selection_list_custom
