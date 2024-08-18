@@ -31,12 +31,49 @@ module Make (Vars : Global_vars.Vars) = struct
                   [
                     "squash"
                   ; "-u"
+                  ; "--keep-emptied"
                   ; "--from"
                   ; get_selected_rev ()
                   ; "--into"
                   ; rev
                   ; Lwd.peek selected_file
                   ] )
+      }
+    ; {
+        key = 'N'
+      ; description = "Move file to child commit"
+      ; cmd =
+          Dynamic_r
+            (fun rev ->
+              Cmd
+                [
+                  "squash"
+                ; "-u"
+                ; "--keep-emptied"
+                ; "--from"
+                ; rev
+                ; "--into"
+                ; rev ^ "+"
+                ; Lwd.peek selected_file
+                ])
+      }
+    ; {
+        key = 'P'
+      ; description = "Move file to parent commit"
+      ; cmd =
+          Dynamic_r
+            (fun rev ->
+              Cmd
+                [
+                  "squash"
+                ; "-u"
+                ; "--keep-emptied"
+                ; "--from"
+                ; rev
+                ; "--into"
+                ; rev ^ "-"
+                ; Lwd.peek selected_file
+                ])
       }
     ; {
         key = 'd'
