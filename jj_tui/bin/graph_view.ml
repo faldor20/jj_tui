@@ -68,9 +68,11 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Fun
                     (fun _ ->
-                      let curr_msg, prev_msg = get_messages () in
-                      let new_msg = prev_msg ^ curr_msg in
                       let rev = Vars.get_selected_rev () in
+                      let source_msg, dest_msg = get_messages rev (rev ^ "-") in
+                      let new_msg =
+                        [ dest_msg;source_msg  ] |> String.concat_non_empty "\n"
+                      in
                       jj [ "squash"; "--quiet"; "-r"; rev; "-m"; new_msg ] |> ignore)
               }
             ; {
@@ -79,11 +81,13 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   PromptThen
                     ( "target revision"
-                    , fun str ->
-                        let curr_msg, prev_msg = get_messages () in
-                        let new_msg = prev_msg ^ curr_msg in
+                    , fun target ->
                         Dynamic_r
                           (fun rev ->
+                            let src_msg, dest_msg = get_messages rev target in
+                            let new_msg =
+                              [  dest_msg;src_msg ] |> String.concat_non_empty "\n"
+                            in
                             Cmd
                               [
                                 "squash"
@@ -93,7 +97,7 @@ module Make (Vars : Global_vars.Vars) = struct
                               ; "--from"
                               ; rev
                               ; "--into"
-                              ; str
+                              ; target
                               ]) )
               }
             ; {

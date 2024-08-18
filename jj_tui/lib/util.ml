@@ -29,6 +29,7 @@ let parse_query parser s =
 ;;
 
 Base.List.intersperse
+
 let ( <-$ ) f v = Lwd.map ~f (Lwd.get v)
 let ( $-> ) v f = Lwd.map ~f (Lwd.get v)
 let ( let$$ ) v f = Lwd.map ~f (Lwd.get v)
@@ -36,3 +37,12 @@ let ( |>$ ) v f = Lwd.map ~f v
 let ( >> ) f g x = g (f x)
 let ( << ) f g x = f (g x)
 let ( |>$$ ) v2 v f = Lwd.map2 ~f v v2
+
+module String = struct
+  include String
+
+(** Concatenates any non-empty strings in the given array*)
+  let concat_non_empty sep strings  =
+    strings |> List.filter (Base.String.is_empty >> not) |> String.concat sep
+  ;;
+end

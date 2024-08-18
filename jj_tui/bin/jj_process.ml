@@ -110,7 +110,7 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   (**gets the description of the current and previous change. Useful when squashing*)
-  let get_messages () =
+  let get_messages source dest =
     let open Base.Result in
     let output =
       jj
@@ -118,14 +118,18 @@ module Make (Vars : Global_vars.Vars) = struct
           "log"
         ; "--no-graph"
         ; "-T"
-        ; {|"::"++current_working_copy++"::\n"++description++"\n::end::\n"|}
+        ; Printf.sprintf
+            {|if(self.contained_in("%s")||self.contained_in("%s"),description++"%s")++if(self.contained_in("%s")||self.contained_in("%s"),description)|}
+            source
+            source
+            "\u{ab}"
+            dest
+            dest
         ]
       |> String.trim
     in
-    let current, prev =
-      output |> Jj_tui.OutputParsing.parse_descriptions |> Result.get_ok
-    in
-    current |> String.concat "", prev |> String.concat ""
+    let source, dest = output |> Base.String.lsplit2_exn ~on:'\xab' in
+    Base.String.drop_suffix source 1, dest
   ;;
 
   open Vars
