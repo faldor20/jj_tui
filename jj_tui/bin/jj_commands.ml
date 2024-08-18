@@ -19,7 +19,7 @@ module Shared = struct
     | Prompt of string * cmd_args
     | Selection_prompt of
         string
-        * (unit-> 'a Nottui.W.Lists.selectable_item list Lwd.t)
+        * (unit -> 'a Nottui.W.Lists.selectable_item list Lwd.t)
         * (string -> 'a -> bool)
         * ('a -> 'a command_variant)
     | Prompt_r of string * cmd_args
@@ -90,14 +90,14 @@ module Intern (Vars : Global_vars.Vars) = struct
          :: render_commands ~indent_level:(indent_level + 1) subs
   ;;
 
-  let commands_list_ui ?(include_arrows=false) commands =
+  let commands_list_ui ?(include_arrows = false) commands =
     let move_command =
       render_command_line
         ~indent_level:0
         ("Alt+Arrows" |> String.to_seq |> Seq.map Uchar.of_char |> Array.of_seq)
         "navigation between windows"
     in
-    (commands |> render_commands) @  (if include_arrows  then [move_command] else[] )
+    ((commands |> render_commands) @ if include_arrows then [ move_command ] else [])
     |> I.vcat
     |> Ui.atom
     |> Lwd.pure
@@ -140,7 +140,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       $= Some
            W.Overlay.
              {
-               items=items()
+               items = items ()
              ; filter_predicate
              ; label = str
              ; on_exit =
@@ -205,6 +205,7 @@ module Intern (Vars : Global_vars.Vars) = struct
   (** Try mapching the command mapping to the provided key and run the command if it matches *)
   and command_input ~is_sub keymap key =
     (* Use exceptions so we can break out of the list*)
+    let input = Lwd.peek ui_state.input in
     try
       keymap
       |> List.iter (fun cmd ->
@@ -212,7 +213,8 @@ module Intern (Vars : Global_vars.Vars) = struct
       `Unhandled
     with
     | Handled ->
-      if is_sub then ui_state.input $= `Normal;
+      (*If this is a sub command and we didn't change to some other subcommand we should exit back to  normal command operation*)
+      if is_sub && input == Lwd.peek ui_state.input then ui_state.input $= `Normal;
       `Handled
     | Jj_process.JJError (cmd, error) ->
       handle_jj_error cmd error;
@@ -249,7 +251,8 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup $= Some (commands_list_ui ~include_arrows:true default_list, "Help");
+              ui_state.show_popup
+              $= Some (commands_list_ui ~include_arrows:true default_list, "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ]
@@ -262,8 +265,9 @@ module Make (Vars : Global_vars.Vars) = struct
   let confirm_prompt prompt cmd =
     SubCmd [ { key = 'y'; description = "Yes I want to " ^ prompt; cmd } ]
   ;;
+
   (** Handles raw command mapping without regard for modes or the current intput state. Should be used when setting a new input mode*)
-  let command_input=command_input;;
+  let command_input = command_input
 
   (** Handles input and sub_commands.*)
   let handleInputs command_mapping =
