@@ -76,15 +76,7 @@
                 pname = "nottui";
                 version = "dev";
                 duneVersion = "3";
-                src = pkgs.fetchFromGitHub {
-
-                  owner = "faldor20";
-                  repo = "nottui";
-                  rev = "e8d64738c00b22b85d1867414c02c61062fbfc1e";
-                  sha256 =
-                    "sha256-GgC0KX2LbCEqI3NC26J6e56QO27AFc2cv9Pz/9nQkEc=";
-                };
-
+                src = ./forks/nottui/.;
                 buildInputs = with ocamlPackages; [
                   lwd
                   notty-mine
@@ -138,7 +130,6 @@
 
                 buildPhase = ''
                   runHook preBuild
-                  rm -rf ./forks
                   dune build -p ${pname} --profile ${profile}  ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
                   runHook postBuild
                 '';

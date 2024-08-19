@@ -23,10 +23,10 @@ let w_0 =
        in
        og
        |> Lwd.pure
-       |> Wd.scroll_area
-       |> Wd.border_box ~scaling:(`Expand 1)
+       |> W.Scroll.area
+       |> W.Box.box 
        |>$ Ui.resize ~sh:1 ~mh:1000
-       |> Wd.size_logger)
+       |> W.size_logger)
     ; pString "| "
     ]
 ;;
@@ -39,8 +39,8 @@ let w_1 =
           (let og =
              W.string "123456789000000000000000000000000000000000000000000000000000end"
            in
-           og |> Lwd.pure |> Wd.scroll_area |> Wd.border_box
-           (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *))
+           og |> Lwd.pure |> W.Scroll.area |> W.Box.box
+           (* |>$ Ui.resize ~pad:W.neutral_grav ~crop:W.neutral_grav *))
         ; "shrinkable" |> pString |>$ Ui.resize ~sw:1
         ]
     ]
@@ -57,8 +57,8 @@ let w_2 =
             (let og =
                W.string "123456789000000000000000000000000000000000000000000000000000end"
              in
-             og |> Lwd.pure |> Wd.v_scroll_area |> Wd.border_box_focusable ~focus:focus1
-             (* |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav *))
+             og |> Lwd.pure |> W.Scroll.v_area |> W.Box.focusable ~focus:focus1
+             (* |>$ Ui.resize ~pad:W.neutral_grav ~crop:W.neutral_grav *))
           ; "shrinkable" |> pString |>$ Ui.resize ~sw:1
           ]
       ; pString "demonstrates stretching to max without any other objects"
@@ -69,8 +69,8 @@ let w_2 =
              in
              og
              |> Lwd.pure
-             |> Wd.v_scroll_area
-             |> Wd.border_box_focusable
+             |> W.Scroll.v_area
+             |> W.Box.focusable
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ]
       ; pString "Same as above but centered"
@@ -81,9 +81,9 @@ let w_2 =
              in
              og
              |> Lwd.pure
-             |> Wd.scroll_area
-             |> Wd.border_box_focusable
-             |>$ Ui.resize ~pad:Wd.neutral_grav ~crop:Wd.neutral_grav)
+             |> W.Scroll.area
+             |> W.Box.focusable
+             |>$ Ui.resize ~pad:W.neutral_grav ~crop:W.neutral_grav)
           ]
       ; W.hbox
           [
@@ -92,8 +92,8 @@ let w_2 =
              in
              og
              |> Lwd.pure
-             |> Wd.scroll_area
-             |> Wd.border_box_focusable
+             |> W.Scroll.area
+             |> W.Box.focusable
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ; "shrinkable" |> pString |>$ Ui.resize ~sw:1
           ]
@@ -104,8 +104,8 @@ let w_2 =
              in
              og
              |> Lwd.pure
-             |> Wd.scroll_area
-             |> Wd.border_box_focusable
+             |> W.Scroll.area
+             |> W.Box.focusable
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ]
       ; W.hbox
@@ -115,9 +115,9 @@ let w_2 =
              in
              og
              |> Lwd.pure
-             |> Wd.scroll_area
-             |> Wd.border_box_focusable ~scaling:(`Expand 1)
-             |> Wd.size_logger
+             |> W.Scroll.area
+             |> W.Box.focusable 
+             |> W.size_logger
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ]
       ; W.hbox
@@ -125,7 +125,7 @@ let w_2 =
             (let og =
                W.string "123456789000000000000000000000000000000000000000000000000000end"
              in
-             og |> Lwd.pure |> Wd.scroll_area)
+             og |> Lwd.pure |> W.Scroll.area)
           ]
       ]
     |>$ Ui.keyboard_area (function
@@ -174,46 +174,46 @@ let w_3 =
   W.vbox
     [
       (*
-         Wd.v_window_stack2
+         W.v_window_stack2
          [
           is_focused_widget ()
         ; W.string "hi this is the first level"
           |> Lwd.pure
-          |> Wd.scroll_area
-          |> Wd.border_box_focusable
-        ; Wd.v_window_stack2
+          |> W.Scroll.area
+          |> W.Box.focusable
+        ; W.v_window_stack2
             [
               W.string "hi this is the first level"
               |> Lwd.pure
-              |> Wd.scroll_area
-              |> Wd.border_box_focusable
+              |> W.Scroll.area
+              |> W.Box.focusable
             ; W.string "hi this is the second level"
               |> Lwd.pure
-              |> Wd.scroll_area
-              |> Wd.border_box_focusable ~focus:start
-            ; Wd.v_window_stack2
+              |> W.Scroll.area
+              |> W.Box.focusable ~focus:start
+            ; W.v_window_stack2
                 [
                   W.string "hi this is the first level"
                   |> Lwd.pure
-                  |> Wd.scroll_area
-                  |> Wd.border_box_focusable
+                  |> W.Scroll.area
+                  |> W.Box.focusable
                 ; W.string "hi this is the second level"
                   |> Lwd.pure
-                  |> Wd.scroll_area
-                  |> Wd.border_box_focusable
+                  |> W.Scroll.area
+                  |> W.Box.focusable
                 ]
             ]
         ]
-         ; Wd.v_window_stack2
+         ; W.v_window_stack2
          [
           W.string "hi this is the first level"
           |> Lwd.pure
-          |> Wd.scroll_area
-          |> Wd.border_box_focusable
+          |> W.Scroll.area
+          |> W.Box.focusable
         ; W.string "hi this is the second level"
           |> Lwd.pure
-          |> Wd.scroll_area
-          |> Wd.border_box_focusable
+          |> W.Scroll.area
+          |> W.Box.focusable
         ]
       *)
       (let attr = A.fg A.blue in
@@ -245,7 +245,7 @@ let w_3 =
        Ui.vcat [ elem; elem_sw0; elem_sw1; elem_w; elem_mw ]
        |> Ui.resize ~w:15 ~sw:0
        |> Lwd.pure
-       |> Wd.border_box ~pad_w:0 ~pad_h:0)
+       |> W.Box.box ~pad_w:0 ~pad_h:0)
     ; (let output = Lwd.var "none" in
        (*A button that responds to the enter keypress*)
        let button ?(focus = Focus.make ()) name =
@@ -278,28 +278,28 @@ Ui.keyboard_area
 let w_5 =
   let focus = Focus.make () in
   Focus.request focus;
-  Wd.Wip.v_window_stack
+  W.Wip.v_window_stack
     ~focus
     [
       is_focused_widget2
     ; is_focused_widget2
-    ; Wd.Wip.h_window_stack
+    ; W.Wip.h_window_stack
         [
           is_focused_widget2
         ; is_focused_widget2
-        ; Wd.Wip.v_window_stack
+        ; W.Wip.v_window_stack
             [
               is_focused_widget2
             ; is_focused_widget2
-            ; Wd.Wip.h_window_stack
+            ; W.Wip.h_window_stack
                 [
                   is_focused_widget2
                 ; is_focused_widget2
-                ; Wd.Wip.v_window_stack [ is_focused_widget2; is_focused_widget2 ]
+                ; W.Wip.v_window_stack [ is_focused_widget2; is_focused_widget2 ]
                 ]
             ]
         ]
-    ; Wd.Wip.h_window_stack [ is_focused_widget2 ]
+    ; W.Wip.h_window_stack [ is_focused_widget2 ]
     ]
 ;;
 
@@ -329,15 +329,14 @@ let w_4 =
 ;;
 
 let w_6 =
-  let state = Lwd.var W.default_scroll_state in
   W.vbox
     [
       Ui.vcat [ W.string "hi"; W.string "50"; W.string "there"; W.string "mate" ]
       |> Lwd.pure
-      |> W.vscroll_area ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
+      |> W.Scroll.v_area
       |>$ Ui.resize ~h:2 ~sh:0
-    ; Wd.h_rule |> Lwd.pure
-    ; W.file_select ~on_select:(fun x -> ()) ()
+    ; W.h_rule |> Lwd.pure
+    ; W.Old.file_select ~on_select:(fun x -> ()) ()
     ; W.unfoldable
         (W.string "click to unfold" |> Lwd.pure)
         (fun () -> W.string "I'm unfolded" |> Lwd.pure)
@@ -345,10 +344,9 @@ let w_6 =
 ;;
 
 let w_7 =
-  let state = Lwd.var (W.default_scroll_state, W.default_scroll_state) in
   W.vbox
     [ (*
-         Wd.Wip.h_window_stack2
+         W.Wip.h_window_stack2
          [
           Ui.vcat
             [
@@ -358,11 +356,11 @@ let w_7 =
             ; W.string "mate"
             ]
           |> Lwd.pure
-          |> Wd.scroll_area
+          |> W.Scroll.area
           |>$ Ui.resize ~mw:15
         ; W.string "|" |> Lwd.pure
         ]
-         ; Wd.Wip.h_window_stack2
+         ; W.Wip.h_window_stack2
          [
           Ui.vcat
             [
@@ -372,7 +370,7 @@ let w_7 =
             ; W.string "mate"
             ]
           |> Lwd.pure
-          |> Wd.v_scroll_area
+          |> W.Scroll.v_area
           |>$ Ui.resize ~h:2 ~sh:0
         ; W.string "|" |> Lwd.pure
         ]
@@ -398,7 +396,7 @@ let w_8 =
           `Handled
         | _ ->
           `Unhandled)
-      |> Wd.border_box_focusable ~focus:topfocus
+      |> W.Box.focusable ~focus:topfocus
     ; Lwd.get bot
       |>$ W.string
       |>$ Ui.keyboard_area (function
@@ -413,7 +411,7 @@ let w_8 =
           `Handled
         | _ ->
           `Unhandled)
-      |> Wd.border_box_focusable
+      |> W.Box.focusable
     ; Lwd.get last
       |>$ W.string
       |>$ Ui.keyboard_area (function
@@ -428,7 +426,7 @@ let w_8 =
           `Handled
         | _ ->
           `Unhandled)
-      |> Wd.border_box_focusable
+      |> W.Box.focusable
     ]
   |>$ Ui.keyboard_area (function
     | `ASCII 's', _ ->
@@ -441,35 +439,36 @@ let w_8 =
 (* |> Lwd.observe *)
 (* |> Lwd.quick_sample *)
 (* |> Ui.pp Format.str_formatter; *)
-(* pString (Format.flush_str_formatter())|>Wd.v_scroll_area *)
+(* pString (Format.flush_str_formatter())|>W.Scroll.v_area *)
 
 let w_9 =
-  let state = Lwd.var (W.default_scroll_state, W.default_scroll_state) in
   let items =
     [ "hi"; "it's"; "meeeeeeeeeeeeeeeeeeeeeeeee" ]
-    |> List.map (fun item -> Wd.{ data = item; ui = Wd.selectable_item (W.string item) })
+    |> List.map (fun item -> W.Lists.{ data = item; ui = W.Lists.selectable_item (W.string item) })
     |> Lwd.pure
   in
   W.vbox
     [
       items
-      |> Wd.selection_list_custom
+      |> W.Lists.selection_list_custom
            ~on_selection_change:(fun x -> ())
-           ~custom_handler:(fun _ _ key -> match key with _ -> `Unhandled)
+           ~custom_handler:(fun _  key -> match key with _ -> `Unhandled)
       |>$ Ui.resize ~w:10 ~sw:1
-      |> Wd.border_box_focusable ~pad_h:0
+      |> W.Box.focusable ~pad_h:0
     ; items
-      |> Wd.selection_list_custom
+      |> W.Lists.selection_list_custom
+ 
            ~on_selection_change:(fun x -> ())
-           ~custom_handler:(fun _ _ key -> match key with _ -> `Unhandled)
+           ~custom_handler:(fun _  key -> match key with _ -> `Unhandled)
       |>$ Ui.resize ~w:10 ~sw:1
-      |> Wd.border_box_focusable ~pad_h:0
+      |> W.Box.focusable ~pad_h:0
     ; items
-      |> Wd.selection_list_custom
+      |> W.Lists.selection_list_custom
+ 
            ~on_selection_change:(fun x -> ())
-           ~custom_handler:(fun _ _ key -> match key with _ -> `Unhandled)
+           ~custom_handler:(fun _  key -> match key with _ -> `Unhandled)
       |>$ Ui.resize ~w:10 ~sw:1
-      |> Wd.border_box_focusable ~pad_h:0
+      |> W.Box.focusable ~pad_h:0
     ]
 ;;
 
