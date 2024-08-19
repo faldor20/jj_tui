@@ -133,6 +133,12 @@ module Make (Vars : Global_vars.Vars) = struct
       ; description = "Describe this revision"
       }
     ; {
+        key = 'D'
+      ; cmd =
+          Dynamic_r (fun rev -> Cmd_I[ "describe"; "-r"; rev;  ])
+      ; description = "Describe this revision using an editor"
+      }
+    ; {
         key = 'R'
       ; cmd = Dynamic_r (fun rev -> Cmd_I [ "resolve"; "-r"; rev ])
       ; description = "Resolve conflicts at this revision"

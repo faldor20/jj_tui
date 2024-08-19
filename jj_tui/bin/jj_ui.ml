@@ -124,7 +124,7 @@ module Make (Vars : Global_vars.Vars) = struct
          else (fun x -> x |> Ui.atom) <-$ ui_state.jj_show)
         |> W.Scroll.area
         (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
-        |>$ Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:100 ~mh:10000
+        |>$ Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:10000 ~mh:10000
         |> W.on_focus ~focus:summary_focus (Ui.resize ~sw:3 ~mw:1000)
         |> W.Box.focusable ~focus:summary_focus ~pad_h:0 ~pad_w:1
       ]
