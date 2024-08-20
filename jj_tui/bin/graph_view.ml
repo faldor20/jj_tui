@@ -1,13 +1,15 @@
 module Make (Vars : Global_vars.Vars) = struct
   open Lwd_infix
   open Vars
-  open Jj_process.Make (Vars)
   open Notty
   open Jj_tui
   open Nottui
   open! Jj_tui.Util
   open Jj_commands.Make (Vars)
   open Jj_widgets.Make (Vars)
+  module Process =Jj_process.Make (Vars)
+  open Process
+  open Jj_tui.Process_wrappers.Make(Process)
 
   let branch_select_prompt get_branch_list name func =
     Selection_prompt
@@ -71,7 +73,7 @@ module Make (Vars : Global_vars.Vars) = struct
                       let rev = Vars.get_selected_rev () in
                       let source_msg, dest_msg = get_messages rev (rev ^ "-") in
                       let new_msg =
-                        [ dest_msg;source_msg  ] |> String.concat_non_empty "\n"
+                        [ dest_msg; source_msg ] |> String.concat_non_empty "\n"
                       in
                       jj [ "squash"; "--quiet"; "-r"; rev; "-m"; new_msg ] |> ignore)
               }
@@ -86,7 +88,7 @@ module Make (Vars : Global_vars.Vars) = struct
                           (fun rev ->
                             let src_msg, dest_msg = get_messages rev target in
                             let new_msg =
-                              [  dest_msg;src_msg ] |> String.concat_non_empty "\n"
+                              [ dest_msg; src_msg ] |> String.concat_non_empty "\n"
                             in
                             Cmd
                               [
@@ -134,8 +136,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         key = 'D'
-      ; cmd =
-          Dynamic_r (fun rev -> Cmd_I[ "describe"; "-r"; rev;  ])
+      ; cmd = Dynamic_r (fun rev -> Cmd_I [ "describe"; "-r"; rev ])
       ; description = "Describe this revision using an editor"
       }
     ; {
@@ -210,7 +211,7 @@ module Make (Vars : Global_vars.Vars) = struct
                         ]
                       in
                       let log =
-                        jj_no_log   ~get_stderr:true [ "git"; "push"; "--dry-run" ]
+                        jj_no_log ~get_stderr:true [ "git"; "push"; "--dry-run" ]
                         |> AnsiReverse.colored_string
                         |> Ui.atom
                         |> Lwd.pure

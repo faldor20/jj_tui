@@ -2,17 +2,9 @@ open Notty
 open Nottui
 open Eio.Std
 open Lwd_infix
+open Jj_tui.Process
 
 type cmd_args = string list
-
-type rev_id = {
-    change_id : string
-  ; commit_id : string
-}
-
-type 'a maybe_unique =
-  | Unique of 'a
-  | Duplicate of 'a
 
 type ui_state_t = {
     view :
