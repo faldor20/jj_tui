@@ -6,8 +6,12 @@ A TUI for the new version control system Jujutsu
 ![jj_tui-ezgif com-optimize](https://github.com/faldor20/jj_tui/assets/26968035/fb053320-484a-4d6f-9b66-e5b9d0d49e5d)
 
 
-Press `h` to show the help.
+Press `?` to show the help. (commands are different between graph and files view).
 Press `Alt+Up`and`Alt+Down` to navigate windows
+List of graph commands:
+
+![jj_tui commands](https://github.com/user-attachments/assets/1e446a3d-1736-4207-b311-29d8e4bdc333)
+
 
 Please provide any suggestions. I'm new to jujutsu so I'm sure people have workflows I couldn't even dream of.  
 ## Installing
