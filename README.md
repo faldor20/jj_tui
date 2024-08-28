@@ -26,6 +26,13 @@ To install without nix:
 2. clone the repo
 3. Run: `opam install .`
 
+## Known issues:
+- file contents don't show
+- crash after moving a file at the end of the file list
+- revision summary doesn't show
+- slow when selecting very large revisions
+
+**All the issues listed above are because of the way we currently call out to the jujutsu process, the next major change is to make that concurrent and fix all these bugs.**
 
 ## Dependencies
 The jujutsu CLI.
