@@ -158,6 +158,10 @@ let ansi_string_to_image ?(extra_attr = A.empty) str =
     |> Base.String.Search_pattern.replace_all
          (Base.String.Search_pattern.create "\t")
          ~with_:"    "
+     (*delete control char*)
+    |> Base.String.Search_pattern.replace_all
+         (Base.String.Search_pattern.create "\u{7f}")
+         ~with_:"    "
     (*replace form feed with a symbol: https://codepoints.net/U+000C?lang=en*)
     |> Base.String.Search_pattern.replace_all
          (Base.String.Search_pattern.create "")
