@@ -1,10 +1,11 @@
+open Picos_std_structured
 open Notty
 open Nottui
 open Lwd_infix
 open Global_funcs
 open Jj_tui.Util
 open Jj_tui
-
+module Pio = Picos_io
 
 module Ui = struct
   include Nottui.Ui
@@ -27,8 +28,9 @@ module Make (Vars : Global_vars.Vars) = struct
   let full_term_sized_background =
     let$ term_width, term_height = Lwd.get Vars.term_width_height in
     Notty.I.void term_width term_height |> Nottui.Ui.atom
-  let blue= I.string A.((fg blue)++(bg blue)++(st bold)) "blue"
   ;;
+
+  let blue = I.string A.(fg blue ++ bg blue ++ st bold) "blue"
 
   let _quitButton =
     W.button (Printf.sprintf "quit ") (fun () -> Vars.quit $= true) |> Lwd.pure
@@ -70,18 +72,12 @@ module Make (Vars : Global_vars.Vars) = struct
     W.string message
     |> Lwd.pure
     |> W.Box.box
-    |>$ Ui.resize
-          ~sw:1
-          ~sh:1
-          ~mw:10000
-          ~mh:10000
-          ~crop:W.neutral_grav
-          ~pad:W.neutral_grav
+    |>$ Ui.resize ~sw:1 ~sh:1 ~mw:10000 ~mh:10000 ~crop:W.neutral_grav ~pad:W.neutral_grav
     |> inputs
   ;;
 
   (** The primary view for the UI with the file_view graph_view and summary*)
-  let main_view ~sw =
+  let main_view =
     let file_focus = Focus.make () in
     let graph_focus = Focus.make () in
     Focus.request graph_focus;
@@ -92,13 +88,13 @@ module Make (Vars : Global_vars.Vars) = struct
         (*left side window stack*)
         W.vbox
           [
-            File_view.file_view sw ()
+            File_view.file_view file_focus
             |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000
             |> W.Box.focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
-          ; Graph_view.graph_view ~sw ()
+          ; Graph_view.graph_view ()
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
             |> W.Box.focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
-          ; W.Scroll.area(ui_state.jj_branches $-> Ui.atom)
+          ; W.Scroll.area (ui_state.jj_branches $-> Ui.atom)
             |> W.is_focused ~focus:branch_focus (fun ui focused ->
               ui
               |> Ui.keyboard_area (function
@@ -116,12 +112,8 @@ module Make (Vars : Global_vars.Vars) = struct
             |> W.Box.focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
           ]
       ; (*Right side summary/status/fileinfo view*)
-        (let$* file_focus = file_focus |> Focus.status in
-         if file_focus |> Focus.has_focus
-         then
-           let$ status = File_view.file_status () in
-           status |> AnsiReverse.colored_string |> Ui.atom
-         else (fun x -> x |> Ui.atom) <-$ ui_state.jj_show)
+        ui_state.jj_show
+        $-> Ui.atom
         |> W.Scroll.area
         (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
         |>$ Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:10000 ~mh:10000
@@ -131,7 +123,8 @@ module Make (Vars : Global_vars.Vars) = struct
     (*These outer prompts can popup and show them selves over the main view*)
     |> W.Overlay.text_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
     |> W.Overlay.popup ~show_popup_var:ui_state.show_popup
-    |> W.Overlay.selection_list_prompt_filterable ~show_prompt_var:(ui_state.show_string_selection_prompt)
+    |> W.Overlay.selection_list_prompt_filterable
+         ~show_prompt_var:ui_state.show_string_selection_prompt
     |> inputs
   ;;
 
@@ -147,21 +140,20 @@ module Make (Vars : Global_vars.Vars) = struct
     |> inputs
   ;;
 
-  let mainUi ~sw env =
+  let mainUi () =
     (*we want to initialize our states and keep them up to date*)
     match check_startup () with
     | `Good ->
       update_status ~cause_snapshot:true ();
-      Eio.Fiber.fork_daemon ~sw (fun _ ->
-        let clock = Eio.Stdenv.clock env in
+      Flock.fork (fun () ->
         while true do
-          Eio.Time.sleep clock 5.0;
+          Picos.Fiber.sleep ~seconds:5.0;
           (*we need to lock this becasue we could end up updating while the ui is rendering*)
-          Vars.render_mutex |> Eio.Mutex.lock;
-          update_status ~cause_snapshot:true ();
-          Vars.render_mutex |> Eio.Mutex.unlock
+          (* Vars.render_mutex |> Eio.Mutex.lock; *)
+          update_status ~cause_snapshot:true ()
+          (* Vars.render_mutex |> Eio.Mutex.unlock *)
         done;
-        `Stop_daemon);
+        ());
       let$* running = Lwd.get ui_state.view in
       (match running with
        | `Cmd_I cmd ->
@@ -169,9 +161,9 @@ module Make (Vars : Global_vars.Vars) = struct
          Lwd.set ui_state.view @@ `RunCmd cmd;
          full_term_sized_background
        | `RunCmd cmd ->
-         Jj_widgets.interactive_process env ("jj" :: cmd)
+         Jj_widgets.interactive_process ("jj" :: cmd)
        | `Main ->
-         W.keyboard_tabs [ ("Main", fun _ -> main_view ~sw); "Op log", log_view ])
+         W.keyboard_tabs [ ("Main", fun _ -> main_view); "Op log", log_view ])
     | (`CantStartProcess | `NotInRepo | `OtherError _) as other ->
       render_startup_error other
   ;;

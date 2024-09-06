@@ -139,13 +139,14 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (** Start a process that will take full control of both stdin and stdout.
       This is used for interactive diffs and such*)
-  let interactive_process env cmd =
+  let interactive_process cmd =
     let post_change new_view =
       Global_funcs.update_status ();
       Lwd.set ui_state.view new_view
     in
-    let exit_status_to_str y =
-      match match y with `Exited x -> x | `Signaled x -> x with
+    let exit_status_to_str (y : Unix.process_status) =
+      let open Unix in
+      match match y with WSTOPPED x -> x | WEXITED x -> x | WSIGNALED x -> x with
       | 0 ->
         "success"
       | 1 ->
@@ -153,7 +154,7 @@ module Make (Vars : Global_vars.Vars) = struct
       | a ->
         Printf.sprintf "unknown code %d" a
     in
-    let res = switch_to_process env cmd in
+    let res = switch_to_process (cmd |> Array.of_list) in
     let$ ui =
       W.vbox
         [

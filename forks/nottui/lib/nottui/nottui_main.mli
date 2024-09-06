@@ -36,6 +36,8 @@ module Focus : sig
   (** Check if this [status] corresponds to an active focus *)
   val has_focus : status -> bool
 
+  (** EXPERIMENTAL: Check if the handle is focused.*)
+  val peek_has_focus:handle->bool
   (** TODO
       This implements a more general concept of "reactive auction":
 

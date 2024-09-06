@@ -20,6 +20,7 @@ sig
     | Empty
     | Handle of int * var
     | Conflict of int
+  val peek_has_focus:handle->bool
 
   val empty : status
   (*val is_empty : status -> bool*)
@@ -52,6 +53,8 @@ end = struct
   let has_focus = function
     | Empty -> false
     | Handle (i, _) | Conflict i -> i > 0
+
+  let peek_has_focus (h : handle) : bool= fst h|>Lwd.peek>0
 
   let clock = ref 0
 

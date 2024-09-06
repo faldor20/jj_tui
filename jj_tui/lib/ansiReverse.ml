@@ -146,26 +146,28 @@ end
     It parses the escape codes and then creates notty images from that by applying the styles*)
 let ansi_string_to_image ?(extra_attr = A.empty) str =
   let str =
-    (* replace any carrriage returns becasue notty doesn't know what to do with them*)
-    Base.String.Search_pattern.replace_all
-      (Base.String.Search_pattern.create "\r\n")
-      ~in_:str
-      ~with_:"\n"
-    |> Base.String.Search_pattern.replace_all
-         (Base.String.Search_pattern.create "\r")
-         ~with_:"\n"
-    (*tabs cause issues too*)
-    |> Base.String.Search_pattern.replace_all
-         (Base.String.Search_pattern.create "\t")
-         ~with_:"    "
-     (*delete control char*)
-    |> Base.String.Search_pattern.replace_all
-         (Base.String.Search_pattern.create "\u{7f}")
-         ~with_:"    "
-    (*replace form feed with a symbol: https://codepoints.net/U+000C?lang=en*)
-    |> Base.String.Search_pattern.replace_all
-         (Base.String.Search_pattern.create "")
-         ~with_:"↡"
+    let buffer = Buffer.create (String.length str) in
+    let last_char = ref '\000' in
+    String.iter
+      (fun c ->
+        match c with
+        | '\r' ->
+          last_char := '\r'
+        | '\n' when !last_char <> '\r' ->
+          Buffer.add_char buffer '\n'
+        | '\n' ->
+          Buffer.add_char buffer '\n';
+          last_char := '\000'
+        | '\t' ->
+          Buffer.add_string buffer "    "
+        | '\x7F' ->
+          Buffer.add_string buffer "    "
+        | '\x0C' ->
+          Buffer.add_string buffer "↡"
+        | _ ->
+          Buffer.add_char buffer c)
+      str;
+    Buffer.contents buffer
   in
   match Parser.parse_ansi_escape_codes str with
   | Error a ->
@@ -198,4 +200,11 @@ let ansi_string_to_image ?(extra_attr = A.empty) str =
 ;;
 
 (** Same as ansi_string_to_image, but can throw if a parsing error occurs. I have not seen it fail, should be safe. *)
-let colored_string ?extra_attr s = s |> ansi_string_to_image ?extra_attr |> Result.get_ok
+let colored_string ?extra_attr ?(max_length = 50000) s =
+  let truncated_s =
+    if String.length s > max_length
+    then String.sub s 0 max_length ^ "\n...truncated"
+    else s
+  in
+  truncated_s |> ansi_string_to_image ?extra_attr |> Result.get_ok
+;;

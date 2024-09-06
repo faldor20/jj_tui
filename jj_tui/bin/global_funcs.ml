@@ -1,6 +1,7 @@
 open Global_vars
 open Lwd_infix
 open Jj_process.Make (Global_vars.Vars)
+open Picos_std_structured
 
 let colored_string = Jj_tui.AnsiReverse.colored_string
 
@@ -20,7 +21,7 @@ let check_startup () =
     if str |> Base.String.is_substring ~substring:"There is no jj repo"
     then `NotInRepo
     else `OtherError str
-  | Error (`EioErr a) ->
+  | Error (`Exception _) ->
     `CantStartProcess
 ;;
 
@@ -38,27 +39,27 @@ let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
 let update_views ?(cause_snapshot = false) () =
   safe_jj (fun () ->
     let rev = Vars.get_selected_rev () in
-    Eio.Switch.run @@ fun sw ->
-    let log_res =
-      jj_no_log ~snapshot:cause_snapshot [ "show"; "-s"; "--color-words"; "-r"; rev ]
-      |> colored_string
+    Flock.join_after @@ fun () ->
+    let tree =
+      jj_no_log ~snapshot:cause_snapshot [ "log"; "-r"; rev ] |> colored_string
     in
     (* From now on we use ignore-working-copy so we don't re-snapshot the state and so
        we can operate in paralell *)
-    let tree =
-      Eio.Fiber.fork_promise ~sw (fun _ ->
-        jj_no_log ~snapshot:false [ "log"; "-r"; rev ] |> colored_string)
     (* TODO: stop using dop last twice *)
+    let log_res =
+      Flock.fork_as_promise (fun _ ->
+        jj_no_log ~snapshot:false [ "show"; "-s"; "--color-words"; "-r"; rev ]
+        |> colored_string)
     and branches =
-      Eio.Fiber.fork_promise ~sw (fun _ ->
+      Flock.fork_as_promise (fun _ ->
         jj_no_log ~snapshot:false [ "branch"; "list"; "-a" ] |> colored_string)
-    and files_list = Eio.Fiber.fork_promise ~sw (fun _ -> list_files ~rev ()) in
+    and files_list = Flock.fork_as_promise (fun _ -> list_files ~rev ()) in
     (*wait for all our tasks*)
-    let tree = Eio.Promise.await_exn tree
-    and files_list = Eio.Promise.await_exn files_list
-    and branches = Eio.Promise.await_exn branches in
+    let log_res= Promise.await log_res
+    and files_list = Promise.await files_list
+    and branches = Promise.await branches in
     (*now we can assign our results*)
-    Vars.ui_state.jj_show $= log_res;
+    (* Vars.ui_state.jj_show $= log_res; *)
     Vars.ui_state.jj_branches $= branches;
     Vars.ui_state.jj_tree $= tree;
     Vars.ui_state.jj_change_files $= files_list)

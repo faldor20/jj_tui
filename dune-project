@@ -32,6 +32,8 @@
   ppx_jane
   eio-process
 
+  (picos_std (= 0.5.0))
+  (picos_io (= 0.5.0))
  ;;for notty
  uutf
  )

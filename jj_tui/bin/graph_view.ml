@@ -348,7 +348,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (*TODO:make a custom widget the renders the commit with and without selection.
     with selection replace the dot with a blue version and slightly blue tint the background *)
-  let graph_view ~sw () =
+  let graph_view () =
     (*We have a seperate error var here instead of using a result type. This allows us to avoid using Lwd.bind which would cause our list selection to get reset anytime the content changes *)
     let error_var = Lwd.var None in
     let revset_ui =
@@ -415,10 +415,12 @@ module Make (Vars : Global_vars.Vars) = struct
       items
       |> W.Lists.selection_list_exclusions
            ~on_selection_change:(fun revision ->
-             Eio.Fiber.fork ~sw @@ fun _ ->
-             Vars.update_ui_state @@ fun _ ->
+             (* Eio.Fiber.fork ~sw @@ fun _ -> *)
+             (* Vars.update_ui_state @@ fun _ -> *)
+             (* TODO: Do i need this now that we have the concurrency safeguards?*)
+             Picos_std_structured.Flock.fork(fun ()->
              Lwd.set Vars.ui_state.selected_revision revision;
-             Global_funcs.update_views ())
+             Global_funcs.update_views ()))
            ~custom_handler:(fun _ key -> handleKeys key)
     in
     let final_ui =

@@ -1,8 +1,10 @@
-open Eio
+open Picos_std_structured
+open Picos_std_sync
+open Picos_std_finally
 
 module type t = sig
   val jj : string list -> string
-  val switch_to_process : Eio_unix.Stdenv.base -> string list -> Process.exit_status
+  val switch_to_process : string list -> Unix.process_status
 end
 
 exception JJError of string * string
@@ -10,46 +12,41 @@ exception JJError of string * string
 module Make (Vars : Global_vars.Vars) = struct
   (** Makes a new process that has acess to all input and output
       This should be used for running other tui sub-programs *)
-  let switch_to_process env command =
-    Switch.run @@ fun sw ->
-    let mgr = Eio.Stdenv.process_mgr env in
-    let stdout = Eio.Stdenv.stdout env in
-    let stdin = Eio.Stdenv.stdin env in
-    let stderr = Eio.Stdenv.stderr env in
-    let proc = Eio.Process.spawn ~sw mgr ~stderr ~stdin ~stdout command in
-    proc |> Eio.Process.await
+  let switch_to_process command =
+    let stdout = Unix.stdout in
+    let stdin = Unix.stdin in
+    let stderr = Unix.stderr in
+    let pid = Unix.create_process command.(0) command stdin stdout stderr in
+    let _, status = Unix.waitpid [] pid in
+    status
   ;;
 
   (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
   let cmdArgs cmd args =
-    let Vars.{ cwd; mgr; _ } = Vars.get_eio_vars () in
-    let out =
-      Eio_process.run
-        ~cwd
-        ~process_mgr:mgr
-        ~prog:cmd
-        ~args
-        ~f:(fun x ->
-          (match x.exit_status with
-           | `Exited i ->
-             if i == 0 then `Ok (x.stdout, x.stderr) else `BadExit (i, x.stderr)
-           | `Signaled i ->
-             `BadExit (i, x.stderr))
-          |> Base.Or_error.return)
-        ()
+    let stdout, stdin, stderr =
+      Unix.open_process_args_full cmd (Array.of_list (cmd::args)) (Unix.environment ())
     in
-    match out with
-    | Error a ->
-      Error (`EioErr a)
-    | Ok (`Ok a) ->
-      Ok a
-    | Ok (`BadExit _ as a) ->
-      Error a
+    let out_content = In_channel.input_all stdout in
+    let err_content = In_channel.input_all stderr in
+    (* TODO: may need to wait before calling close*)
+    let status = Unix.close_process_full (stdout, stdin, stderr) in
+    let exit_code =
+      match status with
+      | Unix.WEXITED code ->
+        code
+      | Unix.WSIGNALED _ | Unix.WSTOPPED _ ->
+        -1
+    in
+    match exit_code with
+    | 0 ->
+      Ok (out_content, err_content)
+    | _ ->
+      Error (`BadExit (exit_code, err_content ^ "\n" ^ out_content))
   ;;
 
   (** Prevents concurrent acess to jj when running commands that cause snapshotting.
       jj can get currupted otherwise *)
-  let access_lock = Eio.Mutex.create ()
+  let access_lock = Mutex.create ()
 
   (** Run a jj command without outputting to the command_log.
       @param ?snapshot=true
@@ -64,14 +61,18 @@ module Make (Vars : Global_vars.Vars) = struct
       else false
     in
     let res =
-      cmdArgs
-        "jj"
-        (List.concat
-           [
-             args
-           ; (if snapshot then [] else [ "--ignore-working-copy" ])
-           ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
-           ])
+      try
+        cmdArgs
+          "jj"
+          (List.concat
+             [
+               args
+             ; (if snapshot then [] else [ "--ignore-working-copy" ])
+             ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
+             ])
+      with
+      | e ->
+        Error (`Exception (Printexc.to_string e))
     in
     if locked then Mutex.unlock access_lock;
     res
@@ -90,14 +91,11 @@ module Make (Vars : Global_vars.Vars) = struct
         (JJError
            ( "jj" :: args |> String.concat " "
            , Printf.sprintf "Exited with code %i; Message:\n%s" code str ))
-    | Error (`EioErr a) ->
+    | Error (`Exception a) ->
       raise
         (JJError
            ( "jj" :: args |> String.concat " "
-           , Printf.sprintf
-               "Error running jj process:\n%a"
-               (fun _ -> Base.Error.to_string_hum)
-               a ))
+           , Printf.sprintf "Error running jj process:\n%s" a ))
   ;;
 
   let jj args =
