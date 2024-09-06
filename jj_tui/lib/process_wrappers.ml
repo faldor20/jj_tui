@@ -101,6 +101,7 @@ let is_line_filler line =
           || uchar |> Uchar.equal rev_symbol
           || uchar |> Uchar.equal elieded_symbol
           || uchar |> Uchar.equal elieded_symbol_alt
+          || uchar |> Uchar.equal (make_uchar"×")
           || char == '@')
          && not (line |> Base.String.is_substring ~substring:"(elided revisions)")
       then raise FoundStart)
