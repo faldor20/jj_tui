@@ -46,17 +46,22 @@ let update_views ?(cause_snapshot = false) () =
     (* From now on we use ignore-working-copy so we don't re-snapshot the state and so
        we can operate in paralell *)
     (* TODO: stop using dop last twice *)
-    let log_res =
-      Flock.fork_as_promise (fun _ ->
-        jj_no_log ~snapshot:false [ "show"; "-s"; "--color-words"; "-r"; rev ]
-        |> colored_string)
+    let _=
+      (* TODO: could these all just run in fully paralell like this ?*)
+      !(Vars.ui_state.jj_show_promise) |> Promise.terminate;
+      Vars.ui_state.jj_show_promise
+      := Flock.fork_as_promise @@ fun () ->
+         let show_data =
+           jj_no_log ~snapshot:false [ "show"; "-s"; "--color-words"; "-r"; rev ]
+           |> colored_string
+         in
+         Vars.ui_state.jj_show $= show_data
     and branches =
       Flock.fork_as_promise (fun _ ->
         jj_no_log ~snapshot:false [ "branch"; "list"; "-a" ] |> colored_string)
     and files_list = Flock.fork_as_promise (fun _ -> list_files ~rev ()) in
     (*wait for all our tasks*)
-    let log_res= Promise.await log_res
-    and files_list = Promise.await files_list
+    let files_list = Promise.await files_list
     and branches = Promise.await branches in
     (*now we can assign our results*)
     (* Vars.ui_state.jj_show $= log_res; *)
