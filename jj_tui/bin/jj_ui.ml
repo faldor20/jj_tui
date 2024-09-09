@@ -24,6 +24,7 @@ module Make (Vars : Global_vars.Vars) = struct
   module Jj_widgets = Jj_widgets.Make (Vars)
   module File_view = File_view.Make (Vars)
   module Graph_view = Graph_view.Make (Vars)
+  module Show_view = Show_view.Make (Vars)
 
   let full_term_sized_background =
     let$ term_width, term_height = Lwd.get Vars.term_width_height in
@@ -66,8 +67,8 @@ module Make (Vars : Global_vars.Vars) = struct
         "Not in a jj repo."
       | `OtherError str ->
         str
-      | `CantStartProcess ->
-        "Can't start jj process, maybe it's not installed?"
+      | `CantStartProcess e ->
+        Printf.sprintf "Can't start jj process, maybe it's not installed?, error: %s" e
     in
     W.string message
     |> Lwd.pure
@@ -77,7 +78,7 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   (** The primary view for the UI with the file_view graph_view and summary*)
-  let main_view =
+  let main_view () =
     let file_focus = Focus.make () in
     let graph_focus = Focus.make () in
     Focus.request graph_focus;
@@ -112,8 +113,7 @@ module Make (Vars : Global_vars.Vars) = struct
             |> W.Box.focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
           ]
       ; (*Right side summary/status/fileinfo view*)
-        ui_state.jj_show
-        $-> Ui.atom
+        Show_view.render ()
         |> W.Scroll.area
         (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
         |>$ Ui.resize ~w:0 ~sh:3 ~sw:2 ~mw:10000 ~mh:10000
@@ -163,8 +163,8 @@ module Make (Vars : Global_vars.Vars) = struct
        | `RunCmd cmd ->
          Jj_widgets.interactive_process ("jj" :: cmd)
        | `Main ->
-         W.keyboard_tabs [ ("Main", fun _ -> main_view); "Op log", log_view ])
-    | (`CantStartProcess | `NotInRepo | `OtherError _) as other ->
+         W.keyboard_tabs [ ("Main", fun _ -> main_view ()); "Op log", log_view ])
+    | (`CantStartProcess _ | `NotInRepo | `OtherError _) as other ->
       render_startup_error other
   ;;
 end

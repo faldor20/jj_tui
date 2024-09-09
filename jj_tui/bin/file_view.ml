@@ -106,29 +106,11 @@ module Make (Vars : Global_vars.Vars) = struct
       It will have a cancellation system just like this one.
       when any of the dependencies change, selected file, selected rev, focus etc, it will re-render if needed and cancel the current rendering.
     *)
-    let show_selected_file_diff () =
-      (* kill any existing process writing to the show buffer*)
-      !(Vars.ui_state.jj_show_promise) |> Promise.terminate;
-      (* set self as current process writing to show buffer*)
-      Vars.ui_state.jj_show_promise
-      := Picos_std_structured.Flock.fork_as_promise (fun () ->
-           let rev = Vars.get_selected_rev () in
-           let selected = Lwd.peek selected_file in
-           Vars.ui_state.jj_show
-           $=
-           if selected != ""
-           then (
-             let log = jj_no_log [ "diff"; "-r"; rev; selected ] in
-             Control.yield ();
-             let res = log |> AnsiReverse.colored_string in
-             Control.yield ();
-             res)
-           else I.string A.empty "")
-    in
     W.Lists.selection_list_custom
       ~on_selection_change:(fun selected ->
         Lwd.set selected_file selected;
-        if Focus.peek_has_focus focus then show_selected_file_diff ())
+        if Focus.peek_has_focus focus
+        then Show_view.(pushStatus (File_preview (Vars.get_selected_rev (),selected))))
       ~custom_handler:(fun _ key ->
         match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
       file_uis

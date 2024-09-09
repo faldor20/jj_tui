@@ -12,7 +12,7 @@ let ui_loop ~quit ~term root =
     root
     |> Nottui.Ui.event_filter (fun x ->
       match x with
-      | `Key (`Delete, []) ->
+      | `Key (`ASCII 'q', [`Ctrl]) ->
         Lwd.set quit true;
         `Handled
       | _ ->
@@ -33,12 +33,14 @@ let ui_loop ~quit ~term root =
         ~renderer
         term
         (Lwd.observe @@ root);
-      (* Vars.render_mutex |> Eio.Mutex.unlock; *)
+
+      (*Sleep for a bit to stop spinning the cpu
+      TODO: May not be needed, nottui may sleep for a bit anyway
+      *)
       let end_time = Sys.time () in
       let elapsed = end_time -. start_time in
       let sleep_time = max 0.01 (0.01 -. elapsed) in
-      Unix.sleepf sleep_time;
-      Picos.Fiber.yield ();
+      Picos_io.Unix.sleepf sleep_time;
       loop ())
   in
   loop ()
@@ -49,7 +51,9 @@ let start_ui () =
   (*initialse the state*)
   let term = Notty_unix.Term.create () in
   Vars.term := Some term;
-  ui_loop ~quit:Vars.quit ~term (Jj_ui.mainUi ())
+  ui_loop ~quit:Vars.quit ~term (Jj_ui.mainUi ());
+  Flock.terminate ()
+
 ;;
 
 let start () =

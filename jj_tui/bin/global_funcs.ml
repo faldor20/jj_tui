@@ -21,8 +21,8 @@ let check_startup () =
     if str |> Base.String.is_substring ~substring:"There is no jj repo"
     then `NotInRepo
     else `OtherError str
-  | Error (`Exception _) ->
-    `CantStartProcess
+  | Error (`Exception e) ->
+    `CantStartProcess e
 ;;
 
 (**Updates the status windows; Without snapshotting the working copy by default
@@ -46,17 +46,8 @@ let update_views ?(cause_snapshot = false) () =
     (* From now on we use ignore-working-copy so we don't re-snapshot the state and so
        we can operate in paralell *)
     (* TODO: stop using dop last twice *)
-    let _=
-      (* TODO: could these all just run in fully paralell like this ?*)
-      !(Vars.ui_state.jj_show_promise) |> Promise.terminate;
-      Vars.ui_state.jj_show_promise
-      := Flock.fork_as_promise @@ fun () ->
-         let show_data =
-           jj_no_log ~snapshot:false [ "show"; "-s"; "--color-words"; "-r"; rev ]
-           |> colored_string
-         in
-         Vars.ui_state.jj_show $= show_data
-    and branches =
+    Show_view.reRender();
+    let branches =
       Flock.fork_as_promise (fun _ ->
         jj_no_log ~snapshot:false [ "branch"; "list"; "-a" ] |> colored_string)
     and files_list = Flock.fork_as_promise (fun _ -> list_files ~rev ()) in

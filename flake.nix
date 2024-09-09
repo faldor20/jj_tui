@@ -234,11 +234,14 @@
                   picos_mux_with_io
 
                   picos_aux
+
+
                   ocamlPackages.mtime
                   ocamlPackages.multicore-magic
                   ocamlPackages.psq
                   ocamlPackages.thread-local-storage
 
+                  ocamlPackages.spawn
                   ocamlPackages.parsexp
                   ocamlPackages.eio_main
                   ocamlPackages.stdio

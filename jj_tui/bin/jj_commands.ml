@@ -106,7 +106,7 @@ module Intern (Vars : Global_vars.Vars) = struct
 
   let rec handleCommand description cmd =
     let noOut args =
-      let _ = jj args in
+      let _ = args in
       Global_funcs.update_status ();
       ()
     in
@@ -124,7 +124,7 @@ module Intern (Vars : Global_vars.Vars) = struct
                        match cmd with
                        | `Cmd args ->
                          let _result = jj (args @ [ str ]) in
-                         Global_funcs.update_status ();
+                         Global_funcs.update_status ~cause_snapshot:false ();
                          ()
                          (* v_cmd_out $= jj (args @ [ str ]); *)
                        | `Cmd_I args ->
