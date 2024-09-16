@@ -107,7 +107,8 @@ module Intern (Vars : Global_vars.Vars) = struct
   let rec handleCommand description cmd =
     let noOut args =
       let _ = args in
-      Global_funcs.update_status ();
+     let _result = jj (args ) in
+      Global_funcs.update_status ~cause_snapshot:false ();
       ()
     in
     let prompt str cmd =

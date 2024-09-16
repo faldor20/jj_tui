@@ -31,6 +31,7 @@ let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
   safe_jj (fun () ->
     let rev = Lwd.peek Vars.ui_state.selected_revision in
     let log_res = jj_no_log ~snapshot:cause_snapshot [ "log" ] |> colored_string in
+    (* TODO: chagne this because it makes us always a frame behind *)
     if update_graph then Vars.ui_state.trigger_update $= ())
 ;;
 
