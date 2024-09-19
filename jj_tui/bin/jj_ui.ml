@@ -90,7 +90,18 @@ module Make (Vars : Global_vars.Vars) = struct
         W.vbox
           [
             File_view.file_view file_focus
-            |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000
+            (* |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000 *)
+            |> W.is_focused ~focus:file_focus (fun ui focused ->
+
+              ui
+              |> Ui.resize
+                   ~w:5
+                   ~sw:1
+                   ~sh:12
+                   ~h:2
+                   (*Lets our box get bigger when focused but not take up unecissarry spaec*)
+                   ~mh:(if focused then (Int.min (ui|>Ui.layout_max_height) 12) else 2)
+                   ~mw:1000)
             |> W.Box.focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
           ; Graph_view.graph_view ()
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
@@ -106,7 +117,7 @@ module Make (Vars : Global_vars.Vars) = struct
               |> Ui.resize
                    ~w:5
                    ~sw:1
-                   ~sh:(if focused then 3 else 0)
+                   ~sh:(if focused then 6 else 0)
                    ~h:2
                    ~mh:1000
                    ~mw:1000)
