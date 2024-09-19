@@ -10,7 +10,7 @@ let lastMessage = None
 let pushStatus status = Stream.push statusStream status
 
 (** pushes the last message to the queue again to re-render everything *)
-let reRender ()= lastMessage |> Option.iter pushStatus
+let reRender () = lastMessage |> Option.iter pushStatus
 
 module Make (Vars : Global_vars.Vars) = struct
   open Lwd_infix
@@ -67,9 +67,17 @@ module Make (Vars : Global_vars.Vars) = struct
     done
   ;;
 
-  let render () =
+  let render focus =
     Flock.fork (fun () -> render_loop statusStream);
-    Lwd.get viewState |>$ fun x -> x |> Ui.atom
+    Lwd.get viewState |>$ fun x ->
+    x
+    |> Ui.atom
+    |> Ui.keyboard_area (function
+      | `Escape, [] ->
+        Focus.release_reversable focus;
+        `Handled
+      | _ ->
+        `Unhandled)
   ;;
 
   (*

@@ -37,26 +37,31 @@ module Make (Vars : Global_vars.Vars) = struct
     W.button (Printf.sprintf "quit ") (fun () -> Vars.quit $= true) |> Lwd.pure
   ;;
 
-  let inputs ui =
+
+  let inputs ?(custom = fun _ -> `Unhandled) ui =
     let$ input_state = Lwd.get ui_state.input
     and$ ui = ui in
     ui
     |> Ui.keyboard_area @@ fun event ->
-       match event with
-       | `ASCII 'q', _ ->
-         Vars.quit $= true;
-         `Handled
-       | `Escape, _ ->
-         (* TODO: I could refactor this and the rest of the mode handling so that when the popup is up and in focus it handles all key inputs *)
-         (match input_state with
-          | `Mode _ ->
-            ui_state.show_popup $= None;
-            ui_state.input $= `Normal;
+       match custom event with
+       | `Unhandled ->
+         (match event with
+          | `ASCII 'q', _ ->
+            Vars.quit $= true;
             `Handled
+          | `Escape, _ ->
+            (* TODO: I could refactor this and the rest of the mode handling so that when the popup is up and in focus it handles all key inputs *)
+            (match input_state with
+             | `Mode _ ->
+               ui_state.show_popup $= None;
+               ui_state.input $= `Normal;
+               `Handled
+             | _ ->
+               `Unhandled)
           | _ ->
             `Unhandled)
-       | _ ->
-         `Unhandled
+       | a ->
+         a
   ;;
 
   (* shows a pretty box in the middle of the screen with our error in it*)
@@ -92,15 +97,14 @@ module Make (Vars : Global_vars.Vars) = struct
             File_view.file_view file_focus
             (* |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000 *)
             |> W.is_focused ~focus:file_focus (fun ui focused ->
-
               ui
               |> Ui.resize
                    ~w:5
                    ~sw:1
                    ~sh:12
                    ~h:2
-                   (*Lets our box get bigger when focused but not take up unecissarry spaec*)
-                   ~mh:(if focused then (Int.min (ui|>Ui.layout_max_height) 12) else 2)
+                     (*Lets our box get bigger when focused but not take up unecissarry spaec*)
+                   ~mh:(if focused then Int.min (ui |> Ui.layout_max_height) 12 else 2)
                    ~mw:1000)
             |> W.Box.focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
           ; Graph_view.graph_view ()
@@ -124,7 +128,7 @@ module Make (Vars : Global_vars.Vars) = struct
             |> W.Box.focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
           ]
       ; (*Right side summary/status/fileinfo view*)
-        Show_view.render ()
+        Show_view.render summary_focus
         |> W.Scroll.area
         (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
         |>$ Ui.resize ~w:0 ~sh:3 ~sw:1 ~mw:10000 ~mh:10000
@@ -136,7 +140,12 @@ module Make (Vars : Global_vars.Vars) = struct
     |> W.Overlay.popup ~show_popup_var:ui_state.show_popup
     |> W.Overlay.selection_list_prompt_filterable
          ~show_prompt_var:ui_state.show_string_selection_prompt
-    |> inputs
+    |> inputs ~custom:(function
+      | `Enter, [] ->
+        Focus.request_reversable summary_focus;
+        `Handled
+      | _ ->
+        `Unhandled)
   ;;
 
   (** Shows the op log *)
