@@ -115,14 +115,15 @@ module Make (Vars : Global_vars.Vars) = struct
     (* This should ensure that all children processes are killed before we cleanup the pipes*)
     Flock.join_after @@ fun () ->
     let pid =
-      Picos_io.Unix.create_process_env
-        cmd
-        (cmd :: args |> Array.of_list)
-        (Unix.environment ())
-        stdin_o
-        stdout_i
-        stderr_i
+          Picos_io.Unix.create_process_env
+            cmd
+            (cmd :: args |> Array.of_list)
+            (Unix.environment ())
+            stdin_o
+            stdout_i
+            stderr_i
     in
+    let prom = Flock.fork_as_promise (fun () -> Picos_io.Unix.waitpid [] pid) in
     (* Close unused pipe ends in the parent process *)
     Unix.close stdout_i;
     Unix.close stdin_o;
@@ -133,8 +134,6 @@ module Make (Vars : Global_vars.Vars) = struct
     let stderr_prom = read_fd_to_end stderr_o in
     let stdout = Promise.await stdout_prom in
     let stderr = Promise.await stderr_prom in
-    Control.yield ();
-    let prom = Flock.fork_as_promise (fun () -> Picos_io.Unix.waitpid [] pid) in
     let code, status = Promise.await prom in
     (* let stderr = read_fd_to_end stderr_i in *)
     (* let stdout= ""in *)
