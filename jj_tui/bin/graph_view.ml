@@ -251,13 +251,14 @@ module Make (Vars : Global_vars.Vars) = struct
             [
               {
                 key = 'c'
-              ; description = "Create new branches"
+              ; description = "Create new branch"
               ; cmd =
                   PromptThen
-                    ( "Branch names to create"
+                    ( "Branch name to create"
                     , fun x ->
-                        Cmd_r ([ "branch"; "create" ] @ (x |> String.split_on_char ' '))
-                    )
+                        Cmd_r
+                          ([ "branch"; "create" ]
+                           @ [ x |> String.map (fun c -> if c = ' ' then '_' else c) ]) )
               }
             ; {
                 key = 'd'
