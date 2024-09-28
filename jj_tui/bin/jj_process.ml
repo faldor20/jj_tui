@@ -2,6 +2,7 @@ open Picos_std_structured
 open Picos_std_sync
 open Picos_std_finally
 open Spawn
+open Jj_tui.Logging
 
 module type t = sig
   val jj : ?snapshot:bool -> string list -> string
@@ -115,13 +116,13 @@ module Make (Vars : Global_vars.Vars) = struct
     (* This should ensure that all children processes are killed before we cleanup the pipes*)
     Flock.join_after @@ fun () ->
     let pid =
-          Picos_io.Unix.create_process_env
-            cmd
-            (cmd :: args |> Array.of_list)
-            (Unix.environment ())
-            stdin_o
-            stdout_i
-            stderr_i
+      Picos_io.Unix.create_process_env
+        cmd
+        (cmd :: args |> Array.of_list)
+        (Unix.environment ())
+        stdin_o
+        stdout_i
+        stderr_i
     in
     let prom = Flock.fork_as_promise (fun () -> Picos_io.Unix.waitpid [] pid) in
     (* Close unused pipe ends in the parent process *)
@@ -165,6 +166,7 @@ module Make (Vars : Global_vars.Vars) = struct
         When true snapshots the state when running the command and also aquires a lock before running it. Set to false for commands you wish to run concurrently. like those for generating content in the UI
       @param ?color=true When true output will have terminal escape codes for color *)
   let jj_no_log_errorable ?(snapshot = true) ?(color = true) args =
+    [%log debug "Running 'jj %s'" (args |> String.concat " ")];
     let locked =
       if snapshot
       then (
@@ -186,6 +188,7 @@ module Make (Vars : Global_vars.Vars) = struct
       | Picos_std_structured.Control.Terminate as e ->
         raise e
       | e ->
+        [%log warn "Exception running jj: %s" (Printexc.to_string e)];
         Error (`Exception (Printexc.to_string e))
     in
     if locked then Mutex.unlock access_lock;

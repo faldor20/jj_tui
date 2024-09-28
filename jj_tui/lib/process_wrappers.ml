@@ -5,6 +5,7 @@ open Nottui
 open Lwd_infix
 open! Util
 open Process
+open Logging
 
 exception FoundStart
 exception FoundFiller
@@ -45,7 +46,7 @@ let is_whitespace_char (code_point : int) : bool =
   | 0x200A (* Hair Space *)
   | 0x2028 (* Line Separator *)
   | 0x2029 (* Paragraph Separator *)
-  | 0x202F (* Narrow No-Break Space *)
+  | 0x202F (* Narrow No-Brpeak Space *)
   | 0x205F (* Medium Mathematical Space *)
   | 0x3000 (* Ideographic Space *) ->
     true
@@ -101,7 +102,7 @@ let is_line_filler line =
           || uchar |> Uchar.equal rev_symbol
           || uchar |> Uchar.equal elieded_symbol
           || uchar |> Uchar.equal elieded_symbol_alt
-          || uchar |> Uchar.equal (make_uchar"×")
+          || uchar |> Uchar.equal (make_uchar "×")
           || char == '@')
          && not (line |> Base.String.is_substring ~substring:"(elided revisions)")
       then raise FoundStart)

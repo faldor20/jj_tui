@@ -1,3 +1,5 @@
+open Jj_tui.Logging
+
 module Make (Vars : Global_vars.Vars) = struct
   open Lwd_infix
   open Vars
@@ -415,11 +417,10 @@ module Make (Vars : Global_vars.Vars) = struct
       items
       |> W.Lists.selection_list_exclusions
            ~on_selection_change:(fun revision ->
-             (* Eio.Fiber.fork ~sw @@ fun _ -> *)
-             (* Vars.update_ui_state @@ fun _ -> *)
-             (* TODO: Do i need this now that we have the concurrency safeguards?*)
+             (*Respond to change in selected revision*)
              Lwd.set Vars.ui_state.selected_revision revision;
              Show_view.(pushStatus (Graph_preview (Vars.get_selected_rev ())));
+             [%log debug "Selected revision: '%s'" (Global_vars.get_unique_id revision)];
              Picos_std_structured.Flock.fork (fun () -> Global_funcs.update_views ()))
            ~custom_handler:(fun _ key -> handleKeys key)
     in

@@ -3,6 +3,16 @@ module Vars = Global_vars.Vars
 open Nottui
 module Jj_ui = Jj_ui.Make (Vars)
 open Picos_std_structured
+open Jj_tui.Logging
+
+(* let file_logger ~logs_stream=
+   let logs_crs=Picos_std_sync.Stream.tap logs_stream in
+   let file=Picos_io.Unix.openfile "" in
+   let handle_log cursor=
+   let log,cursor =Picos_std_sync.Stream.read cursor in
+
+   Picos_io.Unix.wri
+*)
 
 let ui_loop ~quit ~term root =
   print_endline "starting loop";
@@ -12,7 +22,7 @@ let ui_loop ~quit ~term root =
     root
     |> Nottui.Ui.event_filter (fun x ->
       match x with
-      | `Key (`ASCII 'q', [`Ctrl]) ->
+      | `Key (`ASCII 'q', [ `Ctrl ]) ->
         Lwd.set quit true;
         `Handled
       | _ ->
@@ -33,9 +43,8 @@ let ui_loop ~quit ~term root =
         ~renderer
         term
         (Lwd.observe @@ root);
-
       (*Sleep for a bit to stop spinning the cpu
-      TODO: May not be needed, nottui may sleep for a bit anyway
+        TODO: May not be needed, nottui may sleep for a bit anyway
       *)
       let end_time = Sys.time () in
       let elapsed = end_time -. start_time in
@@ -53,12 +62,13 @@ let start_ui () =
   Vars.term := Some term;
   ui_loop ~quit:Vars.quit ~term (Jj_ui.mainUi ());
   Flock.terminate ()
-
 ;;
 
 let start () =
   Picos_mux_multififo.run_on ~n_domains:8 (fun _ ->
-    Flock.join_after @@ fun () -> start_ui ())
+    Flock.join_after @@ fun () ->
+    init_logging ();
+    start_ui ())
 (* Picos_mux_multififo.run (fun () -> Flock.join_after (fun _ -> start_ui ())) *)
 ;;
 

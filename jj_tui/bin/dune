@@ -2,7 +2,10 @@
  (public_name jj_tui)
  (name main)
  (libraries jj_tui nottui base stdio picos_io picos_mux.multififo picos_std.sync picos_std.finally picos_std.structured eio_main eio-process spawn )
- )
+
+(preprocess
+  (pps logs-ppx ppx_deriving.std))
+   )
 
  (env
   (static

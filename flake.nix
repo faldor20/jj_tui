@@ -235,6 +235,10 @@
 
                   picos_aux
 
+                  ocamlPackages.logs
+                  ocamlPackages.logs-ppx
+
+                  ocamlPackages.ppx_deriving
 
                   ocamlPackages.mtime
                   ocamlPackages.multicore-magic

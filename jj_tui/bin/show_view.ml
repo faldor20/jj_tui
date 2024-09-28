@@ -1,9 +1,11 @@
 open Picos_std_sync
 open Picos_std_structured
+open Jj_tui.Logging
 
 type status_state =
   | File_preview of (string * string) (*revision,filepath*)
   | Graph_preview of string (*revision*)
+[@@deriving show]
 
 let statusStream = Stream.create ()
 let lastMessage = None
@@ -57,6 +59,7 @@ module Make (Vars : Global_vars.Vars) = struct
       Promise.terminate_after ~seconds:0. !current_computation;
       current_computation
       := Flock.fork_as_promise (fun () ->
+           [%log debug "Rendering status view with: %a" pp_status_state msg];
            viewState
            $=
            match msg with

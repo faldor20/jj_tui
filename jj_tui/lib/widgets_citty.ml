@@ -149,22 +149,6 @@ let word_wrap_string_table table width =
         join3 (wrap_line pa) ub (wrap_line sb)))
 ;;
 
-(* Grab the mouse and repeat an event until button is released *)
-let grab_and_repeat ~sw f =
-  let stop = ref false in
-  let rec step delay () =
-    if not !stop
-    then (
-      f ();
-      (*TODO: this should not be a clock*)
-      Eio_unix.sleep delay;
-      step 0.025 ())
-    else ()
-  in
-  Eio.Fiber.fork ~sw (step 0.4);
-  `Grab ((fun ~x:_ ~y:_ -> ()), fun ~x:_ ~y:_ -> stop := true)
-;;
-
 let on_click f ~x:_ ~y:_ = function
   | `Left ->
     f ();

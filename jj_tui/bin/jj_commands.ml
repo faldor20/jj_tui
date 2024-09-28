@@ -2,9 +2,11 @@
     It allows us to define a command list: A list of keys, commands and descriptions
     We can then run a command matching a key or generate a documentation UI element showing all available commands *)
 
+open Jj_tui.Logging
+
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
 module Shared = struct
-  type cmd_args = string list
+  type cmd_args = string list [@@deriving show]
 
   (** Regular jj command *)
   type 'a command_variant =
@@ -32,6 +34,7 @@ module Shared = struct
     (** Allows nesting of commands, shows a popup with command options and waits for the user to press the appropriate key*)
     | Fun of (unit -> unit)
     (** Execute an arbitrary function. Prefer other command types if possible *)
+  [@@deriving show]
 
   (** A command that should be run when it's key is pressed*)
   and 'a command = {
@@ -39,6 +42,7 @@ module Shared = struct
     ; description : string
     ; cmd : 'a command_variant
   }
+  [@@deriving show]
 end
 
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
@@ -105,9 +109,10 @@ module Intern (Vars : Global_vars.Vars) = struct
   ;;
 
   let rec handleCommand description cmd =
+    [%log info "Handling command: %s" description];
     let noOut args =
       let _ = args in
-     let _result = jj (args ) in
+      let _result = jj args in
       Global_funcs.update_status ~cause_snapshot:false ();
       ()
     in
