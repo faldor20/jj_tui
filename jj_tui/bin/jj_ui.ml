@@ -176,9 +176,7 @@ module Make (Vars : Global_vars.Vars) = struct
         while true do
           Picos.Fiber.sleep ~seconds:5.0;
           (*we need to lock this becasue we could end up updating while the ui is rendering*)
-          (* Vars.render_mutex |> Eio.Mutex.lock; *)
           update_status ~cause_snapshot:true ()
-          (* Vars.render_mutex |> Eio.Mutex.unlock *)
         done;
         ());
       let$* running = Lwd.get ui_state.view in

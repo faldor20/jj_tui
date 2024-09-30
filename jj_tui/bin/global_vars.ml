@@ -1,6 +1,5 @@
 open Notty
 open Nottui
-open Eio.Std
 open Picos_std_structured
 open Lwd_infix
 open Jj_tui.Process
@@ -47,22 +46,12 @@ let get_unique_id maybe_unique_rev =
 
 (** Global variables for the ui. Here we keep anything that's just a pain to pipe around*)
 module type Vars = sig
-  type eio_vars = {
-      env : Eio_unix.Stdenv.base
-    ; mgr : Eio_unix.Process.mgr_ty Eio.Resource.t
-    ; cwd : Eio.Fs.dir_ty Eio.Path.t
-  }
 
   val quit : bool Lwd.var
   val term : Notty_unix.Term.t option ref
   val term_width_height : (int * int) Lwd.var
-  val get_eio_env : unit -> Eio_unix.Stdenv.base
-  val set_eio_env : Eio_unix.Stdenv.base -> unit
-  val get_eio_vars : unit -> eio_vars
   val get_term : unit -> Notty_unix.Term.t
   val ui_state : ui_state_t
-  val update_ui_state : (ui_state_t -> unit) -> unit
-  val render_mutex : Eio.Mutex.t
   val reset_selection : unit -> unit
 
   (**returns either a change_id or if their are change_id conflicts, a commit_id *)
@@ -78,16 +67,9 @@ module type Vars = sig
 end
 
 module Vars : Vars = struct
-  type eio_vars = {
-      env : Eio_unix.Stdenv.base
-    ; mgr : Eio_unix.Process.mgr_ty Eio.Resource.t
-    ; cwd : Eio.Fs.dir_ty Eio.Path.t
-  }
 
   let quit = Lwd.var false
-  let eio = ref None
 
-  (** DONT DIRECTLY SET FROM EIO FIBERS!! When setting variables within a fiber use update_ui_state*)
   let ui_state =
     {
       view = Lwd.var `Main
@@ -109,24 +91,10 @@ module Vars : Vars = struct
     }
   ;;
 
-  (** allows other fibers to set lwd vars only when not during rendering*)
-  let render_mutex = Eio.Mutex.create ()
 
-  (** Safely ensures your update doesn't occur during a render*)
-  let update_ui_state f =
-    Eio.Mutex.lock render_mutex;
-    f ui_state;
-    Eio.Mutex.unlock render_mutex
-  ;;
-
-  let set_eio_env env =
-    eio := Some { env; mgr = Eio.Stdenv.process_mgr env; cwd = Eio.Stdenv.cwd env }
-  ;;
 
   let term = ref None
   let term_width_height : (int * int) Lwd.var = Lwd.var (0, 0)
-  let get_eio_env () = (Option.get !eio).env
-  let get_eio_vars () = Option.get !eio
   let get_term () = Option.get !term
 
   let reset_selection () =

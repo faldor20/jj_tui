@@ -26,11 +26,9 @@
   stdio
   nottui
   base 
-  eio_main 
   angstrom 
   ppx_expect 
   ppx_jane
-  eio-process
 
   (picos_std (= 0.5.0))
   (picos_io (= 0.5.0))

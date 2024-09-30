@@ -145,34 +145,6 @@
 
                 strictDeps = true;
               };
-              eio-process = ocamlPackages.buildDunePackage {
-                pname = "eio-process";
-                version = "0.1.0";
-                duneVersion = "3";
-                src = pkgs.fetchFromGitHub {
-
-                  owner = "mbarbin";
-                  repo = "eio-process";
-                  rev = "482ba341884dc8711f93ec9cc6d7c941099e0faa";
-                  sha256 = "sha256-/Y2U+1y+nDMBrRfDAYif0WJp0vPWmvbSMt39wAB/rS8=";
-                };
-
-                buildInputs = with ocamlPackages; [
-                  base
-                  eio
-                  parsexp
-                  ppx_compare
-                  ppx_enumerate
-                  ppx_hash
-                  ppx_here
-                  ppx_let
-                  ppx_sexp_conv
-                  ppx_sexp_value
-                ];
-
-                strictDeps = true;
-
-              };
 
               signal = ocamlPackages.buildDunePackage {
                 pname = "signal";
@@ -250,7 +222,6 @@
                   lwd
                   notty-mine
                   nottui
-                  eio-process
                   picos
                   picos_std
                   picos_io
@@ -272,7 +243,6 @@
 
                   ocamlPackages.spawn
                   ocamlPackages.parsexp
-                  ocamlPackages.eio_main
                   ocamlPackages.stdio
                   ocamlPackages.base
                   ocamlPackages.angstrom

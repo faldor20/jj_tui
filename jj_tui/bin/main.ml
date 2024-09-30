@@ -36,7 +36,6 @@ let ui_loop ~quit ~term root =
       let prev_term_width, prev_term_height = Lwd.peek Vars.term_width_height in
       if term_width <> prev_term_width || term_height <> prev_term_height
       then Lwd.set Vars.term_width_height (term_width, term_height);
-      (* Vars.render_mutex |> Eio.Mutex.lock; *)
       Nottui.Ui_loop.step
         ~process_event:true
         ~timeout:0.01
@@ -55,7 +54,6 @@ let ui_loop ~quit ~term root =
   loop ()
 ;;
 
-(*TODO:For hosting a subprocess i should look into using EIO and Ui_loop.step like some of the other libraries built with nottui*)
 let start_ui () =
   (*initialse the state*)
   let term = Notty_unix.Term.create () in
