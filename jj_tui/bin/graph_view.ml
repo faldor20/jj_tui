@@ -72,7 +72,7 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Fun
                     (fun _ ->
-                      let rev = Vars.get_selected_rev () in
+                      let rev = Vars.get_hovered_rev() in
                       let source_msg, dest_msg = get_messages rev (rev ^ "-") in
                       let new_msg =
                         [ dest_msg; source_msg ] |> String.concat_non_empty "\n"
@@ -311,7 +311,7 @@ module Make (Vars : Global_vars.Vars) = struct
                         ("Select the branch to set to rev: " ^ rev)
                         (fun branch ->
                            Cmd
-                             [ "branch"; "set"; "-r"; get_selected_rev (); "-B"; branch ]))
+                             [ "branch"; "set"; "-r"; get_hovered_rev (); "-B"; branch ]))
               }
             ; {
                 key = 't'
@@ -392,7 +392,15 @@ module Make (Vars : Global_vars.Vars) = struct
                  |> Jj_tui.AnsiReverse.colored_string
                  |> Ui.atom)
             in
-            let data = W.Lists.{ ui; data = rev_ids.(!selectable_idx) } in
+            let id = rev_ids.(!selectable_idx) in
+            let data =
+              W.Lists.
+                {
+                  ui
+                ; id = id |> Global_vars.get_unique_id |> String.hash
+                ; data = rev_ids.(!selectable_idx)
+                }
+            in
             (*Add to our selectable array*)
             Array.set selectable_items !selectable_idx data;
             selectable_idx := !selectable_idx + 1;
@@ -416,14 +424,15 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     let list_ui =
       items
-      |> W.Lists.selection_list_exclusions
-           ~on_selection_change:(fun revision ->
+      |> W.Lists.multi_selection_list_exclusions
+           ~on_selection_change:(fun ~hovered ~selected ->
              (*Respond to change in selected revision*)
-             Lwd.set Vars.ui_state.selected_revision revision;
-             Show_view.(pushStatus (Graph_preview (Vars.get_selected_rev ())));
-             [%log debug "Selected revision: '%s'" (Global_vars.get_unique_id revision)];
+             Lwd.set Vars.ui_state.hovered_revision hovered;
+             Lwd.set Vars.ui_state.selected_revisions selected;
+             Show_view.(pushStatus (Graph_preview (Vars.get_hovered_rev ())));
+             [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
              Picos_std_structured.Flock.fork (fun () -> Global_funcs.update_views ()))
-           ~custom_handler:(fun _ key -> handleKeys key)
+           ~custom_handler:(fun ~selected ~selectable_items key -> handleKeys key)
     in
     let final_ui =
       let$ list_ui = list_ui

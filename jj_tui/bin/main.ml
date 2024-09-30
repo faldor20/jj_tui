@@ -65,7 +65,7 @@ let start_ui () =
 ;;
 
 let start () =
-  Picos_mux_multififo.run_on ~n_domains:8 (fun _ ->
+  Picos_mux_multififo.run_on ~n_domains:1 (fun _ ->
     Flock.join_after @@ fun () ->
     init_logging ();
     start_ui ())

@@ -24,7 +24,7 @@ let w_0 =
        og
        |> Lwd.pure
        |> W.Scroll.area
-       |> W.Box.box 
+       |> W.Box.box
        |>$ Ui.resize ~sh:1 ~mh:1000
        |> W.size_logger)
     ; pString "| "
@@ -116,7 +116,7 @@ let w_2 =
              og
              |> Lwd.pure
              |> W.Scroll.area
-             |> W.Box.focusable 
+             |> W.Box.focusable
              |> W.size_logger
              |>$ Ui.resize ~pad:Gravity.default ~crop:Gravity.default)
           ]
@@ -444,7 +444,13 @@ let w_8 =
 let w_9 =
   let items =
     [ "hi"; "it's"; "meeeeeeeeeeeeeeeeeeeeeeeee" ]
-    |> List.map (fun item -> W.Lists.{ data = item; ui = W.Lists.selectable_item (W.string item) })
+    |> List.map (fun item ->
+      W.Lists.
+        {
+          data = item
+        ; id = item |> String.hash
+        ; ui = W.Lists.selectable_item (W.string item)
+        })
     |> Lwd.pure
   in
   W.vbox
@@ -452,21 +458,19 @@ let w_9 =
       items
       |> W.Lists.selection_list_custom
            ~on_selection_change:(fun x -> ())
-           ~custom_handler:(fun _  key -> match key with _ -> `Unhandled)
+           ~custom_handler:(fun _ key -> match key with _ -> `Unhandled)
       |>$ Ui.resize ~w:10 ~sw:1
       |> W.Box.focusable ~pad_h:0
     ; items
       |> W.Lists.selection_list_custom
- 
            ~on_selection_change:(fun x -> ())
-           ~custom_handler:(fun _  key -> match key with _ -> `Unhandled)
+           ~custom_handler:(fun _ key -> match key with _ -> `Unhandled)
       |>$ Ui.resize ~w:10 ~sw:1
       |> W.Box.focusable ~pad_h:0
     ; items
       |> W.Lists.selection_list_custom
- 
            ~on_selection_change:(fun x -> ())
-           ~custom_handler:(fun _  key -> match key with _ -> `Unhandled)
+           ~custom_handler:(fun _ key -> match key with _ -> `Unhandled)
       |>$ Ui.resize ~w:10 ~sw:1
       |> W.Box.focusable ~pad_h:0
     ]

@@ -35,6 +35,7 @@ module Make (Vars : Global_vars.Vars) = struct
       W.Lists.
         {
           data = name
+        ; id = name |> String.hash
         ; ui =
             str ^ "\n"
             |> Jj_tui.AnsiReverse.colored_string

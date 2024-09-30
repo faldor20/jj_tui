@@ -23,14 +23,14 @@ type ui_state_t = {
       (* rev_id maybe_unique W.Overlay.filterable_selection_list_prompt_data option Lwd.var *)
   ; show_string_selection_prompt :
       string W.Overlay.filterable_selection_list_prompt_data option Lwd.var
-  ; graph_revs : rev_id maybe_unique W.Lists.selectable_item array Lwd.var
+  ; graph_revs : rev_id maybe_unique W.Lists.multi_selectable_item array Lwd.var
   ; command_log : string list Lwd.var
-  ; jj_tree : I.t Lwd.var
   ; jj_show : I.t Lwd.var
-  ; jj_show_promise : (unit Promise.t) ref
+  ; jj_show_promise : unit Promise.t ref
   ; jj_branches : I.t Lwd.var
   ; jj_change_files : (string * string) list Lwd.var
-  ; selected_revision : rev_id maybe_unique Lwd.var
+  ; hovered_revision : rev_id maybe_unique Lwd.var
+  ; selected_revisions : rev_id maybe_unique list Lwd.var
   ; revset : string option Lwd.var
   ; trigger_update : unit Lwd.var
 }
@@ -63,10 +63,15 @@ module type Vars = sig
   val render_mutex : Eio.Mutex.t
 
   (**returns either a change_id or if their are change_id conflicts, a commit_id *)
-  val get_selected_rev : unit -> string
+  val get_hovered_rev : unit -> string
 
   (**returns either a change_id or if their are change_id conflicts, a commit_id *)
-  val get_selected_rev_lwd : unit -> string Lwd.t
+  val get_hovered_rev_lwd : unit -> string Lwd.t
+
+  val get_selected_revs : unit -> string list
+  val get_selected_revs_lwd : unit -> string list Lwd.t
+  val get_active_revs : unit -> string list
+  val get_active_revs_lwd : unit -> string list Lwd.t
 end
 
 module Vars : Vars = struct
@@ -83,12 +88,12 @@ module Vars : Vars = struct
   let ui_state =
     {
       view = Lwd.var `Main
-    ; jj_tree = Lwd.var I.empty
     ; jj_show = Lwd.var I.empty
     ; jj_show_promise = ref @@ Promise.of_value ()
     ; jj_branches = Lwd.var I.empty
     ; jj_change_files = Lwd.var []
-    ; selected_revision = Lwd.var (Unique { change_id = "@"; commit_id = "@" })
+    ; hovered_revision = Lwd.var (Unique { change_id = "@"; commit_id = "@" })
+    ; selected_revisions = Lwd.var [ Unique { change_id = "@"; commit_id = "@" } ]
     ; revset = Lwd.var None
     ; graph_revs = Lwd.var [||]
     ; input = Lwd.var `Normal
@@ -120,12 +125,38 @@ module Vars : Vars = struct
   let get_eio_vars () = Option.get !eio
   let get_term () = Option.get !term
 
-  (**Gets an id for the selected revision. If the change_id is unique we use that, if it's not we return a commit_id instead*)
-  let get_selected_rev () = Lwd.peek ui_state.selected_revision |> get_unique_id
+  (**Gets an id for the currently hovered revision. If the change_id is unique we use that, if it's not we return a commit_id instead*)
+  let get_hovered_rev () = Lwd.peek ui_state.hovered_revision |> get_unique_id
 
-  (**see [get_selected_rev]*)
-  let get_selected_rev_lwd () =
-    let$ a = Lwd.get ui_state.selected_revision in
+  (**see [get_hovered_rev]*)
+  let get_hovered_rev_lwd () =
+    let$ a = Lwd.get ui_state.hovered_revision in
     a |> get_unique_id
+  ;;
+
+  (**Gets all currently selected revisions*)
+  let get_selected_revs () =
+    Lwd.peek ui_state.selected_revisions |> List.map get_unique_id
+  ;;
+
+  (**see [get_selected_revs]*)
+  let get_selected_revs_lwd () =
+    let$ a = Lwd.get ui_state.selected_revisions in
+    a |> List.map get_unique_id
+  ;;
+
+  (**Gets selected revs, if nothing is selected gets the hovered rev*)
+  let get_active_revs () =
+    let selected = get_selected_revs () in
+    if selected |> List.length == 0 then [ get_hovered_rev () ] else selected
+  ;;
+
+  (**See [get_active_revs]*)
+  let get_active_revs_lwd () =
+    let$ hovered = Lwd.get ui_state.hovered_revision
+    and$ selected = Lwd.get ui_state.selected_revisions in
+    if selected |> List.length == 0
+    then [ hovered |> get_unique_id ]
+    else selected |> List.map get_unique_id
   ;;
 end

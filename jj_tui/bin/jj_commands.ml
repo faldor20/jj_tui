@@ -8,11 +8,18 @@ open Jj_tui.Logging
 module Shared = struct
   type cmd_args = string list [@@deriving show]
 
-  (** Regular jj command *)
+  type 'a revision_type =
+    | Hovered of 'a
+    | Selected of 'a
+    | Active of 'a (** Regular jj command *)
+  [@@deriving show]
+
   type 'a command_variant =
     | Cmd of cmd_args (** Regular jj command *)
     | Cmd_r of cmd_args
-    (** Regular jj command that should operate on the selected revison *)
+    (** Regular jj command that should operate on the hovered revison *)
+    | Cmd_ of cmd_args revision_type
+    (** Regular jj command that should operate on active revisions*)
     | Dynamic of (unit -> 'a command_variant)
     | Dynamic_r of (string -> 'a command_variant)
     (** Wraps a command so that the content will be regenerated each time it's run. Usefull if you wish to read some peice of ui state *)
@@ -21,7 +28,7 @@ module Shared = struct
     | Prompt of string * cmd_args
     | Selection_prompt of
         string
-        * (unit -> 'a Nottui.W.Lists.selectable_item list Lwd.t)
+        * (unit -> 'a Nottui.W.Lists.multi_selectable_item list Lwd.t)
         * (string -> 'a -> bool)
         * ('a -> 'a command_variant)
     | Prompt_r of string * cmd_args
@@ -56,6 +63,16 @@ module Intern (Vars : Global_vars.Vars) = struct
   open! Jj_tui.Util
 
   exception Handled
+
+  let get_revs rev_type =
+    match rev_type with
+    | Hovered a ->
+      a, [ get_hovered_rev () ]
+    | Selected a ->
+      a, get_selected_revs ()
+    | Active a ->
+      a, get_active_revs ()
+  ;;
 
   let render_command_line ~indent_level key desc =
     let indent = String.init (indent_level * 2) (fun _ -> ' ') in
@@ -170,7 +187,12 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Cmd_r args ->
       ui_state.show_popup $= None;
-      noOut (args @ [ "-r"; Vars.get_selected_rev () ]);
+      noOut (args @ [ "-r"; Vars.get_hovered_rev () ]);
+      raise Handled
+    | Cmd_ rev_type ->
+      let args, revs = get_revs rev_type in
+      ui_state.show_popup $= None;
+      noOut (args @ ("-r" :: revs));
       raise Handled
     | Prompt (str, args) ->
       ui_state.show_popup $= None;
@@ -178,7 +200,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Prompt_r (str, args) ->
       ui_state.show_popup $= None;
-      prompt str (`Cmd (args @ [ "-r"; Vars.get_selected_rev () ]));
+      prompt str (`Cmd (args @ [ "-r"; Vars.get_hovered_rev() ]));
       raise Handled
     | PromptThen (label, next) ->
       ui_state.show_popup $= None;
@@ -206,7 +228,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Dynamic f ->
       f () |> handleCommand description
     | Dynamic_r f ->
-      f (Vars.get_selected_rev ()) |> handleCommand description
+      f (Vars.get_hovered_rev ()) |> handleCommand description
 
   (** Try mapching the command mapping to the provided key and run the command if it matches *)
   and command_input ~is_sub keymap key =

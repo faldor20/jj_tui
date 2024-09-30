@@ -1,21 +1,37 @@
+open Nottui_main
+module MyMap : Map.S with type key = int
+
 (**Selectable list item with a ui and some data *)
-type 'a selectable_item =
+type 'a multi_selectable_item =
   { data : 'a
   (**info attached to each ui elment in the list,  used for filtering and on_select callback *)
-  ; ui : bool -> Nottui_main.ui Lwd.t
+  ; id : int
+  ; ui : selected:bool -> hovered:bool -> Ui.t Lwd.t
   }
 
-type 'a maybeSelectable =
-  | Selectable of 'a selectable_item
-  | Filler of Nottui_main.ui Lwd.t
+type 'a maybe_multi_selectable =
+  | Selectable of 'a multi_selectable_item
+  | Filler of Ui.t Lwd.t
+
+(** multi_selectable exclusions *)
+val multi_selection_list_exclusions
+  :  ?focus:Nottui_main.Focus.handle
+  -> ?on_selection_change:(hovered:'a -> selected:'a list -> unit)
+  -> custom_handler:
+       (selected:'a MyMap.t
+        -> selectable_items:(int * 'a multi_selectable_item) array
+        -> Nottui_main.Ui.key
+        -> Nottui_main.Ui.may_handle)
+  -> 'a maybe_multi_selectable array Lwd.t
+  -> Nottui_main.ui Lwd.t
 
 (** Same as [selection_list_custom] except that it supports not all element in the list being selectable *)
 val selection_list_exclusions
   :  ?focus:Nottui_main.Focus.handle
   -> ?on_selection_change:('a -> unit)
   -> custom_handler:
-       ('a selectable_item -> Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
-  -> 'a maybeSelectable array Lwd.t
+       ('a multi_selectable_item -> Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
+  -> 'a maybe_multi_selectable array Lwd.t
   -> Nottui_main.ui Lwd.t
 
 (**Makes a ui element selectable.
@@ -23,9 +39,31 @@ val selection_list_exclusions
    Takes [ui] and returns a function that appends '>' to the start when given [true] and ' ' when false
 
    Used in conjuction with [selection_list_custom]*)
-val selectable_item : Nottui_main.ui -> bool -> Nottui_main.ui Lwd.t
+val selectable_item
+  :  Nottui_main.ui
+  -> selected:bool
+  -> hovered:bool
+  -> Nottui_main.ui Lwd.t
 
-val selectable_item_lwd : Nottui_main.ui Lwd.t -> bool -> Nottui_main.ui Lwd.t
+val selectable_item_lwd
+  :  Nottui_main.ui Lwd.t
+  -> selected:bool
+  -> hovered:bool
+  -> Nottui_main.ui Lwd.t
+
+(** multi selection list that allows for custom handling of keyboard events.
+    Scrolls when the selection reaches the lower third
+    Only handles up and down keyboard events. Use [~custom_handler] to do handle confirming your selection and such *)
+val multi_selection_list_custom
+  :  ?focus:Nottui_main.Focus.handle
+  -> ?on_selection_change:(hovered:'a -> selected:'a list -> unit)
+  -> custom_handler:
+       (selected:'a MyMap.t
+        -> selectable_items:(int * 'a multi_selectable_item) array
+        -> Nottui_main.Ui.key
+        -> Nottui_main.Ui.may_handle)
+  -> 'a multi_selectable_item list Lwd.t
+  -> Nottui_main.ui Lwd.t
 
 (** Selection list that allows for custom handling of keyboard events.
     Scrolls when the selection reaches the lower third
@@ -34,8 +72,8 @@ val selection_list_custom
   :  ?focus:Nottui_main.Focus.handle
   -> ?on_selection_change:('a -> unit)
   -> custom_handler:
-       ('a selectable_item -> Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
-  -> 'a selectable_item list Lwd.t
+       ('a multi_selectable_item -> Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
+  -> 'a multi_selectable_item list Lwd.t
   -> Nottui_main.ui Lwd.t
 
 (** A filterable selectable list.
@@ -47,9 +85,9 @@ val filterable_selection_list_custom
   :  ?focus:Nottui_main.Focus.handle
   -> filter_predicate:(string -> 'a -> bool)
   -> custom_handler:
-       ('a selectable_item -> Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
+       ('a multi_selectable_item -> Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
   -> filter_text_var:string Lwd.var
-  -> 'a selectable_item list Lwd.t
+  -> 'a multi_selectable_item list Lwd.t
   -> Nottui_main.ui Lwd.t
 
 (** Filterable selection list
@@ -67,5 +105,5 @@ val filterable_selection_list
   -> filter_predicate:(string -> 'a -> bool)
   -> ?on_esc:('a -> unit)
   -> on_confirm:('a -> unit)
-  -> 'a selectable_item list Lwd.t
+  -> 'a multi_selectable_item list Lwd.t
   -> Nottui_main.ui Lwd.t

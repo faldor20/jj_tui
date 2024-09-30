@@ -29,7 +29,7 @@ let check_startup () =
    This should be called after any command that performs a change *)
 let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
   safe_jj (fun () ->
-    let rev = Lwd.peek Vars.ui_state.selected_revision in
+    let rev = Lwd.peek Vars.ui_state.hovered_revision in
     let log_res = jj_no_log ~snapshot:cause_snapshot [ "log" ] |> colored_string in
     (* TODO: chagne this because it makes us always a frame behind *)
     if update_graph then Vars.ui_state.trigger_update $= ())
@@ -39,25 +39,19 @@ let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
    This should be called after any command that performs a change *)
 let update_views ?(cause_snapshot = false) () =
   safe_jj (fun () ->
-    let rev = Vars.get_selected_rev () in
-    Flock.join_after @@ fun () ->
-    let tree =
-      jj_no_log ~snapshot:cause_snapshot [ "log"; "-r"; rev ] |> colored_string
+    let rev = Vars.get_hovered_rev () in
+    let branches =
+      jj_no_log ~snapshot:cause_snapshot [ "branch"; "list"; "-a" ] |> colored_string
     in
     (* From now on we use ignore-working-copy so we don't re-snapshot the state and so
        we can operate in paralell *)
     (* TODO: stop using dop last twice *)
-    Show_view.reRender();
-    let branches =
-      Flock.fork_as_promise (fun _ ->
-        jj_no_log ~snapshot:false [ "branch"; "list"; "-a" ] |> colored_string)
-    and files_list = Flock.fork_as_promise (fun _ -> list_files ~rev ()) in
+    Show_view.reRender ();
+    let files_list = Flock.fork_as_promise (fun _ -> list_files ~rev ()) in
     (*wait for all our tasks*)
-    let files_list = Promise.await files_list
-    and branches = Promise.await branches in
+    let files_list = Promise.await files_list in
     (*now we can assign our results*)
     (* Vars.ui_state.jj_show $= log_res; *)
     Vars.ui_state.jj_branches $= branches;
-    Vars.ui_state.jj_tree $= tree;
     Vars.ui_state.jj_change_files $= files_list)
 ;;

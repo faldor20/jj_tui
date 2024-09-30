@@ -128,7 +128,7 @@ let text_prompt
 
 type 'a selection_list_prompt_data =
   { label : string
-  ; items : 'a Selection_list.selectable_item list Lwd.t
+  ; items : 'a Selection_list.multi_selectable_item list Lwd.t
   ; on_exit : [ `Closed | `Finished of 'a ] -> unit
   }
 
@@ -177,8 +177,8 @@ let selection_list_prompt
 
 type 'a filterable_selection_list_prompt_data =
   { label : string
-  ; items : 'a Selection_list.selectable_item list Lwd.t
-  ;filter_predicate:(string-> 'a-> bool)
+  ; items : 'a Selection_list.multi_selectable_item list Lwd.t
+  ; filter_predicate : string -> 'a -> bool
   ; on_exit : [ `Closed | `Finished of 'a ] -> unit
   }
 
@@ -195,7 +195,7 @@ let selection_list_prompt_filterable
     let$ show_prompt_val = Lwd.get show_prompt_var in
     show_prompt_val
     |> Option.map
-       @@ fun { label; items;filter_predicate; on_exit } ->
+       @@ fun { label; items; filter_predicate; on_exit } ->
        let on_exit result =
          Focus.release_reversable focus;
          show_prompt_var $= None;
@@ -206,9 +206,7 @@ let selection_list_prompt_filterable
          Selection_list.filterable_selection_list
            ~filter_predicate
            ~focus
-           ~on_confirm:(fun item ->
-               (`Finished item) |> on_exit;
-               )
+           ~on_confirm:(fun item -> `Finished item |> on_exit)
            items
          |> modify_body
        in
@@ -227,7 +225,7 @@ let popup ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let prompt_field = content in
-      prompt_field |>$ Ui.resize ~w:5 ~sw:1  |> BB.box ~label_top:label |> clear_bg
+      prompt_field |>$ Ui.resize ~w:5 ~sw:1 |> BB.box ~label_top:label |> clear_bg
     | None -> Ui.empty |> Lwd.pure
   in
   W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]

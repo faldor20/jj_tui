@@ -10,7 +10,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open Jj_tui
   open Picos_std_structured
 
-  let selected_file = Lwd.var ""
+  let active_files= Lwd.var [""]
 
   let rec command_mapping =
     [
@@ -32,16 +32,18 @@ module Make (Vars : Global_vars.Vars) = struct
             ( "Revision to move file to"
             , fun rev ->
                 Cmd
-                  [
+                  ([
                     "squash"
                   ; "-u"
                   ; "--keep-emptied"
                   ; "--from"
-                  ; get_selected_rev ()
+                  ; get_hovered_rev ()
                   ; "--into"
                   ; rev
-                  ; Lwd.peek selected_file
-                  ] )
+                  ]
+                  @
+                   (Lwd.peek active_files))
+                   )
       }
     ; {
         key = 'N'
@@ -49,7 +51,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Dynamic_r
             (fun rev ->
-              Cmd
+              Cmd (
                 [
                   "squash"
                 ; "-u"
@@ -58,8 +60,10 @@ module Make (Vars : Global_vars.Vars) = struct
                 ; rev
                 ; "--into"
                 ; rev ^ "+"
-                ; Lwd.peek selected_file
-                ])
+                ]@
+                 Lwd.peek active_files
+                 )
+                )
       }
     ; {
         key = 'P'
@@ -67,7 +71,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Dynamic_r
             (fun rev ->
-              Cmd
+              Cmd(
                 [
                   "squash"
                 ; "-u"
@@ -76,8 +80,10 @@ module Make (Vars : Global_vars.Vars) = struct
                 ; rev
                 ; "--into"
                 ; rev ^ "-"
-                ; Lwd.peek selected_file
-                ])
+                ]@
+                 Lwd.peek active_files
+                 )
+                )
       }
     ; {
         key = 'd'
@@ -85,10 +91,10 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Dynamic_r
             (fun rev ->
-              let selected = Lwd.peek selected_file in
+              let selected = Lwd.peek active_files in
               confirm_prompt
-                ("discard all changes to '" ^ selected ^ "' in rev " ^ rev)
-                (Cmd [ "restore"; "--to"; rev; "--from"; rev ^ "-"; selected ]))
+                ("discard all changes to '" ^ (selected|>String.concat "\n") ^ "' in rev " ^ rev)
+                (Cmd (["restore"; "--to"; rev; "--from"; rev ^ "-"] @selected)))
       }
     ]
   ;;
@@ -98,7 +104,12 @@ module Make (Vars : Global_vars.Vars) = struct
       let$ files = Lwd.get Vars.ui_state.jj_change_files in
       files
       |> List.map (fun (_modifier, file) ->
-        W.Lists.{ data = file; ui = W.Lists.selectable_item (W.string file) })
+        W.Lists.
+          {
+            data = file
+          ; id = file |> String.hash
+          ; ui = W.Lists.selectable_item (W.string file)
+          })
     in
     (*TODO:
       This should be redesigned completely
@@ -106,13 +117,16 @@ module Make (Vars : Global_vars.Vars) = struct
       It will have a cancellation system just like this one.
       when any of the dependencies change, selected file, selected rev, focus etc, it will re-render if needed and cancel the current rendering.
     *)
-    W.Lists.selection_list_custom
-      ~on_selection_change:(fun selected ->
-        Lwd.set selected_file selected;
+    file_uis|>
+    W.Lists.multi_selection_list_custom
+      ~on_selection_change:(fun ~hovered ~selected ->
+      let active=
+        if selected|>List.length =0 then [hovered] else selected
+        in
+        Lwd.set active_files active;
         if Focus.peek_has_focus focus
-        then Show_view.(pushStatus (File_preview (Vars.get_selected_rev (),selected))))
-      ~custom_handler:(fun _ key ->
+        then Show_view.(pushStatus (File_preview (Vars.get_hovered_rev (), hovered))))
+      ~custom_handler:(fun ~selected:_ ~selectable_items:_ key ->
         match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
-      file_uis
   ;;
 end
