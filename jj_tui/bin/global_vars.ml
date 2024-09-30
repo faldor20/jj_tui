@@ -4,6 +4,7 @@ open Eio.Std
 open Picos_std_structured
 open Lwd_infix
 open Jj_tui.Process
+open Jj_tui.Logging
 
 type cmd_args = string list
 
@@ -33,6 +34,7 @@ type ui_state_t = {
   ; selected_revisions : rev_id maybe_unique list Lwd.var
   ; revset : string option Lwd.var
   ; trigger_update : unit Lwd.var
+  ; reset_selection : unit Signal.t
 }
 
 let get_unique_id maybe_unique_rev =
@@ -61,6 +63,7 @@ module type Vars = sig
   val ui_state : ui_state_t
   val update_ui_state : (ui_state_t -> unit) -> unit
   val render_mutex : Eio.Mutex.t
+  val reset_selection : unit -> unit
 
   (**returns either a change_id or if their are change_id conflicts, a commit_id *)
   val get_hovered_rev : unit -> string
@@ -102,6 +105,7 @@ module Vars : Vars = struct
     ; show_string_selection_prompt = Lwd.var None
     ; command_log = Lwd.var []
     ; trigger_update = Lwd.var ()
+    ; reset_selection = Signal.make ~equal:(fun _ _ -> false) ()
     }
   ;;
 
@@ -124,6 +128,13 @@ module Vars : Vars = struct
   let get_eio_env () = (Option.get !eio).env
   let get_eio_vars () = Option.get !eio
   let get_term () = Option.get !term
+
+  let reset_selection () =
+    Flock.fork(fun _ ->
+      Picos_std_structured.Control.sleep ~seconds:0.7;
+      [%log info "Resetting selection"];
+      ui_state.reset_selection |> Signal.trigger)
+  ;;
 
   (**Gets an id for the currently hovered revision. If the change_id is unique we use that, if it's not we return a commit_id instead*)
   let get_hovered_rev () = Lwd.peek ui_state.hovered_revision |> get_unique_id

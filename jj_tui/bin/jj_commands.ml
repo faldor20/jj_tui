@@ -18,7 +18,7 @@ module Shared = struct
     | Cmd of cmd_args (** Regular jj command *)
     | Cmd_r of cmd_args
     (** Regular jj command that should operate on the hovered revison *)
-    | Cmd_ of cmd_args revision_type
+    | Cmd_with_revs of cmd_args revision_type
     (** Regular jj command that should operate on active revisions*)
     | Dynamic of (unit -> 'a command_variant)
     | Dynamic_r of (string -> 'a command_variant)
@@ -72,6 +72,17 @@ module Intern (Vars : Global_vars.Vars) = struct
       a, get_selected_revs ()
     | Active a ->
       a, get_active_revs ()
+  ;;
+
+  (**resets the selection if there was a selection and the command revision type used it*)
+  let reset_selection_post_cmd rev_type =
+    match rev_type with
+    | Selected _ ->
+      Vars.reset_selection ()
+    | Active _ ->
+      if Vars.get_selected_revs () |> List.length > 0 then Vars.reset_selection ()
+    | _ ->
+      ()
   ;;
 
   let render_command_line ~indent_level key desc =
@@ -189,10 +200,11 @@ module Intern (Vars : Global_vars.Vars) = struct
       ui_state.show_popup $= None;
       noOut (args @ [ "-r"; Vars.get_hovered_rev () ]);
       raise Handled
-    | Cmd_ rev_type ->
+    | Cmd_with_revs rev_type ->
       let args, revs = get_revs rev_type in
       ui_state.show_popup $= None;
       noOut (args @ ("-r" :: revs));
+      reset_selection_post_cmd rev_type;
       raise Handled
     | Prompt (str, args) ->
       ui_state.show_popup $= None;
@@ -200,7 +212,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       raise Handled
     | Prompt_r (str, args) ->
       ui_state.show_popup $= None;
-      prompt str (`Cmd (args @ [ "-r"; Vars.get_hovered_rev() ]));
+      prompt str (`Cmd (args @ [ "-r"; Vars.get_hovered_rev () ]));
       raise Handled
     | PromptThen (label, next) ->
       ui_state.show_popup $= None;

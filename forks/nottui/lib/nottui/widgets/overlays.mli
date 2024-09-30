@@ -75,5 +75,7 @@ val selection_list_prompt_filterable :
 
   (**This is a simple popup that can show ontop of other ui elements *)
 val popup :
+  ?focus:Nottui_main.Focus.handle ->
+  ?on_key:(Nottui_main.Ui.key->Nottui_main.Ui.may_handle)->
   show_popup_var:(Nottui_main.ui Lwd.t * string) option Lwd.var ->
   Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t

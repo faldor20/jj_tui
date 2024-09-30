@@ -16,6 +16,7 @@ type 'a maybe_multi_selectable =
 (** multi_selectable exclusions *)
 val multi_selection_list_exclusions
   :  ?focus:Nottui_main.Focus.handle
+  -> ?reset_selections:'s Signal.t
   -> ?on_selection_change:(hovered:'a -> selected:'a list -> unit)
   -> custom_handler:
        (selected:'a MyMap.t
@@ -56,6 +57,7 @@ val selectable_item_lwd
     Only handles up and down keyboard events. Use [~custom_handler] to do handle confirming your selection and such *)
 val multi_selection_list_custom
   :  ?focus:Nottui_main.Focus.handle
+  -> ?reset_selections:'s Signal.t
   -> ?on_selection_change:(hovered:'a -> selected:'a list -> unit)
   -> custom_handler:
        (selected:'a MyMap.t

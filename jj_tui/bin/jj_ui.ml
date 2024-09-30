@@ -141,9 +141,12 @@ module Make (Vars : Global_vars.Vars) = struct
     |> W.Overlay.selection_list_prompt_filterable
          ~show_prompt_var:ui_state.show_string_selection_prompt
     |> inputs ~custom:(function
+
       | `Enter, [] ->
         Focus.request_reversable summary_focus;
         `Handled
+      | `ASCII k, [] ->
+        Jj_commands.handleInputs Jj_commands.default_list k
       | _ ->
         `Unhandled)
   ;;

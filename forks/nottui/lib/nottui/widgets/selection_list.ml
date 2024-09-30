@@ -60,6 +60,7 @@ let get_selectable_items (items : 'a maybe_multi_selectable array Lwd.t) =
 
 let multi_selection_list_exclusions
   ?(focus = Focus.make ())
+  ?reset_selections
   ?(on_selection_change = fun ~hovered ~selected -> ())
   ~custom_handler
   (items : 'a maybe_multi_selectable array Lwd.t)
@@ -72,6 +73,10 @@ let multi_selection_list_exclusions
      4. offset by the scroll amount, apply size sensors and output final ui
   *)
   let selected_items_var = Lwd.var MyMap.empty in
+  (*provides a way to set this from the outside*)
+  reset_selections
+  |> Option.iter (Signal.sub (fun x -> selected_items_var $= MyMap.empty));
+  (*Lets external functions to reset the selection*)
   (*hovered var is a tuple of (id, overall_idx,selection_idx)*)
   (*we set it up this way so we can avoid double rendering. We sometimes wish to change the value of the hover var during rendering and that would not update till the next  render and cause a re-render*)
   let hovered_var = ref (0, 0, 0) in
@@ -132,7 +137,7 @@ let multi_selection_list_exclusions
         on_selection_change
           ~hovered:item.data
           ~selected:
-            (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_,a) -> a));
+            (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_, a) -> a));
         items, selectable_items)
       else items, selectable_items
     and$ _ = Lwd.get hover_changed
@@ -167,7 +172,7 @@ let multi_selection_list_exclusions
           on_selection_change
             ~hovered:(selectable_items.(hovered_idx) |> snd).data
             ~selected:
-              (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_,a) -> a));
+              (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_, a) -> a));
           `Handled
         | `Arrow `Down, [] ->
           let hovered_idx =
@@ -181,12 +186,12 @@ let multi_selection_list_exclusions
           on_selection_change
             ~hovered:(selectable_items.(hovered_idx) |> snd).data
             ~selected:
-              (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_,a) -> a));
+              (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_, a) -> a));
           `Handled
         | `ASCII ' ', [] ->
           let hovered_id, _, hovered_idx = !hovered_var in
-          let data=
-(selectable_items.(hovered_idx) |> snd).data in           let selected = Lwd.peek selected_items_var in
+          let data = (selectable_items.(hovered_idx) |> snd).data in
+          let selected = Lwd.peek selected_items_var in
           if selected |> MyMap.mem hovered_id
           then Lwd.set selected_items_var (MyMap.remove hovered_id selected)
           else Lwd.set selected_items_var (MyMap.add hovered_id data selected);
@@ -194,7 +199,10 @@ let multi_selection_list_exclusions
           on_selection_change
             ~hovered:data
             ~selected:
-              (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_,a)-> a));
+              (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_, a) -> a));
+          `Handled
+        | `Escape, [] ->
+          Lwd.set selected_items_var MyMap.empty;
           `Handled
         | a -> custom_handler ~selected:(Lwd.peek selected_items_var) ~selectable_items a)
   in
@@ -382,12 +390,14 @@ let selectable_item_lwd ui ~selected ~hovered =
 
 let multi_selection_list_custom
   ?(focus = Focus.make ())
+  ?reset_selections
   ?(on_selection_change = fun ~hovered ~selected -> ())
   ~custom_handler
   (items : 'a multi_selectable_item list Lwd.t)
   =
   multi_selection_list_exclusions
     ~focus
+    ?reset_selections
     ~on_selection_change
     ~custom_handler
     (items
@@ -395,6 +405,7 @@ let multi_selection_list_custom
      let selectable_items = Array.make (List.length items) (Obj.magic ()) in
      items |> List.iteri (fun i x -> Array.set selectable_items i (Selectable x));
      selectable_items)
+;;
 
 let selection_list_custom
   ?(focus = Focus.make ())

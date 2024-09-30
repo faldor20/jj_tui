@@ -130,15 +130,18 @@
                 version = "0.5.0";
                 duneVersion = "3";
                 src = picos_src;
-                buildInputs = with ocamlPackages;picos_io.buildInputs ++[
-                  picos
-                  picos_aux
-                  picos_std
-                  picos_io
-                  backoff
-                  multicore-magic
-                  thread-local-storage
-                ];
+                buildInputs =
+                  with ocamlPackages;
+                  picos_io.buildInputs
+                  ++ [
+                    picos
+                    picos_aux
+                    picos_std
+                    picos_io
+                    backoff
+                    multicore-magic
+                    thread-local-storage
+                  ];
 
                 strictDeps = true;
               };
@@ -168,7 +171,25 @@
                 ];
 
                 strictDeps = true;
+
               };
+
+              signal = ocamlPackages.buildDunePackage {
+                pname = "signal";
+                version = "0.4.2";
+                duneVersion = "3";
+                src = pkgs.fetchFromGitHub {
+                  owner = "rizo";
+                  repo = "signal";
+                  rev = "704fefe7cd7b59e234a51bb470c7a3254468b5a8";
+                  sha256 = "sha256-AcphzD/4rrWnsVB5ebXzdthQ1Rrw3xXkv4n5ZHosoz0=";
+                };
+                buildInputs = with ocamlPackages; [
+
+                ];
+                strictDeps = true;
+              };
+
               lwd = ocamlPackages.buildDunePackage {
                 pname = "lwd";
                 version = "0.1.0";
@@ -195,6 +216,7 @@
                   duneVersion = "3";
                   src = ./forks/nottui/.;
                   buildInputs = with ocamlPackages; [
+                  signal
                     lwd
                     notty-mine
                     seq
@@ -218,6 +240,7 @@
 
                   strictDeps = true;
                 };
+
               jj_tui_build_pkgs =
 
                 picos.buildInputs
@@ -234,6 +257,8 @@
                   picos_mux_with_io
 
                   picos_aux
+
+                  signal
 
                   ocamlPackages.logs
                   ocamlPackages.logs-ppx

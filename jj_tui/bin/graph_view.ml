@@ -41,11 +41,11 @@ module Make (Vars : Global_vars.Vars) = struct
     ; {
         key = 'N'
       ; description = "Make a new change and insert it after the selected rev"
-      ; cmd = Dynamic_r (fun rev -> Cmd [ "new"; "--insert-after"; rev ])
+      ; cmd = Cmd_with_revs (Active [ "new"; "--insert-after"])
       }
     ; {
         key = 'n'
-      ; cmd = Dynamic_r (fun rev -> Cmd [ "new"; rev ])
+      ; cmd =  Cmd_with_revs (Active [ "new" ])
       ; description = "Make a new empty change as a child of the selected rev"
       }
     ; {
@@ -425,6 +425,7 @@ module Make (Vars : Global_vars.Vars) = struct
     let list_ui =
       items
       |> W.Lists.multi_selection_list_exclusions
+          ~reset_selections:Vars.ui_state.reset_selection
            ~on_selection_change:(fun ~hovered ~selected ->
              (*Respond to change in selected revision*)
              Lwd.set Vars.ui_state.hovered_revision hovered;

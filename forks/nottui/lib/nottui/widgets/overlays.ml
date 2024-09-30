@@ -219,14 +219,22 @@ let selection_list_prompt_filterable
   prompt_internal ?pad_w ?pad_h ~focus ~show_prompt:prompt_args ui
 ;;
 
-let popup ~show_popup_var ui =
+let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
   let popup_ui =
     let$* show_popup = Lwd.get show_popup_var in
     match show_popup with
     | Some (content, label) ->
-      let prompt_field = content in
-      prompt_field |>$ Ui.resize ~w:5 ~sw:1 |> BB.box ~label_top:label |> clear_bg
-    | None -> Ui.empty |> Lwd.pure
+      let ui =
+        let$ status = Focus.status focus
+        and$ prompt_field = content in
+        if not (Focus.has_focus status) then Focus.request_reversable focus;
+        prompt_field |> Ui.resize ~w:5 ~sw:1
+      in
+      ui |> BB.focusable ~focus ~label_top:label ?on_key |> clear_bg
+    | None ->
+        let$ status = Focus.status focus in
+        if Focus.has_focus status then Focus.release_reversable focus;
+      Ui.empty 
   in
   W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
 ;;

@@ -93,7 +93,7 @@ module Make (Vars : Global_vars.Vars) = struct
             (fun rev ->
               let selected = Lwd.peek active_files in
               confirm_prompt
-                ("discard all changes to '" ^ (selected|>String.concat "\n") ^ "' in rev " ^ rev)
+                ("discard all changes to:\n" ^ (selected|>String.concat "\n") ^ "\nin rev " ^ rev)
                 (Cmd (["restore"; "--to"; rev; "--from"; rev ^ "-"] @selected)))
       }
     ]
@@ -119,6 +119,7 @@ module Make (Vars : Global_vars.Vars) = struct
     *)
     file_uis|>
     W.Lists.multi_selection_list_custom
+      ~reset_selections:Vars.ui_state.reset_selection
       ~on_selection_change:(fun ~hovered ~selected ->
       let active=
         if selected|>List.length =0 then [hovered] else selected
