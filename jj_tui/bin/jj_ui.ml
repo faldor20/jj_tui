@@ -46,6 +46,10 @@ module Make (Vars : Global_vars.Vars) = struct
        match custom event with
        | `Unhandled ->
          (match event with
+          | `Arrow (`Left), _ ->
+            `Remap (`Focus `Up,[])
+          | `Arrow (`Right), _ ->
+            `Remap (`Focus `Down,[])
           | `ASCII 'q', _ ->
             Vars.quit $= true;
             `Handled
@@ -110,7 +114,7 @@ module Make (Vars : Global_vars.Vars) = struct
           ; Graph_view.graph_view ()
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
             |> W.Box.focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
-          ; W.Scroll.area (ui_state.jj_branches $-> Ui.atom)
+          ; W.Scroll.v_area (ui_state.jj_branches $-> Ui.atom)
             |> W.is_focused ~focus:branch_focus (fun ui focused ->
               ui
               |> Ui.keyboard_area (function
