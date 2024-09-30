@@ -142,7 +142,8 @@ let multi_selection_list_exclusions
       else items, selectable_items
     and$ _ = Lwd.get hover_changed
     and$ selected_items = Lwd.get selected_items_var in
-    let _, _, hovered = !hovered_var in
+    (* FIXME: can i just get rid of all the other parts of the hovered var now that we store the id?*)
+    let hovered_id, _, _= !hovered_var in
     (*==== Rendering The list ====*)
     (* Ui.vcat can be a little weird when the *)
     if items |> Array.length = 0
@@ -153,7 +154,7 @@ let multi_selection_list_exclusions
         match x with
         | Filler ui -> ui
         | Selectable x ->
-          let hovered = hovered == i in
+          let hovered = hovered_id == x.id in
           let selected = selected_items |> MyMap.mem x.id in
           if hovered
           then
