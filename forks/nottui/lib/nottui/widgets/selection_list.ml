@@ -115,14 +115,14 @@ let multi_selection_list_exclusions
                | `Found _ -> nCount, acc
                | `Same_idx _ ->
                  if item.id = hovered_id
-                 then nCount, `Found (hovered_id, idx, count)
+                 then nCount, `Found (item.id, idx, count)
                  else nCount, acc
                | `Searching _ ->
                  if item.id = hovered_id
-                 then nCount, `Found (hovered_id, idx, count)
+                 then nCount, `Found (item.id, idx, count)
                  else if count == hovered_selection_idx
-                 then nCount, `Same_idx (hovered_id, idx, count)
-                 else nCount, `Searching (hovered_id, idx, count))
+                 then nCount, `Same_idx (item.id, idx, count)
+                 else nCount, `Searching (item.id, idx, count))
              (0, `Searching (0, 0, 0))
         |> snd
         |> function
