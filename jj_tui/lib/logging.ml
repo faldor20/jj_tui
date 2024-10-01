@@ -106,35 +106,35 @@ module Internal = struct
 
   (*tries to get the logging dir for macos and linux*)
   let get_log_dir () =
-    let os = poll_os () in
-    let state_home =
-      try
-        match os with
-        | Some "linux" ->
-          Some (Unix.getenv "XDG_STATE_HOME")
-        | Some "macos" ->
-          Some "~/Library/Logs"
-        | Some "windows" ->
-          Some "~/AppData/Local"
+    try
+      let os = poll_os () in
+      let state_home =
+        try
+          match os with
+          | Some "linux" ->
+            Sys.getenv_opt "XDG_STATE_HOME"
+          | Some "macos" ->
+            let pwd = Unix.getpwuid (Unix.getuid ()) in
+            Some (pwd.pw_dir ^ "/Library/Logs")
+          | _ ->
+            None
+        with
         | _ ->
           None
-      with
-      | _ ->
-        None
-    in
-    let state_home =
-      Option.bind state_home (fun x -> if Sys.is_directory x then Some x else None)
-    in
-    match state_home with
-    | None ->
-      (try
-         Unix.mkdir "~/.jj_tui" 0o755;
-         Some "~/.jj_tui"
-       with
-       | Unix.Unix_error (Unix.EEXIST, _, _) ->
-         None)
-    | a ->
-      a
+      in
+      let state_home =
+        Option.bind state_home (fun x ->
+          if Sys.file_exists x && Sys.is_directory x then Some x else None)
+      in
+      match state_home with
+      | None ->
+        Unix.mkdir "~/.jj_tui" 0o755;
+        Some "~/.jj_tui"
+      | a ->
+        a
+    with
+    |_->
+      None
   ;;
 
   let init_logging () =
@@ -179,6 +179,8 @@ module Internal = struct
       cleanup_logs ();
       [%log debug "Old logs cleaned up"]
     | None ->
+      (*just no logging if we can't find a log file*)
+      (*TODO: log to stderr *)
       ()
   ;;
 end
