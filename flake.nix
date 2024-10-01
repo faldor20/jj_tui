@@ -188,7 +188,8 @@
                   duneVersion = "3";
                   src = ./forks/nottui/.;
                   buildInputs = with ocamlPackages; [
-                  signal
+                    logs
+                    signal
                     lwd
                     notty-mine
                     seq

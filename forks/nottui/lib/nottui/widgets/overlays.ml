@@ -225,16 +225,14 @@ let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let ui =
-        let$ status = Focus.status focus
-        and$ prompt_field = content in
-        if not (Focus.has_focus status) then Focus.request_reversable focus;
+        let$ prompt_field = content in
+        Focus.request_reversable focus;
         prompt_field |> Ui.resize ~w:5 ~sw:1
       in
       ui |> BB.focusable ~focus ~label_top:label ?on_key |> clear_bg
     | None ->
-        let$ status = Focus.status focus in
-        if Focus.has_focus status then Focus.release_reversable focus;
-      Ui.empty 
+      Focus.release_reversable focus;
+      Ui.empty |> Lwd.pure
   in
   W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
 ;;

@@ -31,6 +31,8 @@
    (= :version))
   (notty
    (>= 0.2))
+  (logs
+   (>= 0.7.0))
   (cbor :with-test) ; for the examples
   (containers :with-test)))
 

@@ -1,5 +1,6 @@
 open Notty
 open Lwd_utils
+module Log = (val Logs.src_log (Logs.Src.create "nottui"))
 
 module Focus : sig
   type var = int Lwd.var
@@ -29,6 +30,8 @@ module Focus : sig
   val has_focus : status -> bool
   val merge : status -> status -> status
 end = struct
+  let () = ()
+
   (*The focus system works by having a clock which changes each time the focus changes. An item has focus so long as its `var` is greater than 0
     When we render the UI we go through and set anything with a focus value not matching that of the clock to 0 *)
 
@@ -57,7 +60,7 @@ end = struct
   let peek_has_focus (h : handle) : bool = fst h |> Lwd.peek > 0
   let clock = ref 0
   let currently_focused : var ref = ref (make () |> fst)
-  let focus_stack : var Stack.t = Stack.create ()
+  let focus_stack : var list ref = ref []
 
   let request_var (v : var) =
     incr clock;
@@ -72,14 +75,46 @@ end = struct
     Lwd.set v 0
   ;;
 
+  let var_equal a b = Lwd.peek a = Lwd.peek b
+
   let request_reversable ((v, _) : handle) =
-    focus_stack |> Stack.push !currently_focused;
-    request_var v
+    Log.debug (fun m -> m "Maybe requesting revesable focus %d" (Lwd.peek v));
+    if not @@ var_equal !currently_focused v
+    then (
+      focus_stack := !currently_focused :: !focus_stack;
+      request_var v;
+      Log.debug (fun m -> m "Requested reversable focus %d" (Lwd.peek v)))
   ;;
 
   let release_reversable ((v, _) : handle) =
+        Log.debug (fun m -> m "Maybe release or remove %d from reversable focus stack" (Lwd.peek v));
     (* we should only release if we actually have the focus*)
-    if Lwd.peek v > 0 then focus_stack |> Stack.pop_opt |> Option.iter request_var
+    if var_equal !currently_focused v
+    then (
+      (*just load the last item in the stack *)
+      match !focus_stack with
+      | hd :: tl ->
+        request_var hd;
+        Log.debug (fun m -> m "Released reversable focus %d in echange form %d" (Lwd.peek v) (Lwd.peek v));
+        focus_stack := tl
+      | _ -> ())
+    else (
+      (*we might be in the stack and we should be removed*)
+      let rec loop start stack =
+        match stack with
+        | hd :: tl ->
+          if hd == v
+          then (
+            (* we find an instance of the handle we are trying to release in our focus stack
+            *)
+            (*request focus for the next item in the stack if it's at the head*)
+            (*update the stack with the new focus*)
+            Log.debug (fun m -> m "Removed %d from reversable focus stack" (Lwd.peek v));
+            focus_stack := List.rev start @ tl)
+          else loop (hd :: start) tl
+        | _ -> ()
+      in
+      loop [] !focus_stack)
   ;;
 
   let merge s1 s2 : status =

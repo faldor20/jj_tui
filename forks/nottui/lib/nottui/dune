@@ -4,5 +4,5 @@
  (name nottui)
  (public_name nottui)
  (wrapped true)
- (libraries lwd notty notty.unix signal)
+ (libraries lwd notty notty.unix signal logs)
  )

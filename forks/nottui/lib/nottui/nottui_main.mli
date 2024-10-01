@@ -48,7 +48,9 @@ module Focus : sig
         "more". *)
 
   (** Request the focus and add to the focus stack. 
-  WARNING: The focus stack is global, if you render multiple nottui ui's you may not want to use this *)
+  WARNING: The focus stack is global, if you render multiple nottui ui's you may not want to use this 
+  NOTE: Calling this twice has the same result as calling it once. Trying to focus the currently focused item will not add to the stack*)
+
   val request_reversable : handle -> unit
 
   (** Release the focus (if the handle has it) and restore the last focus on the stack *)
