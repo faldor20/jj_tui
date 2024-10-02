@@ -112,6 +112,7 @@ module Intern (Vars : Global_vars.Vars) = struct
            | PromptThen _
            | Dynamic _
            | Selection_prompt _
+           | Cmd_with_revs _
            | Cmd_r _
            | Prompt_r _
            | Dynamic_r _ )

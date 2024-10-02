@@ -15,7 +15,6 @@ open Jj_tui.Logging
 *)
 
 let ui_loop ~quit ~term root =
-  print_endline "starting loop";
   let renderer = Nottui.Renderer.make () in
   let root =
     let$ root = root in
