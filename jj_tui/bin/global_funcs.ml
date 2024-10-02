@@ -48,10 +48,10 @@ let update_views ?(cause_snapshot = false) () =
     (* TODO: stop using dop last twice *)
     Show_view.reRender ();
     let files_list = Flock.fork_as_promise (fun _ -> list_files ~rev ()) in
+    Vars.ui_state.jj_branches $= branches;
     (*wait for all our tasks*)
     let files_list = Promise.await files_list in
     (*now we can assign our results*)
     (* Vars.ui_state.jj_show $= log_res; *)
-    Vars.ui_state.jj_branches $= branches;
     Vars.ui_state.jj_change_files $= files_list)
 ;;
