@@ -53,6 +53,27 @@ jobs:
         with:
           name: jj_tui_macos
           path: jj_tui_macos-aarch64.tar.gz
+          
+  macos-x86:
+    strategy:
+      fail-fast: false
+    runs-on: macos-13
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
+        with:
+          fetch-depth: 0
+      - uses: DeterminateSystems/nix-installer-action@8cdf194da984e4f12b2f8c36d1fa107c1dd67f5c
+      - uses: DeterminateSystems/magic-nix-cache-action@87e8236f46702ab0ce5a058b605a173ec88d618e
+      - run: nix build
+      - name: Create tar.gz
+        run: tar -czvf jj_tui_macos-x86_64.tar.gz -C result/bin jj_tui
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jj_tui_macos
+          path: jj_tui_macos-x86_64.tar.gz
 
   release:
     permissions:
