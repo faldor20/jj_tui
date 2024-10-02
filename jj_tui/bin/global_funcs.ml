@@ -46,7 +46,7 @@ let update_views ?(cause_snapshot = false) () =
     (* From now on we use ignore-working-copy so we don't re-snapshot the state and so
        we can operate in paralell *)
     (* TODO: stop using dop last twice *)
-    Show_view.reRender ();
+    Show_view.re_render ();
     let files_list = Flock.fork_as_promise (fun _ -> list_files ~rev ()) in
     Vars.ui_state.jj_branches $= branches;
     (*wait for all our tasks*)

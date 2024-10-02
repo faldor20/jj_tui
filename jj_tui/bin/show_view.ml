@@ -12,7 +12,7 @@ let lastMessage = None
 let pushStatus status = Stream.push statusStream status
 
 (** pushes the last message to the queue again to re-render everything *)
-let reRender () = lastMessage |> Option.iter pushStatus
+let re_render () = lastMessage |> Option.iter pushStatus
 
 module Make (Vars : Global_vars.Vars) = struct
   open Lwd_infix

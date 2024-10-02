@@ -1,18 +1,21 @@
 (** A version of the logging module that adds timestamps to the logs *)
 
+let time_to_string tm =
+  let ms = (tm |> Float.modf |> fst) *. 1000. |> Float.to_int in
+  let tm = tm |> Unix.localtime in
+  Printf.sprintf
+    "%04d-%02d-%02d %02d:%02d:%02d.%03d"
+    (tm.Unix.tm_year + 1900)
+    (tm.Unix.tm_mon + 1)
+    tm.Unix.tm_mday
+    tm.Unix.tm_hour
+    tm.Unix.tm_min
+    tm.Unix.tm_sec
+    ms
+;;
+
 module Log = struct
   let timestamp_tag =
-    let now () = Unix.gettimeofday () |> Unix.localtime in
-    let time_to_string tm =
-      Printf.sprintf
-        "%04d-%02d-%02d %02d:%02d:%02d"
-        (tm.Unix.tm_year + 1900)
-        (tm.Unix.tm_mon + 1)
-        tm.Unix.tm_mday
-        tm.Unix.tm_hour
-        tm.Unix.tm_min
-        tm.Unix.tm_sec
-    in
     Logs.Tag.def "timestamp" ~doc:"Timestamp" (fun fmt tm ->
       time_to_string tm |> Format.pp_print_string fmt)
   ;;
@@ -20,8 +23,8 @@ module Log = struct
   let timestamp_wrap fn : ('a, 'b) Logs.msgf =
     fun m ->
     fn (fun ?header ?(tags = Logs.Tag.empty) fmt ->
-      let timestamp = Unix.gettimeofday () |> Unix.localtime in
-      let tags = Logs.Tag.add timestamp_tag timestamp Logs.Tag.empty in
+      let timestamp = Unix.gettimeofday () in
+      let tags = Logs.Tag.add timestamp_tag timestamp tags in
       m ?header ~tags fmt)
   ;;
 
@@ -64,6 +67,7 @@ module Internal = struct
 
   (** Removes old log files, keeping only the 20 most recent *)
   let cleanup_logs log_path =
+    [%log debug "cleaning up logs at %s" log_path];
     let log_files =
       Sys.readdir log_path
       |> Array.to_list
@@ -77,7 +81,8 @@ module Internal = struct
           if i >= 20
           then (
             let file_path = Filename.concat log_path file in
-            Unix.unlink file_path))
+            Unix.unlink file_path;
+            [%log debug "deleted log file:%s" file_path]))
         log_files
   ;;
 
@@ -140,13 +145,11 @@ module Internal = struct
       (*just no logging if we can't find a log file*)
       (*TODO: log to stderr *)
       match get_log_dir () with
-      | Some log_dir ->
+      | Some state_dir ->
+        let log_dir = Filename.concat state_dir "jj_tui" in
         (*creates or opens the log file*)
         let get_log_file_channel () =
-          let jj_tui_dir = Filename.concat log_dir "jj_tui" in
-          (try Unix.mkdir jj_tui_dir 0o755 with
-           | Unix.Unix_error (Unix.EEXIST, _, _) ->
-             ());
+          (try Unix.mkdir log_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
           let timestamp = Unix.time () |> Unix.localtime in
           let timestamp_str =
             Printf.sprintf
@@ -159,7 +162,7 @@ module Internal = struct
               timestamp.tm_sec
           in
           let log_file =
-            Filename.concat jj_tui_dir (Printf.sprintf "log_%s.log" timestamp_str)
+            Filename.concat log_dir (Printf.sprintf "log_%s.log" timestamp_str)
           in
           let log_channel = open_out_gen [ Open_append; Open_creat ] 0o644 log_file in
           log_channel

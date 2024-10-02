@@ -430,7 +430,10 @@ module Make (Vars : Global_vars.Vars) = struct
              (*Respond to change in selected revision*)
              Lwd.set Vars.ui_state.hovered_revision hovered;
              Lwd.set Vars.ui_state.selected_revisions selected;
+             (*If the files are focused we shouldn't send this*)
+             if Show_view.lastMessage
              Show_view.(pushStatus (Graph_preview (Vars.get_hovered_rev ())));
+
              [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
              Picos_std_structured.Flock.fork (fun () -> Global_funcs.update_views ()))
            ~custom_handler:(fun ~selected ~selectable_items key -> handleKeys key)
