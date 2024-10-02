@@ -21,7 +21,7 @@ If you are on mac, also grab a prebuild, let me know if you have any issues as I
 
 To open a shell with jj_tui on nix:`nix shell github:faldor20/jj_tui`
 
-To install without nix:
+To install without nix: **This is definitely broken right now. Please just use nix 🙏**
 1. Install opam with your package manager
 2. clone the repo
 3. Run: `opam install .`
