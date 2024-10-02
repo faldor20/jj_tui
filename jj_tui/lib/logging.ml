@@ -63,11 +63,9 @@ module Internal = struct
   ;;
 
   (** Removes old log files, keeping only the 20 most recent *)
-  let cleanup_logs () =
-    let state_home = Unix.getenv "XDG_STATE_HOME" in
-    let jj_tui_dir = Filename.concat state_home "jj_tui" in
+  let cleanup_logs log_path =
     let log_files =
-      Sys.readdir jj_tui_dir
+      Sys.readdir log_path
       |> Array.to_list
       |> List.filter (fun file -> Filename.check_suffix file ".log")
       |> List.sort (fun a b -> String.compare b a)
@@ -78,7 +76,7 @@ module Internal = struct
         (fun i file ->
           if i >= 20
           then (
-            let file_path = Filename.concat jj_tui_dir file in
+            let file_path = Filename.concat log_path file in
             Unix.unlink file_path))
         log_files
   ;;
@@ -133,55 +131,59 @@ module Internal = struct
       | a ->
         a
     with
-    |_->
+    | _ ->
       None
   ;;
 
   let init_logging () =
-    (*creates or opens the log file*)
-    let get_log_file_channel () =
-      get_log_dir ()
-      |> Option.map @@ fun state_home ->
-         let jj_tui_dir = Filename.concat state_home "jj_tui" in
-         (try Unix.mkdir jj_tui_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
-         let timestamp = Unix.time () |> Unix.localtime in
-         let timestamp_str =
-           Printf.sprintf
-             "%04d%02d%02d_%02d%02d%02d"
-             (timestamp.tm_year + 1900)
-             (timestamp.tm_mon + 1)
-             timestamp.tm_mday
-             timestamp.tm_hour
-             timestamp.tm_min
-             timestamp.tm_sec
-         in
-         let log_file =
-           Filename.concat jj_tui_dir (Printf.sprintf "log_%s.log" timestamp_str)
-         in
-         let log_channel = open_out_gen [ Open_append; Open_creat ] 0o644 log_file in
-         log_channel
-    in
-    (* log our logs into the log file*)
-    let log_chan = get_log_file_channel () in
-    match log_chan with
-    | Some log_chan ->
-      (*Make a mutex for logging to prevent concurrency and threading issues *)
-      let logging_mutex = Picos_std_sync.Mutex.create () in
-      Logs.set_reporter_mutex
-        ~lock:(fun () -> Picos_std_sync.Mutex.lock logging_mutex)
-        ~unlock:(fun () -> Picos_std_sync.Mutex.unlock logging_mutex);
-      let log_formatter = Format.formatter_of_out_channel log_chan in
-      let reporter = reporter log_formatter in
-      Logs.set_level (Some Debug);
-      Logs.set_reporter reporter;
-      (*make sure everything is working*)
-      [%log info "Logging initialized"];
-      cleanup_logs ();
-      [%log debug "Old logs cleaned up"]
-    | None ->
+    try
       (*just no logging if we can't find a log file*)
       (*TODO: log to stderr *)
-      ()
+      match get_log_dir () with
+      | Some log_dir ->
+        (*creates or opens the log file*)
+        let get_log_file_channel () =
+          let jj_tui_dir = Filename.concat log_dir "jj_tui" in
+          (try Unix.mkdir jj_tui_dir 0o755 with
+           | Unix.Unix_error (Unix.EEXIST, _, _) ->
+             ());
+          let timestamp = Unix.time () |> Unix.localtime in
+          let timestamp_str =
+            Printf.sprintf
+              "%04d%02d%02d_%02d%02d%02d"
+              (timestamp.tm_year + 1900)
+              (timestamp.tm_mon + 1)
+              timestamp.tm_mday
+              timestamp.tm_hour
+              timestamp.tm_min
+              timestamp.tm_sec
+          in
+          let log_file =
+            Filename.concat jj_tui_dir (Printf.sprintf "log_%s.log" timestamp_str)
+          in
+          let log_channel = open_out_gen [ Open_append; Open_creat ] 0o644 log_file in
+          log_channel
+        in
+        (* log our logs into the log file*)
+        let log_chan = get_log_file_channel () in
+        (*Make a mutex for logging to prevent concurrency and threading issues *)
+        let logging_mutex = Picos_std_sync.Mutex.create () in
+        Logs.set_reporter_mutex
+          ~lock:(fun () -> Picos_std_sync.Mutex.lock logging_mutex)
+          ~unlock:(fun () -> Picos_std_sync.Mutex.unlock logging_mutex);
+        let log_formatter = Format.formatter_of_out_channel log_chan in
+        let reporter = reporter log_formatter in
+        Logs.set_level (Some Debug);
+        Logs.set_reporter reporter;
+        (*make sure everything is working*)
+        [%log info "Logging initialized"];
+        cleanup_logs log_dir;
+        [%log debug "Old logs cleaned up"]
+      | None ->
+        Printf.eprintf "Logging couldn't be initialized"
+    with
+    | e ->
+      Printf.eprintf "Logging couldn't be initialized. Exn: %s" (Printexc.to_string e)
   ;;
 end
 
