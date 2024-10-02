@@ -30,7 +30,7 @@ let ui_loop ~quit ~term root =
   let rec loop () =
     if not (Lwd.peek quit)
     then (
-      let start_time = Sys.time () in
+      let start_time = Unix.gettimeofday() in
       let term_width, term_height = Notty_unix.Term.size (Vars.get_term ()) in
       let prev_term_width, prev_term_height = Lwd.peek Vars.term_width_height in
       if term_width <> prev_term_width || term_height <> prev_term_height
@@ -44,7 +44,7 @@ let ui_loop ~quit ~term root =
       (*Sleep for a bit to stop spinning the cpu
         TODO: May not be needed, nottui may sleep for a bit anyway
       *)
-      let end_time = Sys.time () in
+      let end_time = Unix.gettimeofday () in
       let elapsed = end_time -. start_time in
       let sleep_time = max 0.01 (0.01 -. elapsed) in
       Picos_io.Unix.sleepf sleep_time;

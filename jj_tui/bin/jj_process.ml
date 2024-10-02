@@ -143,7 +143,15 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
   let cmdArgs cmd args =
+    let start_time = Unix.gettimeofday () in
     let code, status, out_content, err_content = picos_process cmd args in
+    let end_time = Unix.gettimeofday () in
+    [%log
+      debug
+        "Executing '%s %s' took: %fms "
+        cmd
+        (args |> String.concat " ")
+        ((end_time -. start_time) *. 1000.)];
     let exit_code =
       match status with
       | Unix.WEXITED code ->

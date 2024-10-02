@@ -171,7 +171,7 @@ module Make (Vars : Global_vars.Vars) = struct
     (*we want to initialize our states and keep them up to date*)
     match check_startup () with
     | `Good ->
-      update_status ~cause_snapshot:true ();
+      (* update_status ~cause_snapshot:true (); *)
       Flock.fork (fun () ->
         while true do
           Picos.Fiber.sleep ~seconds:5.0;

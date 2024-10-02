@@ -14,7 +14,7 @@ let list_files ?(rev = "@") () =
 ;;
 
 let check_startup () =
-  match jj_no_log_errorable ~color:false [ "log"; "''" ] with
+  match jj_no_log_errorable ~color:false ~snapshot:false [  "op";"log"; "-l";"0" ] with
   | Ok _ ->
     `Good
   | Error (`BadExit (i, str)) ->

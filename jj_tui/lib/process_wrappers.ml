@@ -6,6 +6,7 @@ open Lwd_infix
 open! Util
 open Process
 open Logging
+open Picos_std_structured
 
 exception FoundStart
 exception FoundFiller
@@ -211,12 +212,14 @@ struct
 
   (** returns the graph and a list of revs within that graph*)
   let graph_and_revs ?revset () =
-    let selectable_count, graph =
+    let graph =
+      Flock.fork_as_promise @@ fun () ->
       let revset_arg = match revset with Some revset -> [ "-r"; revset ] | None -> [] in
       let output = jj_no_log ([ "log" ] @ revset_arg) in
       output |> find_selectable_from_graph
-    in
-    let revs = get_revs ?revset () in
+    and revs = Flock.fork_as_promise @@ fun () -> get_revs ?revset () in
+    let selectable_count, graph = Promise.await graph
+    and revs = Promise.await revs in
     (*The graph should never have selectable items that don't also have a rev*)
 
     (* TODO: remove this becasue it's just for debugging*)
