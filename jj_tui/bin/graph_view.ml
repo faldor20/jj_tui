@@ -351,7 +351,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (*TODO:make a custom widget the renders the commit with and without selection.
     with selection replace the dot with a blue version and slightly blue tint the background *)
-  let graph_view () =
+  let graph_view ~focus () =
     (*We have a seperate error var here instead of using a result type. This allows us to avoid using Lwd.bind which would cause our list selection to get reset anytime the content changes *)
     let error_var = Lwd.var None in
     let revset_ui =
@@ -431,8 +431,8 @@ module Make (Vars : Global_vars.Vars) = struct
              Lwd.set Vars.ui_state.hovered_revision hovered;
              Lwd.set Vars.ui_state.selected_revisions selected;
              (*If the files are focused we shouldn't send this*)
-             if Show_view.lastMessage
-             Show_view.(pushStatus (Graph_preview (Vars.get_hovered_rev ())));
+          if Focus.peek_has_focus focus then
+             Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ())));
 
              [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
              Picos_std_structured.Flock.fork (fun () -> Global_funcs.update_views ()))
@@ -440,6 +440,9 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     let final_ui =
       let$ list_ui = list_ui
+      and$ _= Focus.status focus|>$(fun focus->if Focus.has_focus focus then
+             Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ())));
+        )
       and$ error = Lwd.get error_var in
       match error with Some e -> e |> Ui.keyboard_area handleKeys | None -> list_ui
     in

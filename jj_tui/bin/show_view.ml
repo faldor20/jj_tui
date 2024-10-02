@@ -8,11 +8,13 @@ type status_state =
 [@@deriving show]
 
 let statusStream = Stream.create ()
-let lastMessage = None
-let pushStatus status = Stream.push statusStream status
+let lastMessage = ref None
+let push_status status = 
+  lastMessage:=Some status;
+  Stream.push statusStream status
 
 (** pushes the last message to the queue again to re-render everything *)
-let re_render () = lastMessage |> Option.iter pushStatus
+let re_render () = !lastMessage |> Option.iter push_status
 
 module Make (Vars : Global_vars.Vars) = struct
   open Lwd_infix

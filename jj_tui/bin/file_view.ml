@@ -10,7 +10,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open Jj_tui
   open Picos_std_structured
 
-  let active_files= Lwd.var [""]
+  let active_files = Lwd.var [ "" ]
 
   let rec command_mapping =
     [
@@ -33,17 +33,15 @@ module Make (Vars : Global_vars.Vars) = struct
             , fun rev ->
                 Cmd
                   ([
-                    "squash"
-                  ; "-u"
-                  ; "--keep-emptied"
-                  ; "--from"
-                  ; get_hovered_rev ()
-                  ; "--into"
-                  ; rev
-                  ]
-                  @
-                   (Lwd.peek active_files))
-                   )
+                     "squash"
+                   ; "-u"
+                   ; "--keep-emptied"
+                   ; "--from"
+                   ; get_hovered_rev ()
+                   ; "--into"
+                   ; rev
+                   ]
+                   @ Lwd.peek active_files) )
       }
     ; {
         key = 'N'
@@ -51,19 +49,9 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Dynamic_r
             (fun rev ->
-              Cmd (
-                [
-                  "squash"
-                ; "-u"
-                ; "--keep-emptied"
-                ; "--from"
-                ; rev
-                ; "--into"
-                ; rev ^ "+"
-                ]@
-                 Lwd.peek active_files
-                 )
-                )
+              Cmd
+                ([ "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "+" ]
+                 @ Lwd.peek active_files))
       }
     ; {
         key = 'P'
@@ -71,19 +59,9 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Dynamic_r
             (fun rev ->
-              Cmd(
-                [
-                  "squash"
-                ; "-u"
-                ; "--keep-emptied"
-                ; "--from"
-                ; rev
-                ; "--into"
-                ; rev ^ "-"
-                ]@
-                 Lwd.peek active_files
-                 )
-                )
+              Cmd
+                ([ "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "-" ]
+                 @ Lwd.peek active_files))
       }
     ; {
         key = 'd'
@@ -93,11 +71,16 @@ module Make (Vars : Global_vars.Vars) = struct
             (fun rev ->
               let selected = Lwd.peek active_files in
               confirm_prompt
-                ("discard all changes to:\n" ^ (selected|>String.concat "\n") ^ "\nin rev " ^ rev)
-                (Cmd (["restore"; "--to"; rev; "--from"; rev ^ "-"] @selected)))
+                ("discard all changes to:\n"
+                 ^ (selected |> String.concat "\n")
+                 ^ "\nin rev "
+                 ^ rev)
+                (Cmd ([ "restore"; "--to"; rev; "--from"; rev ^ "-" ] @ selected)))
       }
     ]
   ;;
+
+  let hovered_var = ref "./"
 
   let file_view focus =
     let file_uis =
@@ -117,17 +100,30 @@ module Make (Vars : Global_vars.Vars) = struct
       It will have a cancellation system just like this one.
       when any of the dependencies change, selected file, selected rev, focus etc, it will re-render if needed and cancel the current rendering.
     *)
-    file_uis|>
-    W.Lists.multi_selection_list_custom
-      ~reset_selections:Vars.ui_state.reset_selection
-      ~on_selection_change:(fun ~hovered ~selected ->
-      let active=
-        if selected|>List.length =0 then [hovered] else selected
-        in
-        Lwd.set active_files active;
-        if Focus.peek_has_focus focus
-        then Show_view.(pushStatus (File_preview (Vars.get_hovered_rev (), hovered))))
-      ~custom_handler:(fun ~selected:_ ~selectable_items:_ key ->
-        match key with `ASCII k, [] -> handleInputs command_mapping k | _ -> `Unhandled)
+    let ui =
+      file_uis
+      |> W.Lists.multi_selection_list_custom
+           ~reset_selections:Vars.ui_state.reset_selection
+           ~on_selection_change:(fun ~hovered ~selected ->
+             let active = if selected |> List.length = 0 then [ hovered ] else selected in
+             Lwd.set active_files active;
+             hovered_var := hovered;
+             if Focus.peek_has_focus focus
+             then
+               Show_view.(push_status (File_preview (Vars.get_hovered_rev (), hovered))))
+           ~custom_handler:(fun ~selected:_ ~selectable_items:_ key ->
+             match key with
+             | `ASCII k, [] ->
+               handleInputs command_mapping k
+             | _ ->
+               `Unhandled)
+    in
+    let$ ui = ui
+    and$ _ =
+      Focus.status focus |>$ fun focus ->
+      if Focus.has_focus focus
+      then Show_view.(push_status (File_preview (Vars.get_hovered_rev (), !hovered_var)))
+    in
+    ui
   ;;
 end
