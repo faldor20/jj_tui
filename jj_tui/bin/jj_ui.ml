@@ -37,7 +37,6 @@ module Make (Vars : Global_vars.Vars) = struct
     W.button (Printf.sprintf "quit ") (fun () -> Vars.quit $= true) |> Lwd.pure
   ;;
 
-
   let inputs ?(custom = fun _ -> `Unhandled) ui =
     let$ input_state = Lwd.get ui_state.input
     and$ ui = ui in
@@ -46,10 +45,10 @@ module Make (Vars : Global_vars.Vars) = struct
        match custom event with
        | `Unhandled ->
          (match event with
-          | `Arrow (`Left), _ ->
-            `Remap (`Focus `Up,[])
-          | `Arrow (`Right), _ ->
-            `Remap (`Focus `Down,[])
+          | `Arrow `Left, _ ->
+            `Remap (`Focus `Up, [])
+          | `Arrow `Right, _ ->
+            `Remap (`Focus `Down, [])
           | `ASCII 'q', _ ->
             Vars.quit $= true;
             `Handled
@@ -145,7 +144,6 @@ module Make (Vars : Global_vars.Vars) = struct
     |> W.Overlay.selection_list_prompt_filterable
          ~show_prompt_var:ui_state.show_string_selection_prompt
     |> inputs ~custom:(function
-
       | `Enter, [] ->
         Focus.request_reversable summary_focus;
         `Handled
@@ -169,14 +167,14 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let mainUi () =
     (*we want to initialize our states and keep them up to date*)
-    match check_startup () with
+    let$* startup_result = check_startup () in
+    match startup_result with
     | `Good ->
-      (* update_status ~cause_snapshot:true (); *)
       Flock.fork (fun () ->
         while true do
           Picos.Fiber.sleep ~seconds:5.0;
-          (*we need to lock this becasue we could end up updating while the ui is rendering*)
           update_status ~cause_snapshot:true ()
+          (*we need to lock this becasue we could end up updating while the ui is rendering*)
         done;
         ());
       let$* running = Lwd.get ui_state.view in

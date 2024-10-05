@@ -14,15 +14,26 @@ let list_files ?(rev = "@") () =
 ;;
 
 let check_startup () =
-  match jj_no_log_errorable ~color:false ~snapshot:false [  "op";"log"; "-l";"0" ] with
-  | Ok _ ->
-    `Good
-  | Error (`BadExit (i, str)) ->
-    if str |> Base.String.is_substring ~substring:"There is no jj repo"
-    then `NotInRepo
-    else `OtherError str
-  | Error (`Exception e) ->
-    `CantStartProcess e
+  let result = Lwd.var `Good in
+  (* In the happy path making this a fiber and returning an Lwd.t makes this not delay rendering. In the unhappy path, after 150-50ms the error message will show*)
+  Flock.fork (fun x ->
+    let res =
+      match
+        (*we snapshot here in the first request to make sure the editor is showing the latest changes*)
+        jj_no_log_errorable ~color:false ~snapshot:true [ "op"; "log"; "-l"; "0" ]
+      with
+      | Ok _ ->
+        `Good
+      | Error (`BadExit (i, str)) ->
+        if str |> Base.String.is_substring ~substring:"There is no jj repo"
+        then `NotInRepo
+        else `OtherError str
+      | Error (`Exception e) ->
+        `CantStartProcess e
+    in
+    (*we don't want to trigger a re-render if the result is still good *)
+    if res != Lwd.peek result then result $= res);
+  result |> Lwd.get
 ;;
 
 (**Updates the status windows; Without snapshotting the working copy by default
