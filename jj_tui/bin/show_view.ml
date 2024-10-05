@@ -9,9 +9,11 @@ type status_state =
 
 let statusStream = Stream.create ()
 let lastMessage = ref None
-let push_status status = 
-  lastMessage:=Some status;
+
+let push_status status =
+  lastMessage := Some status;
   Stream.push statusStream status
+;;
 
 (** pushes the last message to the queue again to re-render everything *)
 let re_render () = !lastMessage |> Option.iter push_status
@@ -61,14 +63,21 @@ module Make (Vars : Global_vars.Vars) = struct
       Promise.terminate_after ~seconds:0. !current_computation;
       current_computation
       := Flock.fork_as_promise (fun () ->
-           [%log debug "Rendering status view with: %a" pp_status_state msg];
-           viewState
-           $=
-           match msg with
-           | File_preview (rev, file) ->
-             render_file_preview (rev, file)
-           | Graph_preview rev ->
-             render_graph_preview rev)
+           try
+             [%log debug "Rendering status view with: %a" pp_status_state msg];
+             viewState
+             $=
+             match msg with
+             | File_preview (rev, file) ->
+               render_file_preview (rev, file)
+             | Graph_preview rev ->
+               render_graph_preview rev
+           with
+           | _ ->
+             [%log
+               warn
+                 "preview render failed. If this happens once it's probably just because \
+                  a node was deleted. If it keeps happening and the user can't see anything, obviously this is important"])
     done
   ;;
 
