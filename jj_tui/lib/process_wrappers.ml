@@ -210,8 +210,11 @@ struct
   (* if count<=0 then failwith "no process root" *)
   (* ;; *)
 
+
   (** returns the graph and a list of revs within that graph*)
   let graph_and_revs ?revset () =
+    (*We join_after here to ensure any errors in sub-fibers only propegate to here, otherwise fibers everywhere would get cancelled when an error here occurs*)
+    Flock.join_after @@ fun _->
     let graph =
       Flock.fork_as_promise @@ fun () ->
       let revset_arg = match revset with Some revset -> [ "-r"; revset ] | None -> [] in
