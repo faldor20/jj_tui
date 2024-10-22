@@ -41,11 +41,12 @@ module Make (Vars : Global_vars.Vars) = struct
     ; {
         key = 'N'
       ; description = "Make a new change and insert it after the selected rev"
-      ; cmd = Cmd_with_revs (Active [ "new"; "--insert-after"])
+      ; cmd =
+          Dynamic (fun () -> Cmd ([ "new"; "--insert-after" ] @ Vars.get_active_revs ()))
       }
     ; {
         key = 'n'
-      ; cmd =  Cmd_with_revs (Active [ "new" ])
+      ; cmd = Cmd_with_revs (Active [ "new" ])
       ; description = "Make a new empty change as a child of the selected rev"
       }
     ; {
@@ -72,7 +73,7 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   Fun
                     (fun _ ->
-                      let rev = Vars.get_hovered_rev() in
+                      let rev = Vars.get_hovered_rev () in
                       let source_msg, dest_msg = get_messages rev (rev ^ "-") in
                       let new_msg =
                         [ dest_msg; source_msg ] |> String.concat_non_empty "\n"
@@ -310,8 +311,7 @@ module Make (Vars : Global_vars.Vars) = struct
                         branches_no_remote
                         ("Select the branch to set to rev: " ^ rev)
                         (fun branch ->
-                           Cmd
-                             [ "branch"; "set"; "-r"; get_hovered_rev (); "-B"; branch ]))
+                           Cmd [ "branch"; "set"; "-r"; get_hovered_rev (); "-B"; branch ]))
               }
             ; {
                 key = 't'
@@ -320,7 +320,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   branch_select_prompt
                     branches_remotes_not_tracked
                     "Select the branch to begin tracking"
-                    (fun branch -> Cmd [ "branch"; "track"; "-B"; branch ])
+                    (fun branch -> Cmd [ "branch"; "track";  branch ])
               }
             ; {
                 key = 'u'
@@ -329,7 +329,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   branch_select_prompt
                     branches_remotes_tracked
                     "Select the branch to untrack"
-                    (fun branch -> Cmd [ "branch"; "untrack"; "-B"; branch ])
+                    (fun branch -> Cmd [ "branch"; "untrack";  branch ])
               }
             ]
       }
@@ -425,24 +425,24 @@ module Make (Vars : Global_vars.Vars) = struct
     let list_ui =
       items
       |> W.Lists.multi_selection_list_exclusions
-          ~reset_selections:Vars.ui_state.reset_selection
+           ~reset_selections:Vars.ui_state.reset_selection
            ~on_selection_change:(fun ~hovered ~selected ->
              (*Respond to change in selected revision*)
              Lwd.set Vars.ui_state.hovered_revision hovered;
              Lwd.set Vars.ui_state.selected_revisions selected;
              (*If the files are focused we shouldn't send this*)
-          if Focus.peek_has_focus focus then
-             Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ())));
-
+             (if Focus.peek_has_focus focus
+              then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ()))));
              [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
              Picos_std_structured.Flock.fork (fun () -> Global_funcs.update_views ()))
            ~custom_handler:(fun ~selected ~selectable_items key -> handleKeys key)
     in
     let final_ui =
       let$ list_ui = list_ui
-      and$ _= Focus.status focus|>$(fun focus->if Focus.has_focus focus then
-             Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ())));
-        )
+      and$ _ =
+        Focus.status focus |>$ fun focus ->
+        if Focus.has_focus focus
+        then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ())))
       and$ error = Lwd.get error_var in
       match error with Some e -> e |> Ui.keyboard_area handleKeys | None -> list_ui
     in

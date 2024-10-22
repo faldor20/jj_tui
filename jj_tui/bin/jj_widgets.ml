@@ -62,14 +62,14 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let branches_remotes_not_tracked =
     get_branches_selectable
-    @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && !tracked, name++"|}
+    @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && !tracked, name++"@"++remote++"|}
     ^ "\u{1C}"
     ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
   ;;
 
   let branches_remotes_tracked =
     get_branches_selectable
-    @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && tracked, name++"|}
+    @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && tracked, name++"@"++remote++"|}
     ^ "\u{1C}"
     ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
   ;;
