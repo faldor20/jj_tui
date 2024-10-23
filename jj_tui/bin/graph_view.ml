@@ -13,11 +13,11 @@ module Make (Vars : Global_vars.Vars) = struct
   open Process
   open Jj_tui.Process_wrappers.Make (Process)
 
-  let branch_select_prompt get_branch_list name func =
+  let bookmark_select_prompt get_bookmark_list name func =
     Selection_prompt
       ( name
-      , (fun () -> get_branch_list () |> Lwd.pure)
-      , (fun x branch_name -> branch_name |> Base.String.is_substring ~substring:x)
+      , (fun () -> get_bookmark_list () |> Lwd.pure)
+      , (fun x bookmark_name -> bookmark_name |> Base.String.is_substring ~substring:x)
       , func )
   ;;
 
@@ -173,12 +173,12 @@ module Make (Vars : Global_vars.Vars) = struct
               }
             ; {
                 key = 'b'
-              ; description = "Rebase revision and all other revissions on its branch"
+              ; description = "Rebase revision and all other revissions on its bookmark"
               ; cmd =
                   Dynamic_r
                     (fun rev ->
                       Prompt
-                        ( "Dest rev for branch including " ^ rev
+                        ( "Dest rev for bookmark including " ^ rev
                         , [ "rebase"; "-b"; rev; "-d" ] ))
               }
             ]
@@ -246,90 +246,90 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         key = 'b'
-      ; description = "Branch commands"
+      ; description = "Bookmark commands"
       ; cmd =
           SubCmd
             [
               {
                 key = 'c'
-              ; description = "Create new branch"
+              ; description = "Create new bookmark"
               ; cmd =
                   PromptThen
-                    ( "Branch name to create"
+                    ( "Bookmark name to create"
                     , fun x ->
                         Cmd_r
-                          ([ "branch"; "create" ]
+                          ([ "bookmark"; "create" ]
                            @ [ x |> String.map (fun c -> if c = ' ' then '_' else c) ]) )
               }
             ; {
                 key = 'd'
-              ; description = "Delete branch"
+              ; description = "Delete bookmark"
               ; cmd =
-                  branch_select_prompt
+                  bookmark_select_prompt
                     branches_no_remote
-                    "Branch to delete"
-                    (fun branch ->
-                       Cmd [ "branch"; "delete"; branch ]
+                    "Bookmark to delete"
+                    (fun bookmark ->
+                       Cmd [ "bookmark"; "delete"; bookmark ]
                        |> confirm_prompt
                             (Printf.sprintf
-                               "delete the branch: '%s' This will also delete it on the \
+                               "delete the bookmark: '%s' This will also delete it on the \
                                 remote next \"git push\"."
-                               branch))
+                               bookmark))
               }
             ; {
                 key = 'f'
-              ; description = "Forget branch"
+              ; description = "Forget bookmark"
               ; cmd =
-                  branch_select_prompt
+                  bookmark_select_prompt
                     branches_no_remote
-                    "Branch to forget"
-                    (fun branch ->
-                       Cmd [ "branch"; "forget"; branch ]
+                    "Bookmark to forget"
+                    (fun bookmark ->
+                       Cmd [ "bookmark"; "forget"; bookmark ]
                        |> confirm_prompt
                             (Printf.sprintf
-                               "orget the branch: '%s' . This will not delete it on the \
+                               "forget the bookmark: '%s' . This will not delete it on the \
                                 remote."
-                               branch))
+                               bookmark))
               }
             ; {
                 key = 'r'
-              ; description = "Rename branch"
+              ; description = "Rename bookmark"
               ; cmd =
-                  branch_select_prompt
+                  bookmark_select_prompt
                     branches_no_remote
-                    "Select the branch to rename (only local/tracked branches are shown)"
+                    "Select the bookmark to rename (only local/tracked bookmarks are shown)"
                     (fun curr_name ->
-                       Prompt ("New branch name", [ "branch"; "rename"; curr_name ]))
+                       Prompt ("New bookmark name", [ "bookmark"; "rename"; curr_name ]))
               }
             ; {
                 key = 's'
-              ; description = "Set branch to this change"
+              ; description = "Set bookmark to this change"
               ; cmd =
                   Dynamic_r
                     (fun rev ->
-                      branch_select_prompt
+                      bookmark_select_prompt
                         branches_no_remote
-                        ("Select the branch to set to rev: " ^ rev)
-                        (fun branch ->
-                           Cmd [ "branch"; "set"; "-r"; get_hovered_rev (); "-B"; branch ]))
+                        ("Select the bookmark to set to rev: " ^ rev)
+                        (fun bookmark ->
+                           Cmd [ "bookmark"; "set"; "-r"; get_hovered_rev (); "-B"; bookmark ]))
               }
             ; {
                 key = 't'
-              ; description = "track given remote branch"
+              ; description = "track given remote bookmark"
               ; cmd =
-                  branch_select_prompt
+                  bookmark_select_prompt
                     branches_remotes_not_tracked
-                    "Select the branch to begin tracking"
-                    (fun branch -> Cmd [ "branch"; "track";  branch ])
+                    "Select the bookmark to begin tracking"
+                    (fun bookmark -> Cmd [ "bookmark"; "track";  bookmark ])
               }
             ; {
                 key = 'u'
-              ; description = "untrack given remote branch"
+              ; description = "untrack given remote bookmark"
               ; cmd =
-                  branch_select_prompt
+                  bookmark_select_prompt
                     branches_remotes_tracked
-                    "Select the branch to untrack"
-                    (fun branch -> Cmd [ "branch"; "untrack";  branch ])
+                    "Select the bookmark to untrack"
+                    (fun bookmark -> Cmd [ "bookmark"; "untrack";  bookmark ])
               }
             ]
       }
