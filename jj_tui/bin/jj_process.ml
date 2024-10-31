@@ -1,7 +1,6 @@
 open Picos_std_structured
 open Picos_std_sync
 open Picos_std_finally
-open Spawn
 open Jj_tui.Logging
 
 module type t = sig
@@ -115,16 +114,29 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     (* This should ensure that all children processes are killed before we cleanup the pipes*)
     Flock.join_after @@ fun () ->
-    let pid =
-      Picos_io.Unix.create_process_env
-        cmd
-        (cmd :: args |> Array.of_list)
-        (Unix.environment ())
-        stdin_o
-        stdout_i
-        stderr_i
+    let isDone = ref false in
+    let@ pid =
+      finally
+        (fun pid ->
+            (* if the process didn't finish we will kill the process and then wait it's pid to release the pid*)
+            if not !isDone
+            then (
+              try
+                Unix.kill pid Sys.sigkill;
+                Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
+              with
+              | _ ->
+                ()))
+        (fun _ ->
+          Unix.create_process_env
+            cmd
+            (cmd :: args |> Array.of_list)
+            (Unix.environment ())
+            stdin_o
+            stdout_i
+            stderr_i)
     in
-    let prom = Flock.fork_as_promise (fun () -> Picos_io.Unix.waitpid [] pid) in
+    let prom = Flock.fork_as_promise (fun () -> Unix.waitpid [] pid) in
     (* Close unused pipe ends in the parent process *)
     Unix.close stdout_i;
     Unix.close stdin_o;
@@ -136,6 +148,7 @@ module Make (Vars : Global_vars.Vars) = struct
     let stdout = Promise.await stdout_prom in
     let stderr = Promise.await stderr_prom in
     let code, status = Promise.await prom in
+    isDone := true;
     (* let stderr = read_fd_to_end stderr_i in *)
     (* let stdout= ""in *)
     code, status, stdout, stderr

@@ -45,11 +45,10 @@
                 src = ./forks/notty/.;
               });
               picos_src = pkgs.fetchFromGitHub {
-
                 owner = "ocaml-multicore";
                 repo = "picos";
-                rev = "0.5.0";
-                sha256 = "sha256-dbqY/Q+KTWRIJyYi6TqtnU1dLcr/C/F+k4tGG3ISJWI=";
+                rev = "1ba3357ec7ca56b9bbeb251904636e3453ff2c32";
+                sha256 = "sha256-I0PFesFeZ+7H0uXDoC4LNltef5buuKeO2THyq0VBg/A=";
               };
               picos = ocamlPackages.buildDunePackage {
                 pname = "picos";
@@ -70,6 +69,7 @@
                 src = picos_src;
                 buildInputs = with ocamlPackages; [
                   picos
+                  picos_aux
                   backoff
                   thread-local-storage
                   multicore-magic

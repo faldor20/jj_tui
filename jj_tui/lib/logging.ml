@@ -95,8 +95,9 @@ module Internal = struct
       match Sys.os_type with
       | "Unix" ->
         (try
-           let uname_in, _ = Unix.open_process_args "uname" [| "uname"; "-s" |] in
+           let uname_in  = Unix.open_process_args_in "uname" [| "uname"; "-s" |] in
            let str = uname_in |> In_channel.input_all in
+           Unix.wait()|>ignore;
            Some (str |> String.lowercase_ascii |> String.trim)
          with
          | _ ->
