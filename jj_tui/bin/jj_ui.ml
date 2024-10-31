@@ -97,7 +97,7 @@ module Make (Vars : Global_vars.Vars) = struct
         (*left side window stack*)
         W.vbox
           [
-            File_view.file_view file_focus
+            File_view.file_view ~focus:file_focus summary_focus  
             (* |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000 *)
             |> W.is_focused ~focus:file_focus (fun ui focused ->
               ui
@@ -110,7 +110,7 @@ module Make (Vars : Global_vars.Vars) = struct
                    ~mh:(if focused then Int.min (ui |> Ui.layout_max_height) 12 else 2)
                    ~mw:1000)
             |> W.Box.focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
-          ; Graph_view.graph_view ~focus:graph_focus ()
+          ; Graph_view.graph_view ~focus:graph_focus summary_focus  ()
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
             |> W.Box.focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
           ; W.Scroll.v_area (ui_state.jj_branches $-> Ui.atom)
@@ -144,11 +144,11 @@ module Make (Vars : Global_vars.Vars) = struct
     |> W.Overlay.selection_list_prompt_filterable
          ~show_prompt_var:ui_state.show_string_selection_prompt
     |> inputs ~custom:(function
-      | `Enter, [] ->
-        Focus.request_reversable summary_focus;
-        `Handled
       | `ASCII k, [] ->
         Jj_commands.handleInputs Jj_commands.default_list k
+      |`Arrow _,[`Meta]| `Tab, [`Meta]|`Tab, [`Meta;`Shift]-> 
+        (* block all normal focus keys *)
+        `Handled
       | _ ->
         `Unhandled)
   ;;

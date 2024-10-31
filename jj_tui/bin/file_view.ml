@@ -82,7 +82,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let hovered_var = ref "./"
 
-  let file_view focus =
+  let file_view ~focus summary_focus =
     let file_uis =
       let$ files = Lwd.get Vars.ui_state.jj_change_files in
       files
@@ -113,6 +113,9 @@ module Make (Vars : Global_vars.Vars) = struct
                Show_view.(push_status (File_preview (Vars.get_hovered_rev (), hovered))))
            ~custom_handler:(fun ~selected:_ ~selectable_items:_ key ->
              match key with
+             | `Enter, [] ->
+               Focus.request_reversable summary_focus;
+               `Handled
              | `ASCII k, [] ->
                handleInputs command_mapping k
              | _ ->

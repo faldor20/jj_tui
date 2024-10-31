@@ -351,7 +351,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (*TODO:make a custom widget the renders the commit with and without selection.
     with selection replace the dot with a blue version and slightly blue tint the background *)
-  let graph_view ~focus () =
+  let graph_view ~focus summary_focus () =
     (*We have a seperate error var here instead of using a result type. This allows us to avoid using Lwd.bind which would cause our list selection to get reset anytime the content changes *)
     let error_var = Lwd.var None in
     let revset_ui =
@@ -417,6 +417,9 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     (* run commands when there is keybaord input*)
     let handleKeys = function
+      | `Enter, [] ->
+        Focus.request_reversable summary_focus;
+        `Handled
       | `ASCII k, [] ->
         handleInputs command_mapping k
       | _ ->
