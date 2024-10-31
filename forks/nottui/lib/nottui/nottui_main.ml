@@ -11,7 +11,7 @@ module Focus : sig
   val request_var : var -> unit
   val release : handle -> unit
 
-  (** Request the focus and add to the focus stack *)
+  (** request the focus and add to the focus stack *)
   val request_reversable : handle -> unit
 
   (** Release the focus (if the handle has it) and restore the last focus on the stack *)
@@ -1056,10 +1056,21 @@ end
 module Ui_loop = struct
   open Notty_unix
 
+  let await_read_unix fd timeout: [`Ready|`NotReady]=
+    let rec select ()=
+      match Unix.select[fd] [] [fd] timeout with
+      | [], [], []-> `NotReady
+      | _-> `Ready
+      | exception Unix.Unix_error (Unix.EINTR, _, _) -> select ()
+      in
+    select ()
+
+
+
   (* FIXME Uses of [quick_sample] and [quick_release] should be replaced by
      [sample] and [release] with the appropriate release management. *)
 
-  let step ?(process_event = true) ?(timeout = -1.0) ~renderer term root =
+  let step ?(await_read=await_read_unix) ?(process_event = true) ?(timeout = -1.0) ~renderer term root =
     let size = Term.size term in
     let image =
       let rec stabilize () =
@@ -1075,13 +1086,9 @@ module Ui_loop = struct
     then (
       let wait_for_event () =
         let i, _ = Term.fds term in
-        let rec select () =
-          match Unix.select [ i ] [] [ i ] timeout with
-          | [], [], [] -> Term.pending term
-          | _ -> true
-          | exception Unix.Unix_error (Unix.EINTR, _, _) -> select ()
-        in
-        select ()
+          match await_read i timeout with
+          | `NotReady -> Term.pending term
+          | `Ready-> true
       in
       let has_event = timeout < 0.0 || Term.pending term || wait_for_event () in
       if has_event

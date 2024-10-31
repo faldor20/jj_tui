@@ -28,14 +28,36 @@ let ui_loop ~quit ~term root =
         `Unhandled)
   in
   let rec loop () =
+    let open Picos_std_event in
     if not (Lwd.peek quit)
     then (
-      let start_time = Unix.gettimeofday() in
+      (* let start_time = Unix.gettimeofday() in *)
       let term_width, term_height = Notty_unix.Term.size (Vars.get_term ()) in
       let prev_term_width, prev_term_height = Lwd.peek Vars.term_width_height in
       if term_width <> prev_term_width || term_height <> prev_term_height
       then Lwd.set Vars.term_width_height (term_width, term_height);
+      let stored_fd=ref (Obj.magic()) in
       Nottui.Ui_loop.step
+        ~await_read:(fun unix_fd timeout ->
+
+          let fd = 
+            if (Picos_io_fd.unsafe_get (!stored_fd)) = unix_fd then 
+            !stored_fd
+            else
+            let picos_fd=Picos_io_fd.create ~dispose:false unix_fd in
+            stored_fd:=picos_fd;
+          picos_fd
+            in
+          let res =
+            let event_ret ret = Event.map (fun _ -> ret) in
+            Picos_std_event.Event.select
+              [
+                Picos_io_select.on fd `R |> event_ret `Ready
+              ; Picos_io_select.on fd `W |> event_ret `Ready
+              ; Picos_io_select.timeout ~seconds:timeout |> event_ret `NotReady
+              ]
+          in
+          res)
         ~process_event:true
         ~timeout:0.01
         ~renderer
@@ -44,10 +66,10 @@ let ui_loop ~quit ~term root =
       (*Sleep for a bit to stop spinning the cpu
         TODO: May not be needed, nottui may sleep for a bit anyway
       *)
-      let end_time = Unix.gettimeofday () in
-      let elapsed = end_time -. start_time in
-      let sleep_time = max 0.01 (0.01 -. elapsed) in
-      Picos_io.Unix.sleepf sleep_time;
+      (* let end_time = Unix.gettimeofday () in *)
+      (* let elapsed = end_time -. start_time in *)
+      (* let sleep_time = max 0.01 (0.01 -. elapsed) in *)
+      (* Picos_io.Unix.sleepf sleep_time; *)
       loop ())
   in
   loop ()

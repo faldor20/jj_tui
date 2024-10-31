@@ -37,7 +37,7 @@ module Focus : sig
   val has_focus : status -> bool
 
   (** EXPERIMENTAL: Check if the handle is focused.*)
-  val peek_has_focus:handle->bool
+  val peek_has_focus : handle -> bool
   (** TODO
       This implements a more general concept of "reactive auction":
 
@@ -47,9 +47,9 @@ module Focus : sig
       - the result can evolve over time, parties can join or leave, or bid
         "more". *)
 
-  (** Request the focus and add to the focus stack. 
-  WARNING: The focus stack is global, if you render multiple nottui ui's you may not want to use this 
-  NOTE: Calling this twice has the same result as calling it once. Trying to focus the currently focused item will not add to the stack*)
+  (** Request the focus and add to the focus stack.
+      WARNING: The focus stack is global, if you render multiple nottui ui's you may not want to use this
+      NOTE: Calling this twice has the same result as calling it once. Trying to focus the currently focused item will not add to the stack*)
 
   val request_reversable : handle -> unit
 
@@ -366,13 +366,15 @@ end
 module Ui_loop : sig
   open Notty_unix
 
+
   (** Run one step of the main loop.
 
       Update output image describe by the provided [root].
       If [process_event], wait up to [timeout] seconds for an input event, then
       consume and dispatch it. *)
   val step
-    :  ?process_event:bool
+    :  ?await_read:(Unix.file_descr -> float -> [ `Ready | `NotReady ])
+    -> ?process_event:bool
     -> ?timeout:float
     -> renderer:Renderer.t
     -> Term.t
