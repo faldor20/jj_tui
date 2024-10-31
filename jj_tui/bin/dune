@@ -5,6 +5,7 @@
   signal
   jj_tui
   nottui
+  nottui_picos
   base
   stdio
   picos_io

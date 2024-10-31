@@ -5,6 +5,19 @@ module Jj_ui = Jj_ui.Make (Vars)
 open Picos_std_structured
 open Jj_tui.Logging
 
+let await_read_unix fd timeout : [ `Ready | `NotReady ] =
+  let rec select () =
+    match Unix.select [ fd ] [] [ fd ] timeout with
+    | [], [], [] ->
+      `NotReady
+    | _ ->
+      `Ready
+    | exception Unix.Unix_error (Unix.EINTR, _, _) ->
+      select ()
+  in
+  select ()
+;;
+
 (* let file_logger ~logs_stream=
    let logs_crs=Picos_std_sync.Stream.tap logs_stream in
    let file=Picos_io.Unix.openfile "" in
@@ -28,7 +41,6 @@ let ui_loop ~quit ~term root =
         `Unhandled)
   in
   let rec loop () =
-    let open Picos_std_event in
     if not (Lwd.peek quit)
     then (
       (* let start_time = Unix.gettimeofday() in *)
@@ -36,40 +48,15 @@ let ui_loop ~quit ~term root =
       let prev_term_width, prev_term_height = Lwd.peek Vars.term_width_height in
       if term_width <> prev_term_width || term_height <> prev_term_height
       then Lwd.set Vars.term_width_height (term_width, term_height);
-      let stored_fd=ref (Obj.magic()) in
-      Nottui.Ui_loop.step
-        ~await_read:(fun unix_fd timeout ->
-
-          let fd = 
-            if (Picos_io_fd.unsafe_get (!stored_fd)) = unix_fd then 
-            !stored_fd
-            else
-            let picos_fd=Picos_io_fd.create ~dispose:false unix_fd in
-            stored_fd:=picos_fd;
-          picos_fd
-            in
-          let res =
-            let event_ret ret = Event.map (fun _ -> ret) in
-            Picos_std_event.Event.select
-              [
-                Picos_io_select.on fd `R |> event_ret `Ready
-              ; Picos_io_select.on fd `W |> event_ret `Ready
-              ; Picos_io_select.timeout ~seconds:timeout |> event_ret `NotReady
-              ]
-          in
-          res)
+      Nottui_picos.step
+        ~await_read:(fun fd timeout ->
+          (*await the read inside a promise*)
+          Promise.await @@ Flock.fork_as_promise (fun _ -> await_read_unix fd timeout))
         ~process_event:true
         ~timeout:0.01
         ~renderer
         term
         (Lwd.observe @@ root);
-      (*Sleep for a bit to stop spinning the cpu
-        TODO: May not be needed, nottui may sleep for a bit anyway
-      *)
-      (* let end_time = Unix.gettimeofday () in *)
-      (* let elapsed = end_time -. start_time in *)
-      (* let sleep_time = max 0.01 (0.01 -. elapsed) in *)
-      (* Picos_io.Unix.sleepf sleep_time; *)
       loop ())
   in
   loop ()
@@ -83,6 +70,7 @@ let start_ui () =
   Flock.terminate ()
 ;;
 
+Picos_io.Unix
 let start () =
   Picos_mux_multififo.run_on ~n_domains:1 (fun _ ->
     Flock.join_after @@ fun () ->

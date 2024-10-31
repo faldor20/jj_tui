@@ -1,0 +1,5 @@
+(library
+ (name nottui_picos)
+ (public_name nottui_picos)
+ (libraries nottui picos picos_std.structured picos_io picos_std.finally )
+ )

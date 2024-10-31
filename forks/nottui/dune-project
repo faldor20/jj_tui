@@ -56,3 +56,14 @@
    (= :version))
   (notty
    (>= 0.2))))
+
+(package
+ (name nottui_picos)
+ (synopsis "Run Nottui UIs using picos")
+ (documentation "https://let-def.github.io/lwd/doc")
+ (depends
+  (picos(>= 0.6.0))
+  (nottui
+   (= :version))
+  (notty
+   (>= 0.2))))

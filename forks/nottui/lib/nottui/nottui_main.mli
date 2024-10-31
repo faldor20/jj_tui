@@ -366,15 +366,13 @@ end
 module Ui_loop : sig
   open Notty_unix
 
-
   (** Run one step of the main loop.
 
       Update output image describe by the provided [root].
       If [process_event], wait up to [timeout] seconds for an input event, then
       consume and dispatch it. *)
   val step
-    :  ?await_read:(Unix.file_descr -> float -> [ `Ready | `NotReady ])
-    -> ?process_event:bool
+    :  ?process_event:bool
     -> ?timeout:float
     -> renderer:Renderer.t
     -> Term.t
@@ -402,4 +400,70 @@ module Ui_loop : sig
     -> ?quit_on_ctrl_q:bool
     -> ui Lwd.t
     -> unit
+
+  module Internal : sig
+    (** Provides slightly more powerful interfaces as compared to the Ui_llop module. 
+    
+    Allows you to override the step/ await_read function. 
+    
+    This should allow you to implement your own concurrency framework and modify how stepping is done. *)
+
+    type step =
+      ?process_event:bool
+      -> ?timeout:float
+      -> renderer:Renderer.t
+      -> Term.t
+      -> ui Lwd.root
+      -> unit
+
+    val await_read_unix : Unix.file_descr -> float -> [ `NotReady | `Ready ]
+
+    (** Run one step of the main loop.
+
+        Update output image describe by the provided [root].
+        If [process_event], wait up to [timeout] seconds for an input event, then
+        consume and dispatch it.
+
+        [?await_read]- A function that waits for the file handle to be ready for reading for up to the provided timeout (-1.0 for no timeout). This exists entirely so this waiting can be overriden to interoperate with an effects based async system. *)
+    val step
+      :  ?await_read:(Unix.file_descr -> float -> [ `Ready | `NotReady ])
+      -> ?process_event:bool
+      -> ?timeout:float
+      -> renderer:Renderer.t
+      -> Term.t
+      -> ui Lwd.root
+      -> unit
+
+    type run_with_term_intern=
+      step:step
+      -> Term.t
+      -> ?tick_period:float
+      -> ?tick:(unit -> unit)
+      -> renderer:Renderer.t
+      -> bool Lwd.var
+      -> ui Lwd.t
+      -> unit
+
+    type run_with_term=
+      Term.t
+      -> ?tick_period:float
+      -> ?tick:(unit -> unit)
+      -> renderer:Renderer.t
+      -> bool Lwd.var
+      -> ui Lwd.t
+      -> unit
+    val run_with_term:run_with_term_intern
+
+    val run:
+      run_with_term:run_with_term
+      -> ?tick_period:float
+      -> ?tick:(unit -> unit)
+      -> ?term:Term.t
+      -> ?renderer:Renderer.t
+      -> ?quit:bool Lwd.var
+      -> ?quit_on_escape:bool
+      -> ?quit_on_ctrl_q:bool
+      -> ui Lwd.t
+      -> unit
+  end
 end
