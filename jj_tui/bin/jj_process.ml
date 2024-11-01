@@ -122,6 +122,7 @@ module Make (Vars : Global_vars.Vars) = struct
             if not !isDone
             then (
               try
+                [%log debug "Cleaning up cancelled command %s" (args|>String.concat " " )];
                 Unix.kill pid Sys.sigkill;
                 Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
               with
@@ -141,6 +142,7 @@ module Make (Vars : Global_vars.Vars) = struct
     Unix.close stdout_i;
     Unix.close stdin_o;
     Unix.close stderr_i;
+
     Unix.set_nonblock stdout_o;
     Unix.set_nonblock stderr_o;
     let stdout_prom = read_fd_to_end stdout_o in
@@ -208,6 +210,7 @@ module Make (Vars : Global_vars.Vars) = struct
              ])
       with
       | Picos_std_structured.Control.Terminate as e ->
+        [%log debug "Terminated cmmand: %s" (args|>String.concat " " )];
         raise e
       | e ->
         [%log warn "Exception running jj: %s" (Printexc.to_string e)];
