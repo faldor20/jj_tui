@@ -17,7 +17,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (*List of branches, containing the full output string as well as the string name*)
   let get_branches template =
-    let log = jj_no_log ~snapshot:false [ "branch"; "list"; "-a"; "-T"; template ] in
+    let log = jj_no_log ~snapshot:false [ "bookmark"; "list"; "-a"; "-T"; template ] in
     let lines = String.split_on_char '\n' log in
     lines
     |> List.filter_map (fun line ->
@@ -49,7 +49,7 @@ module Make (Vars : Global_vars.Vars) = struct
     get_branches_selectable
       ({|if(!remote,name++"|}
        ^ "\u{1C}"
-       ^ {|"++label("branch", name)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
+       ^ {|"++label("bookmark", name)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
       )
   ;;
 
@@ -57,21 +57,21 @@ module Make (Vars : Global_vars.Vars) = struct
     get_branches_selectable
     @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")), name++"|}
     ^ "\u{1C}"
-    ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
+    ^ {|"++label("bookmark", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
   ;;
 
   let branches_remotes_not_tracked =
     get_branches_selectable
     @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && !tracked, name++"@"++remote++"|}
     ^ "\u{1C}"
-    ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
+    ^ {|"++label("bookmark", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
   ;;
 
   let branches_remotes_tracked =
     get_branches_selectable
     @@ {|if(remote && !(remote.starts_with("git")&&remote.ends_with("git")) && tracked, name++"@"++remote++"|}
     ^ "\u{1C}"
-    ^ {|"++label("branch", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
+    ^ {|"++label("bookmark", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
   ;;
 
   let selection_list ?(focus = Focus.make ()) items =

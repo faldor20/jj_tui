@@ -52,7 +52,7 @@ let update_views ?(cause_snapshot = false) () =
   safe_jj (fun () ->
     let rev = Vars.get_hovered_rev () in
     let branches =
-      jj_no_log ~snapshot:cause_snapshot [ "branch"; "list"; "-a" ] |> colored_string
+      jj_no_log ~snapshot:cause_snapshot [ "bookmark"; "list"; "-a" ] |> colored_string
     in
     (* From now on we use ignore-working-copy so we don't re-snapshot the state and so
        we can operate in paralell *)
