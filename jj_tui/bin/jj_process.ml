@@ -222,9 +222,10 @@ module Make (Vars : Global_vars.Vars) = struct
              ])
       with
       | Picos_std_structured.Control.Terminate as e ->
-        [%log debug "Terminated command: %s" (args |> String.concat " ")];
-        if locked then Mutex.unlock access_lock;
-        raise e
+        Control.protect (fun () ->
+          if locked then Mutex.unlock access_lock;
+          [%log debug "Terminated command: %s" (args |> String.concat " ")];
+          raise e)
       | e ->
         [%log warn "Exception running jj: %s" (Printexc.to_string e)];
         Error (`Exception (Printexc.to_string e))
