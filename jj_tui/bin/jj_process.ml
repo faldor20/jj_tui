@@ -202,6 +202,7 @@ module Make (Vars : Global_vars.Vars) = struct
           (List.concat
              [
                args
+             ;  ["--no-pager"]
              ; (if snapshot then [] else [ "--ignore-working-copy" ])
              ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
              ])
