@@ -103,14 +103,28 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let picos_process cmd args =
     let open Picos_io in
+    let closed_one_end = ref false in
+    let dispose fd = if not !closed_one_end then Unix.close fd in
     let@ stdout_o, stdout_i =
-      finally (fun (o, i) -> Unix.close o) (Picos_io.Unix.pipe ~cloexec:true)
+      finally
+        (fun (o, i) ->
+          Unix.close o;
+          dispose i)
+        (Picos_io.Unix.pipe ~cloexec:true)
     in
     let@ stdin_o, stdin_i =
-      finally (fun (o, i) -> Unix.close i) (Picos_io.Unix.pipe ~cloexec:true)
+      finally
+        (fun (o, i) ->
+          Unix.close i;
+          dispose o)
+        (Picos_io.Unix.pipe ~cloexec:true)
     in
     let@ stderr_o, stderr_i =
-      finally (fun (o, i) -> Unix.close o) (Picos_io.Unix.pipe ~cloexec:true)
+      finally
+        (fun (o, i) ->
+          Unix.close o;
+          dispose i)
+        (Picos_io.Unix.pipe ~cloexec:true)
     in
     (* This should ensure that all children processes are killed before we cleanup the pipes*)
     Flock.join_after @@ fun () ->
@@ -118,16 +132,16 @@ module Make (Vars : Global_vars.Vars) = struct
     let@ pid =
       finally
         (fun pid ->
-            (* if the process didn't finish we will kill the process and then wait it's pid to release the pid*)
-            if not !isDone
-            then (
-              try
-                [%log debug "Cleaning up cancelled command %s" (args|>String.concat " " )];
-                Unix.kill pid Sys.sigkill;
-                Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
-              with
-              | _ ->
-                ()))
+          (* if the process didn't finish we will kill the process and then wait it's pid to release the pid*)
+          if not !isDone
+          then (
+            try
+              [%log debug "Cleaning up cancelled command %s" (args |> String.concat " ")];
+              Unix.kill pid Sys.sigkill;
+              Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
+            with
+            | _ ->
+              ()))
         (fun _ ->
           Unix.create_process_env
             cmd
@@ -142,9 +156,7 @@ module Make (Vars : Global_vars.Vars) = struct
     Unix.close stdout_i;
     Unix.close stdin_o;
     Unix.close stderr_i;
-
-    Unix.set_nonblock stdout_o;
-    Unix.set_nonblock stderr_o;
+    closed_one_end := true;
     let stdout_prom = read_fd_to_end stdout_o in
     let stderr_prom = read_fd_to_end stderr_o in
     let stdout = Promise.await stdout_prom in
@@ -204,13 +216,14 @@ module Make (Vars : Global_vars.Vars) = struct
           (List.concat
              [
                args
-             ;  ["--no-pager"]
+             ; [ "--no-pager" ]
              ; (if snapshot then [] else [ "--ignore-working-copy" ])
              ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
              ])
       with
       | Picos_std_structured.Control.Terminate as e ->
-        [%log debug "Terminated cmmand: %s" (args|>String.concat " " )];
+        [%log debug "Terminated command: %s" (args |> String.concat " ")];
+        if locked then Mutex.unlock access_lock;
         raise e
       | e ->
         [%log warn "Exception running jj: %s" (Printexc.to_string e)];
