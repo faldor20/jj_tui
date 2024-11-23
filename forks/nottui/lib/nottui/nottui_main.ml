@@ -257,11 +257,10 @@ module Ui = struct
 
   type semantic_key =
     [ (* Clipboard *)
-      `Copy
+        `Copy
     | `Paste
     | (* Focus management *)
-      `Focus of
-      [ `Out | `Next | `Prev | `Left | `Right | `Up | `Down ]
+      `Focus of [ `Out | `Next | `Prev | `Left | `Right | `Up | `Down ]
     ]
 
   type key =
@@ -653,13 +652,14 @@ module Renderer = struct
   let has_permanent_sensor flags = flags land flag_permanent_sensor <> 0
 
   let rec update_sensors ox oy sw sh mw mh ui =
-    if has_transient_sensor ui.flags
-       || (has_permanent_sensor ui.flags
-           &&
-           match ui.sensor_cache with
-           | None -> true
-           | Some (ox', oy', sw', sh') ->
-             not (ox = ox' && oy = oy' && sw = sw' && sh = sh'))
+    if
+      has_transient_sensor ui.flags
+      || (has_permanent_sensor ui.flags
+          &&
+          match ui.sensor_cache with
+          | None -> true
+          | Some (ox', oy', sw', sh') -> not (ox = ox' && oy = oy' && sw = sw' && sh = sh')
+         )
     then (
       ui.flags <- ui.flags land lnot flag_transient_sensor;
       if has_permanent_sensor ui.flags then ui.sensor_cache <- Some (ox, oy, sw, sh);
@@ -765,20 +765,21 @@ module Renderer = struct
   ;;
 
   let dispatch_mouse t (event, (x, y), _mods) =
-    if match event with
-       | `Press btn ->
-         release_grab t x y;
-         let w, h = t.size in
-         dispatch_mouse t x y btn w h t.view
-       | `Drag ->
-         (match t.mouse_grab with
-          | None -> false
-          | Some (drag, _) ->
-            drag ~x ~y;
-            true)
-       | `Release ->
-         release_grab t x y;
-         true
+    if
+      match event with
+      | `Press btn ->
+        release_grab t x y;
+        let w, h = t.size in
+        dispatch_mouse t x y btn w h t.view
+      | `Drag ->
+        (match t.mouse_grab with
+         | None -> false
+         | Some (drag, _) ->
+           drag ~x ~y;
+           true)
+      | `Release ->
+        release_grab t x y;
+        true
     then `Handled
     else `Unhandled
   ;;
@@ -798,12 +799,13 @@ module Renderer = struct
   let same_size w h image = w = I.width image && h = I.height image
 
   let rec render_node vx1 vy1 vx2 vy2 sw sh t : cache =
-    if let cache = t.cache in
-       vx1 >= Interval.fst cache.vx
-       && vy1 >= Interval.fst cache.vy
-       && vx2 <= Interval.snd cache.vx
-       && vy2 <= Interval.snd cache.vy
-       && same_size sw sh cache.image
+    if
+      let cache = t.cache in
+      vx1 >= Interval.fst cache.vx
+      && vy1 >= Interval.fst cache.vy
+      && vx2 <= Interval.snd cache.vx
+      && vy2 <= Interval.snd cache.vy
+      && same_size sw sh cache.image
     then t.cache
     else if vx2 < 0 || vy2 < 0 || sw < vx1 || sh < vy1
     then (
@@ -1067,7 +1069,7 @@ module Ui_loop = struct
       -> ui Lwd.root
       -> unit
 
-    let await_read_unix fd timeout : [ `Ready | `NotReady ] =
+    let await_read_unix fd timeout : [ `Ready | `NotReady | `LwdStateUpdate ] =
       let rec select () =
         match Unix.select [ fd ] [] [ fd ] timeout with
         | [], [], [] -> `NotReady
@@ -1080,36 +1082,47 @@ module Ui_loop = struct
     (* FIXME Uses of [quick_sample] and [quick_release] should be replaced by
        [sample] and [release] with the appropriate release management. *)
 
+    let cache = ref None
+
     let step
-      ?(await_read = await_read_unix)
-      ?(process_event = true)
-      ?(timeout = -1.0)
-      ~renderer
-      term
-      root
+          ?(await_read = await_read_unix)
+          ?(process_event = true)
+          ?(timeout = -1.0)
+          ~renderer
+          term
+          root
       =
       let size = Term.size term in
       let image =
-        let rec stabilize () =
-          let tree = Lwd.quick_sample root in
-          Renderer.update renderer size tree;
-          let image = Renderer.image renderer in
-          if Lwd.is_damaged root then stabilize () else image
-        in
-        stabilize ()
+        if (not (Lwd.is_damaged root)) && !cache |> Option.is_some
+        then !cache |> Option.get
+        else (
+          let rec stabilize () =
+            let tree = Lwd.quick_sample root in
+            Renderer.update renderer size tree;
+            let image = Renderer.image renderer in
+            (* If we are already damaged then we should re-calculate*)
+            if Lwd.is_damaged root then stabilize () else image
+          in
+          stabilize ())
       in
+      cache := Some image;
       Term.image term image;
+      (* Now we wait for another event or the timeout*)
       if process_event
       then (
         let wait_for_event () =
           let i, _ = Term.fds term in
           match await_read i timeout with
-          | `NotReady -> Term.pending term
+          | `NotReady -> false
           | `Ready -> true
+          | `LwdStateUpdate -> false
         in
-        let has_event = timeout < 0.0 || Term.pending term || wait_for_event () in
-        if has_event
+        (* for async I should extend this to include changed lwd.var values*)
+        (* let has_event =Term.pending term  in *)
+        if wait_for_event ()
         then (
+          Printf.eprintf "getting term event\n";
           match Term.event term with
           | `End -> ()
           | `Resize _ -> ()
@@ -1121,6 +1134,7 @@ module Ui_loop = struct
     type run_with_term_intern =
       step:step
       -> Term.t
+      -> ?on_invalidate:(ui -> unit)
       -> ?tick_period:float
       -> ?tick:(unit -> unit)
       -> renderer:Renderer.t
@@ -1130,6 +1144,7 @@ module Ui_loop = struct
 
     type run_with_term =
       Term.t
+      -> ?on_invalidate:(ui -> unit)
       -> ?tick_period:float
       -> ?tick:(unit -> unit)
       -> renderer:Renderer.t
@@ -1138,9 +1153,16 @@ module Ui_loop = struct
       -> unit
 
     let run_with_term : run_with_term_intern =
-      fun ~(step : step) term ?tick_period ?(tick = ignore) ~renderer quit t ->
+      fun ~(step : step)
+        term
+        ?(on_invalidate = fun _ -> ())
+        ?tick_period
+        ?(tick = ignore)
+        ~renderer
+        quit
+        t ->
       let quit = Lwd.observe (Lwd.get quit) in
-      let root = Lwd.observe t in
+      let root = Lwd.observe ~on_invalidate t in
       let rec loop () =
         let quit = Lwd.quick_sample quit in
         if not quit
@@ -1155,15 +1177,16 @@ module Ui_loop = struct
     ;;
 
     let run
-      ~(run_with_term : run_with_term)
-      ?tick_period
-      ?tick
-      ?term
-      ?(renderer = Renderer.make ())
-      ?quit
-      ?(quit_on_escape = true)
-      ?(quit_on_ctrl_q = true)
-      t
+          ~(run_with_term : run_with_term)
+          ?on_invalidate
+          ?tick_period
+          ?tick
+          ?term
+          ?(renderer = Renderer.make ())
+          ?quit
+          ?(quit_on_escape = true)
+          ?(quit_on_ctrl_q = true)
+          t
       =
       let quit =
         match quit with
@@ -1175,19 +1198,19 @@ module Ui_loop = struct
           t
           ~f:
             (Ui.event_filter (function
-              | `Key (`ASCII 'Q', [ `Ctrl ]) when quit_on_ctrl_q ->
-                Lwd.set quit true;
-                `Handled
-              | `Key (`Escape, []) when quit_on_escape ->
-                Lwd.set quit true;
-                `Handled
-              | _ -> `Unhandled))
+               | `Key (`ASCII 'Q', [ `Ctrl ]) when quit_on_ctrl_q ->
+                 Lwd.set quit true;
+                 `Handled
+               | `Key (`Escape, []) when quit_on_escape ->
+                 Lwd.set quit true;
+                 `Handled
+               | _ -> `Unhandled))
       in
       match term with
       | Some term -> run_with_term term ?tick_period ?tick ~renderer quit t
       | None ->
         let term = Term.create () in
-        run_with_term term ?tick_period ?tick ~renderer quit t;
+        run_with_term term ?on_invalidate ?tick_period ?tick ~renderer quit t;
         Term.release term
     ;;
   end

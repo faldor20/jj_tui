@@ -1,10 +1,9 @@
-
 open Notty
 open Nottui
 open Picos
+
 module Ui_loop : sig
   open Notty_unix
-
 
   (** Run one step of the main loop.
 
@@ -13,7 +12,8 @@ module Ui_loop : sig
       consume and dispatch it.
 
        *)
-  val step:
+  (*
+     val step:
     Picos_io_fd.t
     -> ?process_event:bool
     -> ?timeout:float
@@ -21,7 +21,11 @@ module Ui_loop : sig
     -> Term.t
     -> ui Lwd.root
     -> unit
+  *)
 
+  (*
+     NOTE: Currently we use a tick and a timeout, this is essentially how long we will wait to respond to events that happened
+  *)
   (** Repeatedly run steps of the main loop, until either:
       - [quit] becomes true,
       - the ui computation raises an exception,
@@ -34,8 +38,10 @@ module Ui_loop : sig
      Uses Picos for concurrency. 
      The only change vs the normal version is this yields whenever waiting for input 
        *)
+
   val run
-    :  ?tick_period:float
+    :  ?on_invalidate:(ui -> unit)
+    -> ?tick_period:float
     -> ?tick:(unit -> unit)
     -> ?term:Term.t
     -> ?renderer:Renderer.t

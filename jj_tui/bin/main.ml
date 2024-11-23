@@ -40,26 +40,13 @@ let ui_loop ~quit ~term root =
       | _ ->
         `Unhandled)
   in
-  let rec loop () =
-    if not (Lwd.peek quit)
-    then (
-      (* let start_time = Unix.gettimeofday() in *)
-      let term_width, term_height = Notty_unix.Term.size (Vars.get_term ()) in
-      let prev_term_width, prev_term_height = Lwd.peek Vars.term_width_height in
-      if term_width <> prev_term_width || term_height <> prev_term_height
-      then Lwd.set Vars.term_width_height (term_width, term_height);
-      Nottui_picos.step
-        ~await_read:(fun fd timeout ->
-          (*await the read inside a promise*)
-          Promise.await @@ Flock.fork_as_promise (fun _ -> await_read_unix fd timeout))
-        ~process_event:true
-        ~timeout:0.01
-        ~renderer
-        term
-        (Lwd.observe @@ root);
-      loop ())
+  let tick () =
+    let term_width, term_height = Notty_unix.Term.size (Vars.get_term ()) in
+    let prev_term_width, prev_term_height = Lwd.peek Vars.term_width_height in
+    if term_width <> prev_term_width || term_height <> prev_term_height
+    then Lwd.set Vars.term_width_height (term_width, term_height)
   in
-  loop ()
+  Nottui_picos.Ui_loop.run   ~tick ~term ~renderer ~quit root
 ;;
 
 let start_ui () =
@@ -70,9 +57,8 @@ let start_ui () =
   Flock.terminate ()
 ;;
 
-Picos_io.Unix
 let start () =
-  Picos_mux_multififo.run_on ~n_domains:1 (fun _ ->
+  Picos_mux_multififo.run_on ~n_domains:4 (fun _ ->
     Flock.join_after @@ fun () ->
     init_logging ();
     start_ui ())

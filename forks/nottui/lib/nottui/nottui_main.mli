@@ -188,11 +188,10 @@ module Ui : sig
       Copy and paste, as well as focus movements. *)
   type semantic_key =
     [ (* Clipboard *)
-      `Copy
+        `Copy
     | `Paste
     | (* Focus management *)
-      `Focus of
-      [ `Out | `Next | `Prev | `Left | `Right | `Up | `Down ]
+      `Focus of [ `Out | `Next | `Prev | `Left | `Right | `Up | `Down ]
     ]
 
   (** A key is the pair of a main key and a list of modifiers *)
@@ -391,7 +390,8 @@ module Ui_loop : sig
       To simulate concurrency in a polling fashion, tick function and period
       can be provided. Use the [Lwt] backend for real concurrency. *)
   val run
-    :  ?tick_period:float
+    :  ?on_invalidate:(ui -> unit)
+    -> ?tick_period:float
     -> ?tick:(unit -> unit)
     -> ?term:Term.t
     -> ?renderer:Renderer.t
@@ -416,7 +416,7 @@ module Ui_loop : sig
       -> ui Lwd.root
       -> unit
 
-    val await_read_unix : Unix.file_descr -> float -> [ `NotReady | `Ready ]
+    val await_read_unix : Unix.file_descr -> float -> [ `NotReady | `Ready | `LwdStateUpdate]
 
     (** Run one step of the main loop.
 
@@ -426,7 +426,7 @@ module Ui_loop : sig
 
         [?await_read]- A function that waits for the file handle to be ready for reading for up to the provided timeout (-1.0 for no timeout). This exists entirely so this waiting can be overriden to interoperate with an effects based async system. *)
     val step
-      :  ?await_read:(Unix.file_descr -> float -> [ `Ready | `NotReady ])
+      :  ?await_read:(Unix.file_descr -> float -> [ `Ready | `NotReady | `LwdStateUpdate ])
       -> ?process_event:bool
       -> ?timeout:float
       -> renderer:Renderer.t
@@ -434,9 +434,10 @@ module Ui_loop : sig
       -> ui Lwd.root
       -> unit
 
-    type run_with_term_intern=
+    type run_with_term_intern =
       step:step
       -> Term.t
+      -> ?on_invalidate:(ui -> unit)
       -> ?tick_period:float
       -> ?tick:(unit -> unit)
       -> renderer:Renderer.t
@@ -444,18 +445,21 @@ module Ui_loop : sig
       -> ui Lwd.t
       -> unit
 
-    type run_with_term=
+    type run_with_term =
       Term.t
+      -> ?on_invalidate:(ui -> unit)
       -> ?tick_period:float
       -> ?tick:(unit -> unit)
       -> renderer:Renderer.t
       -> bool Lwd.var
       -> ui Lwd.t
       -> unit
-    val run_with_term:run_with_term_intern
 
-    val run:
-      run_with_term:run_with_term
+    val run_with_term : run_with_term_intern
+
+    val run
+      :  run_with_term:run_with_term
+      -> ?on_invalidate:(ui -> unit)
       -> ?tick_period:float
       -> ?tick:(unit -> unit)
       -> ?term:Term.t
