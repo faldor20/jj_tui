@@ -437,7 +437,7 @@ module Make (Vars : Global_vars.Vars) = struct
              (if Focus.peek_has_focus focus
               then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ()))));
              [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
-             Picos_std_structured.Flock.fork (fun () -> Global_funcs.update_views ()))
+             Global_funcs.update_views_async ();)
            ~custom_handler:(fun ~selected ~selectable_items key -> handleKeys key)
     in
     let final_ui =
