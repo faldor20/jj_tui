@@ -50,6 +50,12 @@ module Make (Vars : Global_vars.Vars) = struct
       ; description = "Make a new empty change as a child of the selected rev"
       }
     ; {
+        key = 'y'
+      ; description = "Duplicate the current selected commits "
+      ; cmd = Dynamic (fun () -> Cmd ([ "duplicate" ] @ Vars.get_active_revs ()))
+      }
+    ; { key = 'u'; description = "Undo the last operation"; cmd = Cmd [ "undo" ] }
+    ; {
         key = 'c'
       ; description =
           "Describe this change and start working on a new rev (same as `describe` then \
@@ -272,8 +278,8 @@ module Make (Vars : Global_vars.Vars) = struct
                        Cmd [ "bookmark"; "delete"; bookmark ]
                        |> confirm_prompt
                             (Printf.sprintf
-                               "delete the bookmark: '%s' This will also delete it on the \
-                                remote next \"git push\"."
+                               "delete the bookmark: '%s' This will also delete it on \
+                                the remote next \"git push\"."
                                bookmark))
               }
             ; {
@@ -287,8 +293,8 @@ module Make (Vars : Global_vars.Vars) = struct
                        Cmd [ "bookmark"; "forget"; bookmark ]
                        |> confirm_prompt
                             (Printf.sprintf
-                               "forget the bookmark: '%s' . This will not delete it on the \
-                                remote."
+                               "forget the bookmark: '%s' . This will not delete it on \
+                                the remote."
                                bookmark))
               }
             ; {
@@ -297,7 +303,8 @@ module Make (Vars : Global_vars.Vars) = struct
               ; cmd =
                   bookmark_select_prompt
                     branches_no_remote
-                    "Select the bookmark to rename (only local/tracked bookmarks are shown)"
+                    "Select the bookmark to rename (only local/tracked bookmarks are \
+                     shown)"
                     (fun curr_name ->
                        Prompt ("New bookmark name", [ "bookmark"; "rename"; curr_name ]))
               }
@@ -311,7 +318,10 @@ module Make (Vars : Global_vars.Vars) = struct
                         branches_no_remote
                         ("Select the bookmark to set to rev: " ^ rev)
                         (fun bookmark ->
-                           Cmd [ "bookmark"; "set"; "-r"; get_hovered_rev (); "-B"; bookmark ]))
+                           Cmd
+                             [
+                               "bookmark"; "set"; "-r"; get_hovered_rev (); "-B"; bookmark
+                             ]))
               }
             ; {
                 key = 't'
@@ -320,7 +330,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   bookmark_select_prompt
                     branches_remotes_not_tracked
                     "Select the bookmark to begin tracking"
-                    (fun bookmark -> Cmd [ "bookmark"; "track";  bookmark ])
+                    (fun bookmark -> Cmd [ "bookmark"; "track"; bookmark ])
               }
             ; {
                 key = 'u'
@@ -329,7 +339,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   bookmark_select_prompt
                     branches_remotes_tracked
                     "Select the bookmark to untrack"
-                    (fun bookmark -> Cmd [ "bookmark"; "untrack";  bookmark ])
+                    (fun bookmark -> Cmd [ "bookmark"; "untrack"; bookmark ])
               }
             ]
       }
@@ -437,7 +447,7 @@ module Make (Vars : Global_vars.Vars) = struct
              (if Focus.peek_has_focus focus
               then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ()))));
              [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
-             Global_funcs.update_views_async ();)
+             Global_funcs.update_views_async ())
            ~custom_handler:(fun ~selected ~selectable_items key -> handleKeys key)
     in
     let final_ui =
