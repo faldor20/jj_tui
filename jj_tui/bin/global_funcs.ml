@@ -20,7 +20,7 @@ let check_startup () =
     let res =
       match
         (*we snapshot here in the first request to make sure the editor is showing the latest changes*)
-        jj_no_log_errorable ~color:false ~snapshot:true [ "op"; "log"; "-l"; "0" ]
+        jj_no_log_errorable ~color:false ~snapshot:true [ "op"; "log"; "--limit"; "0" ]
       with
       | Ok _ ->
         `Good
