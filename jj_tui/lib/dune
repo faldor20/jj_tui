@@ -1,9 +1,18 @@
 (include_subdirs unqualified)
-(library
 
+(library
  (name jj_tui)
  (inline_tests)
- (libraries stdio notty nottui angstrom bigstringaf picos_std.sync picos_std.finally picos_std.structured logs)
+ (libraries
+  stdio
+  notty
+  nottui
+  angstrom
+  bigstringaf
+  picos_std.sync
+  picos_std.finally
+  picos_std.structured
+  logs
+  re)
  (preprocess
-  (pps ppx_expect logs-ppx ppx_deriving.std))
-  )
+  (pps ppx_expect logs-ppx ppx_deriving.std)))

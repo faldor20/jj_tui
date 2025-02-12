@@ -418,7 +418,7 @@ module Make (Vars : Global_vars.Vars) = struct
           | `Filler x ->
             W.Lists.(
               Filler
-                (" " ^ x ^ "\n"
+                (" " ^ x 
                  |> Jj_tui.AnsiReverse.colored_string
                  |> Ui.atom
                  |> Lwd.pure)))
