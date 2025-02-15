@@ -46,3 +46,30 @@ module String = struct
     strings |> List.filter (Base.String.is_empty >> not) |> String.concat sep
   ;;
 end
+(** convinience method to take a str and turn it into a unicode char*)
+let make_uchar str =
+  let a = String.get_utf_8_uchar str 0 in
+  if a |> Uchar.utf_decode_is_valid
+  then a |> Uchar.utf_decode_uchar
+  else failwith "not a unicode string"
+;;
+
+(** Takes a list and pair all elements we can*)
+let rec list_to_pairs lst =
+  match lst with
+  | [] | [ _ ] ->
+    [] (* If list is empty or has only one element, return empty list *)
+  | x :: y :: rest ->
+    (x, y) :: list_to_pairs rest
+;;
+(** Iterate over a list in pairs. f_last handles if there is a last elemment that doesn't have a pair*)
+let rec pairwise f ~f_last lst =
+  match lst with
+  | [ single ] ->
+    f_last single
+  | x :: y :: rest ->
+    ((x, y) |> f) :: pairwise f ~f_last rest
+  | [] ->
+    [] (* If list is empty or has only one element, return empty list *)
+;;
+
