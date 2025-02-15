@@ -1,14 +1,23 @@
 (executable
  (public_name jj_tui)
  (name main)
- (libraries signal jj_tui nottui base stdio picos_io picos_mux.multififo picos_std.sync picos_std.finally picos_std.structured  spawn )
+ (libraries
+  signal
+  jj_tui
+  nottui
+  base
+  stdio
+  picos_io
+  picos_mux.multififo
+  picos_std.sync
+  picos_std.finally
+  picos_std.structured
+  spawn
+  yojson)
+ (preprocess
+  (pps logs-ppx ppx_deriving.std)))
 
-(preprocess
-  (pps logs-ppx ppx_deriving.std))
-   )
-
- (env
-  (static
-   (flags(:standard -cclib -static -cclib -no-pie))
-  )
- )
+(env
+ (static
+  (flags
+   (:standard -cclib -static -cclib -no-pie))))

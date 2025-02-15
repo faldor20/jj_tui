@@ -44,6 +44,26 @@
               notty-mine = ocamlPackages.notty.overrideAttrs (old: {
                 src = ./forks/notty/.;
               });
+
+              ppx_record_updater_src = pkgs.fetchFromGitHub {
+                owner = "faldor20";
+                repo = "ppx_record_updater";
+                rev = "15a6ac0fa1a98e21e2b4b68b2eaee088186d5515";
+                sha256 = "sha256-e1BD3+F+jutQFbjISKcCNJzkzxA+x8vuCphxT/CuZcA=";
+              };
+
+              ppx_record_updater = ocamlPackages.buildDunePackage {
+                pname = "ppx_record_updater";
+                version = "0.1.0";
+                duneVersion = "3";
+                src = ppx_record_updater_src;
+                buildInputs = with ocamlPackages; [
+                  ppxlib
+                  ppx_deriving
+                ];
+                strictDeps = true;
+              };
+
               picos_src = pkgs.fetchFromGitHub {
                 owner = "ocaml-multicore";
                 repo = "picos";
@@ -232,6 +252,7 @@
 
                   signal
 
+                  ppx_record_updater
                   ocamlPackages.logs
                   ocamlPackages.logs-ppx
 
@@ -251,6 +272,12 @@
                   ocamlPackages.uutf
 
                   ocamlPackages.re
+
+                  ocamlPackages.yojson
+                  ocamlPackages.ppx_deriving_yojson
+                  ocamlPackages.yaml
+                  ocamlPackages.ppx_deriving_yaml
+
                   # ocamlPackages.parsexp
 
                   # Ocaml package dependencies needed to build go here.
@@ -291,7 +318,7 @@
               jj_tui_build_pkgs = jj_tui_build_pkgs;
             };
           # OCaml packages available on nixpkgs
-          ocamlPackages = pkgs.ocaml-ng.ocamlPackages_5_1;
+          ocamlPackages = pkgs.ocaml-ng.ocamlPackages_5_3;
           inherit (pkgs) mkShell lib;
 
         in

@@ -5,6 +5,7 @@ open Lwd_infix
 open Global_funcs
 open Jj_tui.Util
 open Jj_tui
+open Logging
 module Pio = Picos_io
 
 module Ui = struct
@@ -55,6 +56,9 @@ module Make (Vars : Global_vars.Vars) = struct
              ; (function
                  | `ASCII 'q', _ ->
                    Vars.quit $= true;
+                   `Handled
+                 |`Arrow _,[`Meta]->
+                   (*totatlly disable all forced focus navigation*)
                    `Handled
                  | _ ->
                    `Unhandled)
@@ -131,7 +135,7 @@ module Make (Vars : Global_vars.Vars) = struct
             |> W.is_focused ~focus:branch_focus (fun ui focused ->
               ui
               |> Ui.keyboard_area (function
-                | `ASCII k, [] ->
+                | k ->
                   Jj_commands.handleInputs Jj_commands.default_list k
                 | _ ->
                   `Unhandled)
@@ -158,7 +162,7 @@ module Make (Vars : Global_vars.Vars) = struct
     |> W.Overlay.selection_list_prompt_filterable
          ~show_prompt_var:ui_state.show_string_selection_prompt
     |> inputs ~custom:(function
-      | `ASCII k, [] ->
+      | k ->
         Jj_commands.handleInputs Jj_commands.default_list k
       | `Arrow _, [ `Ctrl ]
       | `Arrow _, [ `Meta ]
@@ -183,6 +187,9 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   let mainUi () =
+    (* first lets load the config*)
+    Vars.config $= Config.load_config();
+    [%log info "loaded config"];
     (*we want to initialize our states and keep them up to date*)
     let$* startup_result = check_startup () in
     match startup_result with

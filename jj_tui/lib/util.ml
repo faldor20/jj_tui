@@ -73,3 +73,27 @@ let rec pairwise f ~f_last lst =
     [] (* If list is empty or has only one element, return empty list *)
 ;;
 
+module StrMap_=Map.Make(String)
+module StrMap =struct
+  open Yojson.Safe
+  include StrMap_
+  type t= string StrMap_.t
+  let to_yojson map : Yojson.Safe.t =
+    `Assoc (bindings map |> List.map (fun (k, v) -> k, `String v))
+  ;;
+  let of_yojson (json:Yojson.Safe.t)  =
+
+  match json with
+  |`Assoc(items)->
+   items|>List.map (fun (k,v)->
+    (v|>[%of_yojson: string ])
+    |>Result.map(fun x-> k,x)
+    )
+    |>
+    Base.Result.all
+    |>Result.map of_list
+    
+  |_-> Error ("Not an object")
+
+  ;;
+end

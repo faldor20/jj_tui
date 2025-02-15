@@ -10,22 +10,23 @@ module Make (Vars : Global_vars.Vars) = struct
   open Jj_tui
   open Picos_std_structured
 
+  open Jj_tui.Key_map
   let active_files = Lwd.var [ "" ]
 
-  let rec command_mapping =
+  let rec make_command_mapping (key_map: Key_map.file_keys) =
     [
       {
-        key = '?'
+        key = key_map.show_help
       ; description = "Show help"
       ; cmd =
           Fun
             (fun _ ->
               ui_state.show_popup
-              $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
+              $= Some (commands_list_ui ~include_arrows:true (get_command_mapping ()), "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
-        key = 'm'
+        key = key_map.move_to_rev
       ; description = "Move file to other commit"
       ; cmd =
           PromptThen
@@ -44,7 +45,7 @@ module Make (Vars : Global_vars.Vars) = struct
                    @ Lwd.peek active_files) )
       }
     ; {
-        key = 'N'
+        key = key_map.move_to_child
       ; description = "Move file to child commit"
       ; cmd =
           Dynamic_r
@@ -54,7 +55,7 @@ module Make (Vars : Global_vars.Vars) = struct
                  @ Lwd.peek active_files))
       }
     ; {
-        key = 'P'
+        key = key_map.move_to_parent
       ; description = "Move file to parent commit"
       ; cmd =
           Dynamic_r
@@ -64,7 +65,7 @@ module Make (Vars : Global_vars.Vars) = struct
                  @ Lwd.peek active_files))
       }
     ; {
-        key = 'd'
+        key = key_map.discard
       ; description = "Restore to previous revision (git discard)"
       ; cmd =
           Dynamic_r
@@ -78,8 +79,15 @@ module Make (Vars : Global_vars.Vars) = struct
                 (Cmd ([ "restore"; "--to"; rev; "--from"; rev ^ "-" ] @ selected)))
       }
     ]
+  and command_mapping = ref None
+  and get_command_mapping () =
+    match !command_mapping with
+    | Some mapping -> mapping
+    | None -> 
+      let mapping = make_command_mapping (Lwd.peek ui_state.config).key_map.file in
+      command_mapping := Some mapping;
+      mapping
   ;;
-
   let hovered_var = ref "./"
 
   let file_view ~focus summary_focus =
@@ -116,8 +124,8 @@ module Make (Vars : Global_vars.Vars) = struct
              | `Enter, [] ->
                Focus.request_reversable summary_focus;
                `Handled
-             | `ASCII k, [] ->
-               handleInputs command_mapping k
+             |  k  ->
+              handleInputs (get_command_mapping ()) k
              | _ ->
                `Unhandled)
     in
@@ -129,4 +137,5 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     ui
   ;;
+
 end

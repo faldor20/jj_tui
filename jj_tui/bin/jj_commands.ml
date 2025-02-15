@@ -3,7 +3,8 @@
     We can then run a command matching a key or generate a documentation UI element showing all available commands *)
 
 open Jj_tui.Logging
-
+open Jj_tui.Key_map
+open Jj_tui.Key_map
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
 module Shared = struct
   type cmd_args = string list [@@deriving show]
@@ -45,7 +46,7 @@ module Shared = struct
 
   (** A command that should be run when it's key is pressed*)
   and 'a command = {
-      key : char
+      key : key
     ; description : string
     ; cmd : 'a command_variant
   }
@@ -85,12 +86,12 @@ module Intern (Vars : Global_vars.Vars) = struct
       ()
   ;;
 
-  let render_command_line ~indent_level key desc =
+  let render_command_line ~indent_level key_name desc =
     let indent = String.init (indent_level * 2) (fun _ -> ' ') in
     I.hcat
       [
         I.string A.empty indent
-      ; I.uchars (A.fg A.lightblue) key
+      ; I.string (A.fg A.lightblue) key_name
       ; I.strf " "
       ; desc |> String.split_on_char '\n' |> List.map (I.string A.empty) |> I.vcat
       ]
@@ -117,9 +118,9 @@ module Intern (Vars : Global_vars.Vars) = struct
            | Prompt_r _
            | Dynamic_r _ )
        } ->
-         [ render_command_line ~indent_level [| key |> Uchar.of_char |] description ]
+         [ render_command_line ~indent_level (key_to_string key) description ]
        | { key; description; cmd = SubCmd subs } ->
-         render_command_line ~indent_level [| key |> Uchar.of_char |] description
+         render_command_line ~indent_level (key_to_string key) description
          :: render_commands ~indent_level:(indent_level + 1) subs
   ;;
 
@@ -127,7 +128,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     let move_command =
       render_command_line
         ~indent_level:0
-        ("Arrows" |> String.to_seq |> Seq.map Uchar.of_char |> Array.of_seq)
+        ("Arrows" )
         "navigation between windows"
     in
     ((commands |> render_commands) @ if include_arrows then [ move_command ] else [])
@@ -247,10 +248,20 @@ module Intern (Vars : Global_vars.Vars) = struct
   and command_input ~is_sub keymap key =
     (* Use exceptions so we can break out of the list*)
     let input = Lwd.peek ui_state.input in
+   
     try
-      keymap
-      |> List.iter (fun cmd ->
-        if cmd.key == key then handleCommand cmd.description cmd.cmd else ());
+        keymap
+      |> List.iter (fun cmd ->        
+        (*log keys*)
+      match key with
+      |`ASCII k,modifiers->
+
+        (*log keys*)
+        [%log info "key: %s"(key_to_string {key=k;modifiers})];
+        if (`ASCII cmd.key.key,cmd.key.modifiers) = key then 
+          handleCommand cmd.description cmd.cmd;
+        |_->()
+        );
       `Unhandled
     with
     | Handled ->
@@ -260,6 +271,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Jj_process.JJError (cmd, error) ->
       handle_jj_error cmd error;
       `Unhandled
+
 
   and command_no_input description cmd =
     (* Use exceptions so we can break out of the list*)
@@ -287,7 +299,7 @@ module Make (Vars : Global_vars.Vars) = struct
   let rec default_list =
     [
       {
-        key = '?'
+        key = { key = '?'; modifiers = [] }
       ; description = "Show help"
       ; cmd =
           Fun
@@ -304,7 +316,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (**`Prompt`:Allows running one command and then running another using the input of the first*)
   let confirm_prompt prompt cmd =
-    SubCmd [ { key = 'y'; description = "Yes I want to " ^ prompt; cmd } ]
+    SubCmd [ { key = { key = 'y'; modifiers = [] }; description = "Yes I want to " ^ prompt; cmd } ]
   ;;
 
   (** Handles raw command mapping without regard for modes or the current intput state. Should be used when setting a new input mode*)

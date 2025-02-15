@@ -4,8 +4,10 @@ open Picos_std_structured
 open Lwd_infix
 open Jj_tui.Process
 open Jj_tui.Logging
-
+open Jj_tui
 type cmd_args = string list
+open Jj_tui.Key_map
+
 
 type ui_state_t = {
     view :
@@ -16,7 +18,7 @@ type ui_state_t = {
         (* | `Prompt of string * [ `Cmd of cmd_args | `Cmd_I of cmd_args ] *)
       ]
         Lwd.var
-  ; input : [ `Normal | `Mode of char -> Ui.may_handle ] Lwd.var
+  ; input : [ `Normal | `Mode of (Nottui.Ui.key) -> Ui.may_handle ] Lwd.var
   ; show_popup : (ui Lwd.t * string) option Lwd.var
   ; show_prompt : W.Overlay.text_prompt_data option Lwd.var
       (* ; show_graph_selection_prompt : *)
@@ -34,6 +36,7 @@ type ui_state_t = {
   ; revset : string option Lwd.var
   ; trigger_update : unit Lwd.var
   ; reset_selection : unit Signal.t
+  ; config : Config.t Lwd.var
 }
 
 let get_unique_id maybe_unique_rev =
@@ -64,6 +67,7 @@ module type Vars = sig
   val get_selected_revs_lwd : unit -> string list Lwd.t
   val get_active_revs : unit -> string list
   val get_active_revs_lwd : unit -> string list Lwd.t
+  val config : Config.t Lwd.var
 end
 
 module Vars : Vars = struct
@@ -88,6 +92,7 @@ module Vars : Vars = struct
     ; command_log = Lwd.var []
     ; trigger_update = Lwd.var ()
     ; reset_selection = Signal.make ~equal:(fun _ _ -> false) ()
+    ; config = Lwd.var (Config.default_config)
     }
   ;;
 
@@ -138,4 +143,6 @@ module Vars : Vars = struct
     then [ hovered |> get_unique_id ]
     else selected |> List.map get_unique_id
   ;;
+
+  let config = ui_state.config
 end

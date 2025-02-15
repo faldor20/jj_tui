@@ -21,60 +21,114 @@ module Make (Vars : Global_vars.Vars) = struct
       , func )
   ;;
 
-  let rec command_mapping : 'acommand list =
+  let custom_commit ?(edit = true) msg =
+    let rev = Vars.get_hovered_rev () in
+    jj [ "describe"; "-r"; rev; "-m"; msg ] |> ignore;
+    (jj @@ [ "new"; "--insert-after"; rev ] @ if edit then [] else [ "--no-edit" ])
+    |> ignore
+  ;;
+
+  let rec make_command_mapping (key_map : Key_map.graph_keys) : 'acommand list =
     [
       {
-        key = '?'
+        key = key_map.show_help
       ; description = "Show help"
       ; cmd =
           Fun
             (fun _ ->
               ui_state.show_popup
-              $= Some (commands_list_ui ~include_arrows:true command_mapping, "Help");
+              $= Some
+                   (commands_list_ui ~include_arrows:true (get_command_mapping ()), "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ; {
-        key = 'P'
+        key = key_map.prev
       ; description = "Move the working copy to the previous child "
       ; cmd = Cmd [ "prev" ]
       }
     ; {
-        key = 'N'
-      ; description = "Make a new change and insert it after the selected rev"
-      ; cmd =
-          Dynamic (fun () -> Cmd ([ "new"; "--insert-after" ] @ Vars.get_active_revs ()))
-      }
-    ; {
-        key = 'n'
-      ; cmd = Cmd_with_revs (Active [ "new" ])
-      ; description = "Make a new empty change as a child of the selected rev"
-      }
-    ; {
-        key = 'y'
-      ; description = "Duplicate the current selected commits "
-      ; cmd = Dynamic (fun () -> Cmd ([ "duplicate" ] @ Vars.get_active_revs ()))
-      }
-    ; { key = 'u'; description = "Undo the last operation"; cmd = Cmd [ "undo" ] }
-    ; {
-        key = 'c'
-      ; description =
-          "Describe this change and start working on a new rev (same as `describe` then \
-           `new`) "
-      ; cmd = Prompt ("commit msg", [ "commit"; "-m" ])
-      }
-    ; {
-        key = 'S'
-      ; description = "Split the current commit interacively"
-      ; cmd = Dynamic_r (fun rev -> Cmd_I [ "split"; "-r"; rev; "-i" ])
-      }
-    ; {
-        key = 's'
-      ; description = "Squash/unsquash (has subcommands)"
+        key = key_map.new_child.menu
+      ; description = "Make a new change"
       ; cmd =
           SubCmd
             [
               {
-                key = 's'
+                key = key_map.new_child.base
+              ; cmd = Cmd_with_revs (Active [ "new" ])
+              ; description = "Make new child commit"
+              }
+            ; {
+                key = key_map.new_child.no_edit
+              ; cmd = Cmd_with_revs (Active [ "new"; "--no-edit" ])
+              ; description = "Same as 'new', but without editing the new commit"
+              }
+            ; {
+                key = key_map.new_child.inline
+              ; description = "Make a new change and insert it after the selected rev"
+              ; cmd =
+                  Dynamic
+                    (fun () ->
+                      Cmd ([ "new"; "--insert-after" ] @ Vars.get_active_revs ()))
+              }
+            ; {
+                key = key_map.new_child.inline_no_edit
+              ; description = "Same as 'new insert', but without editing the new commit"
+              ; cmd =
+                  Dynamic
+                    (fun () ->
+                      Cmd
+                        ([ "new"; "--no-edit"; "--insert-after" ]
+                         @ Vars.get_active_revs ()))
+              }
+            ]
+      }
+    ; {
+        key = key_map.duplicate
+      ; description = "Duplicate the current selected commits "
+      ; cmd = Dynamic (fun () -> Cmd ([ "duplicate" ] @ Vars.get_active_revs ()))
+      }
+    ; {
+        key = key_map.undo
+      ; description = "Undo the last operation"
+      ; cmd = Cmd [ "undo" ]
+      }
+    ; {
+        key = key_map.commit.menu
+      ; description = "Commit"
+      ; cmd =
+          SubCmd
+            [
+              {
+                key = key_map.commit.base
+              ; description =
+                  "Describe this change and start working on a new rev (same as \
+                   `describe` then `new`)"
+              ; cmd =
+                  PromptThen ("commit msg", fun msg -> Fun (fun () -> custom_commit msg))
+              }
+            ; {
+                key = key_map.commit.no_edit
+              ; description = "Same as commit but without editing the new commit"
+              ; cmd =
+                  PromptThen
+                    ( "commit msg"
+                    , fun msg -> Fun (fun () -> custom_commit ~edit:false msg) )
+              }
+            ]
+      }
+    ; {
+        key = key_map.split
+      ; description = "Split the current commit interacively"
+      ; cmd = Dynamic_r (fun rev -> Cmd_I [ "split"; "-r"; rev; "-i" ])
+      }
+    ; {
+        key = key_map.squash.menu
+      ; description = "Squash/unsquash"
+      ; cmd =
+          SubCmd
+            [
+              {
+                key = key_map.squash.into_parent
               ; description = "Squash into parent"
               ; cmd =
                   Fun
@@ -87,7 +141,7 @@ module Make (Vars : Global_vars.Vars) = struct
                       jj [ "squash"; "--quiet"; "-r"; rev; "-m"; new_msg ] |> ignore)
               }
             ; {
-                key = 'S'
+                key = key_map.squash.into_rev
               ; description = "Squash into any commit"
               ; cmd =
                   PromptThen
@@ -112,17 +166,17 @@ module Make (Vars : Global_vars.Vars) = struct
                               ]) )
               }
             ; {
-                key = 'u'
+                key = key_map.squash.unsquash
               ; cmd = Dynamic_r (fun rev -> Cmd_I [ "unsquash"; "-r"; rev; "-i" ])
               ; description = "Interactivaly unsquash"
               }
             ; {
-                key = 'i'
+                key = key_map.squash.interactive_parent
               ; description = "Interactively choose what to squash into parent"
               ; cmd = Dynamic_r (fun rev -> Cmd_I [ "squash"; "-r"; rev; "-i" ])
               }
             ; {
-                key = 'I'
+                key = key_map.squash.interactive_rev
               ; description = "Interactively choose what to squash into a commit"
               ; cmd =
                   Dynamic_r
@@ -133,34 +187,34 @@ module Make (Vars : Global_vars.Vars) = struct
             ]
       }
     ; {
-        key = 'e'
+        key = key_map.edit
       ; cmd = Dynamic_r (fun rev -> Cmd [ "edit"; rev ])
       ; description = "Edit the selected revision"
       }
     ; {
-        key = 'd'
+        key = key_map.describe
       ; cmd =
           Dynamic_r (fun rev -> Prompt ("description", [ "describe"; "-r"; rev; "-m" ]))
       ; description = "Describe this revision"
       }
     ; {
-        key = 'D'
+        key = key_map.describe_editor
       ; cmd = Dynamic_r (fun rev -> Cmd_I [ "describe"; "-r"; rev ])
       ; description = "Describe this revision using an editor"
       }
     ; {
-        key = 'R'
+        key = key_map.resolve
       ; cmd = Dynamic_r (fun rev -> Cmd_I [ "resolve"; "-r"; rev ])
       ; description = "Resolve conflicts at this revision"
       }
     ; {
-        key = 'r'
+        key = key_map.rebase.menu
       ; description = "Rebase revision "
       ; cmd =
           SubCmd
             [
               {
-                key = 'r'
+                key = key_map.rebase.single
               ; description = "Rebase single revision "
               ; cmd =
                   Dynamic_r
@@ -168,7 +222,7 @@ module Make (Vars : Global_vars.Vars) = struct
                       Prompt ("Dest rev for " ^ rev, [ "rebase"; "-r"; rev; "-d" ]))
               }
             ; {
-                key = 's'
+                key = key_map.rebase.with_descendants
               ; description = "Rebase revision and its decendents"
               ; cmd =
                   Dynamic_r
@@ -178,7 +232,7 @@ module Make (Vars : Global_vars.Vars) = struct
                         , [ "rebase"; "-s"; rev; "-d" ] ))
               }
             ; {
-                key = 'b'
+                key = key_map.rebase.with_bookmark
               ; description = "Rebase revision and all other revissions on its bookmark"
               ; cmd =
                   Dynamic_r
@@ -190,26 +244,27 @@ module Make (Vars : Global_vars.Vars) = struct
             ]
       }
     ; {
-        key = 'g'
+        key = key_map.git.menu
       ; description = "Git commands"
       ; cmd =
           SubCmd
             [
               {
-                key = 'p'
+                key = key_map.git.push
               ; description = "git push"
               ; cmd =
                   Fun
                     (fun _ ->
+                      let revs = Vars.get_active_revs () in
                       let subcmds =
                         [
                           {
-                            key = 'y'
+                            key = key_map.git.push
                           ; description = "proceed"
-                          ; cmd = Cmd [ "git"; "push" ]
+                          ; cmd = Cmd ([ "git"; "push"; "--allow-new"; "-r" ] @ revs)
                           }
                         ; {
-                            key = 'n'
+                            key = key_map.git.fetch
                           ; description = "exit"
                           ; cmd =
                               Fun
@@ -220,7 +275,9 @@ module Make (Vars : Global_vars.Vars) = struct
                         ]
                       in
                       let log =
-                        jj_no_log ~get_stderr:true [ "git"; "push"; "--dry-run" ]
+                        jj_no_log
+                          ~get_stderr:true
+                          ([ "git"; "push"; "--allow-new"; "--dry-run"; "-r" ] @ revs)
                         |> AnsiReverse.colored_string
                         |> Ui.atom
                         |> Lwd.pure
@@ -229,11 +286,15 @@ module Make (Vars : Global_vars.Vars) = struct
                       ui_state.show_popup $= Some (ui, "Git push will:");
                       ui_state.input $= `Mode (command_input ~is_sub:true subcmds))
               }
-            ; { key = 'f'; description = "git fetch"; cmd = Cmd [ "git"; "fetch" ] }
+            ; {
+                key = key_map.git.fetch
+              ; description = "git fetch"
+              ; cmd = Cmd [ "git"; "fetch" ]
+              }
             ]
       }
     ; {
-        key = 'z'
+        key = key_map.parallelize
       ; description =
           "Parallelize commits. Takes 2 commits and makes them have the\n\
            same parent and child. Run `jj parallelize` --help for details"
@@ -243,21 +304,23 @@ module Make (Vars : Global_vars.Vars) = struct
             , fun x -> Cmd ([ "paralellize" ] @ (x |> String.split_on_char ' ')) )
       }
     ; {
-        key = 'a'
+        key = key_map.abandon
       ; description = "Abandon this change(removes just this change and rebases parents)"
       ; cmd =
-          Dynamic_r
-            (fun rev ->
-              Cmd_r [ "abandon" ] |> confirm_prompt ("abandon the revision:" ^ rev))
+          Dynamic
+            (fun () ->
+              let revs = Vars.get_active_revs () in
+              Cmd ([ "abandon" ] @ revs)
+              |> confirm_prompt ("abandon the revisions:\n" ^ (revs |> String.concat "\n")))
       }
     ; {
-        key = 'b'
+        key = key_map.bookmark.menu
       ; description = "Bookmark commands"
       ; cmd =
           SubCmd
             [
               {
-                key = 'c'
+                key = key_map.bookmark.create
               ; description = "Create new bookmark"
               ; cmd =
                   PromptThen
@@ -268,7 +331,7 @@ module Make (Vars : Global_vars.Vars) = struct
                            @ [ x |> String.map (fun c -> if c = ' ' then '_' else c) ]) )
               }
             ; {
-                key = 'd'
+                key = key_map.bookmark.delete
               ; description = "Delete bookmark"
               ; cmd =
                   bookmark_select_prompt
@@ -283,7 +346,7 @@ module Make (Vars : Global_vars.Vars) = struct
                                bookmark))
               }
             ; {
-                key = 'f'
+                key = key_map.bookmark.forget
               ; description = "Forget bookmark"
               ; cmd =
                   bookmark_select_prompt
@@ -298,7 +361,7 @@ module Make (Vars : Global_vars.Vars) = struct
                                bookmark))
               }
             ; {
-                key = 'r'
+                key = key_map.bookmark.rename
               ; description = "Rename bookmark"
               ; cmd =
                   bookmark_select_prompt
@@ -309,7 +372,7 @@ module Make (Vars : Global_vars.Vars) = struct
                        Prompt ("New bookmark name", [ "bookmark"; "rename"; curr_name ]))
               }
             ; {
-                key = 's'
+                key = key_map.bookmark.set
               ; description = "Set bookmark to this change"
               ; cmd =
                   Dynamic_r
@@ -324,7 +387,7 @@ module Make (Vars : Global_vars.Vars) = struct
                              ]))
               }
             ; {
-                key = 't'
+                key = key_map.bookmark.track
               ; description = "track given remote bookmark"
               ; cmd =
                   bookmark_select_prompt
@@ -333,7 +396,7 @@ module Make (Vars : Global_vars.Vars) = struct
                     (fun bookmark -> Cmd [ "bookmark"; "track"; bookmark ])
               }
             ; {
-                key = 'u'
+                key = key_map.bookmark.untrack
               ; description = "untrack given remote bookmark"
               ; cmd =
                   bookmark_select_prompt
@@ -344,7 +407,7 @@ module Make (Vars : Global_vars.Vars) = struct
             ]
       }
     ; {
-        key = 'f'
+        key = key_map.filter
       ; description = "Filter using revset"
       ; cmd =
           PromptThen
@@ -357,6 +420,17 @@ module Make (Vars : Global_vars.Vars) = struct
                     else Vars.ui_state.revset $= Some revset) )
       }
     ]
+
+  and command_mapping = ref None
+
+  and get_command_mapping () =
+    match !command_mapping with
+    | Some mapping ->
+      mapping
+    | None ->
+      let mapping = make_command_mapping (Lwd.peek ui_state.config).key_map.graph in
+      command_mapping := Some mapping;
+      mapping
   ;;
 
   (*TODO:make a custom widget the renders the commit with and without selection.
@@ -417,11 +491,7 @@ module Make (Vars : Global_vars.Vars) = struct
             W.Lists.(Selectable data)
           | `Filler x ->
             W.Lists.(
-              Filler
-                (" " ^ x 
-                 |> Jj_tui.AnsiReverse.colored_string
-                 |> Ui.atom
-                 |> Lwd.pure)))
+              Filler (" " ^ x |> Jj_tui.AnsiReverse.colored_string |> Ui.atom |> Lwd.pure)))
       in
       items
     in
@@ -430,8 +500,8 @@ module Make (Vars : Global_vars.Vars) = struct
       | `Enter, [] ->
         Focus.request_reversable summary_focus;
         `Handled
-      | `ASCII k, [] ->
-        handleInputs command_mapping k
+      | k ->
+        handleInputs (get_command_mapping ()) k
       | _ ->
         `Unhandled
     in

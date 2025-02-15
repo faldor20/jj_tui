@@ -13,6 +13,15 @@
   picos_std.finally
   picos_std.structured
   logs
-  re)
+  re
+  yojson
+  yaml
+  ppx_deriving_yojson.runtime)
  (preprocess
-  (pps ppx_expect logs-ppx ppx_deriving.std)))
+  (pps
+   ppx_expect
+   logs-ppx
+   ppx_deriving.std
+   ppx_deriving_yojson
+   ppx_deriving_yaml
+   ppx_record_updater)))
