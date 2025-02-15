@@ -37,34 +37,48 @@ module Make (Vars : Global_vars.Vars) = struct
     W.button (Printf.sprintf "quit ") (fun () -> Vars.quit $= true) |> Lwd.pure
   ;;
 
+  let rec forward_events handlers event =
+    match handlers with
+    | h :: rest ->
+      (match h event with `Unhandled -> forward_events rest event | other -> other)
+    | [] ->
+      `Unhandled
+  ;;
+
   let inputs ?(custom = fun _ -> `Unhandled) ui =
-    let$ input_state = Lwd.get ui_state.input
-    and$ ui = ui in
     ui
-    |> Ui.keyboard_area @@ fun event ->
-       match custom event with
-       | `Unhandled ->
-         (match event with
-          | `Arrow `Left, _ ->
-            `Remap (`Focus `Up, [])
-          | `Arrow `Right, _ ->
-            `Remap (`Focus `Down, [])
-          | `ASCII 'q', _ ->
-            Vars.quit $= true;
-            `Handled
-          | `Escape, _ ->
-            (* TODO: I could refactor this and the rest of the mode handling so that when the popup is up and in focus it handles all key inputs *)
-            (match input_state with
-             | `Mode _ ->
-               ui_state.show_popup $= None;
-               ui_state.input $= `Normal;
-               `Handled
-             | _ ->
-               `Unhandled)
-          | _ ->
-            `Unhandled)
-       | a ->
-         a
+    |>$ Ui.keyboard_area @@ fun event ->
+        event
+        |> forward_events
+             [
+               custom
+             ; (function
+                 | `ASCII 'q', _ ->
+                   Vars.quit $= true;
+                   `Handled
+                 | _ ->
+                   `Unhandled)
+             ; (fun event ->
+                 match Lwd.peek ui_state.input, Lwd.peek ui_state.show_prompt, Lwd.peek ui_state.show_popup with
+                 | `Mode _, _,_ ->
+                   (match event with
+                    | `Escape, [] ->
+                      ui_state.show_popup $= None;
+                      ui_state.input $= `Normal;
+                      `Handled
+                    | _ ->
+                      `Unhandled)
+                 | `Normal, None,None -> (* only control focus when no popup and no input mode is active*)
+                   (match event with
+                    | `Arrow `Left, _ ->
+                      `Remap (`Focus `Up, [])
+                    | `Arrow `Right, _ ->
+                      `Remap (`Focus `Down, [])
+                    | _ ->
+                      `Unhandled)
+                 | _ ->
+                   `Unhandled)
+             ]
   ;;
 
   (* shows a pretty box in the middle of the screen with our error in it*)
@@ -97,7 +111,7 @@ module Make (Vars : Global_vars.Vars) = struct
         (*left side window stack*)
         W.vbox
           [
-            File_view.file_view ~focus:file_focus summary_focus  
+            File_view.file_view ~focus:file_focus summary_focus
             (* |>$ Ui.resize ~w:5 ~sw:1 ~mw:1000 *)
             |> W.is_focused ~focus:file_focus (fun ui focused ->
               ui
@@ -110,7 +124,7 @@ module Make (Vars : Global_vars.Vars) = struct
                    ~mh:(if focused then Int.min (ui |> Ui.layout_max_height) 12 else 2)
                    ~mw:1000)
             |> W.Box.focusable ~focus:file_focus ~pad_h:0 ~pad_w:1
-          ; Graph_view.graph_view ~focus:graph_focus summary_focus  ()
+          ; Graph_view.graph_view ~focus:graph_focus summary_focus ()
             |>$ Ui.resize ~sh:3 ~w:5 ~sw:1 ~mw:1000 ~h:10 ~mh:1000
             |> W.Box.focusable ~focus:graph_focus ~pad_h:0 ~pad_w:1
           ; W.Scroll.v_area (ui_state.jj_branches $-> Ui.atom)
@@ -146,7 +160,10 @@ module Make (Vars : Global_vars.Vars) = struct
     |> inputs ~custom:(function
       | `ASCII k, [] ->
         Jj_commands.handleInputs Jj_commands.default_list k
-      |`Arrow _,[`Meta]| `Tab, [`Meta]|`Tab, [`Meta;`Shift]-> 
+      | `Arrow _, [ `Ctrl ]
+      | `Arrow _, [ `Meta ]
+      | `Tab, [ `Meta ]
+      | `Tab, [ `Meta; `Shift ] ->
         (* block all normal focus keys *)
         `Handled
       | _ ->

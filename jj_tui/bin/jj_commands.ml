@@ -127,7 +127,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     let move_command =
       render_command_line
         ~indent_level:0
-        ("Alt+Arrows" |> String.to_seq |> Seq.map Uchar.of_char |> Array.of_seq)
+        ("Arrows" |> String.to_seq |> Seq.map Uchar.of_char |> Array.of_seq)
         "navigation between windows"
     in
     ((commands |> render_commands) @ if include_arrows then [ move_command ] else [])
