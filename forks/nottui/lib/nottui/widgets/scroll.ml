@@ -15,7 +15,7 @@ module Internal = struct
   let default_scroll_state = { position = 0; bound = 0 }
 
   (** Primative for implementing scrolling, should be avoided unless you actually have reason to be changing the scroll state *)
-  let vscroll_area_intern ~state ~change t =
+  let vscroll_area_intern ?(reset_on_content_change = true) ~state ~change t =
     let visible = ref (-1) in
     let total = ref (-1) in
     let scroll state delta =
@@ -59,14 +59,19 @@ module Internal = struct
           else false
         in
         if tchange || vchange
-        then change `Content { state with bound = maxi 0 (!total - !visible) })
+        then
+          change
+            `Content
+            { position = (if reset_on_content_change then 0 else state.position)
+            ; bound = maxi 0 (!total - !visible)
+            })
       |> Ui.mouse_area (scroll_handler state)
       |> Ui.keyboard_area (focus_handler state)
       (*restore original max height*)
       |> Ui.resize ~mh:tmh)
   ;;
 
-  let scroll_area_intern ?focus ~state ~change t =
+  let scroll_area_intern ?(reset_on_content_change = true) ?focus ~state ~change t =
     let open Lwd_utils in
     let w_visible = ref (-1) in
     let w_total = ref (-1) in
@@ -132,7 +137,11 @@ module Internal = struct
             else false
           in
           if tchange || vchange
-          then Some { state with bound = maxi 0 (!total - !visible) }
+          then
+            Some
+              { bound = maxi 0 (!total - !visible)
+              ; position = (if reset_on_content_change then 0 else state_w.position)
+              }
           else None
         in
         let w_update = sense tw w state_w w_total w_visible in
@@ -151,13 +160,13 @@ end
 
 open Internal
 
-let v_area ui =
+let v_area ?(reset_on_content_change = true) ui =
   let state = Lwd.var Internal.default_scroll_state in
   ui
   |> Internal.vscroll_area_intern ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
 ;;
 
-let area ?focus ui =
+let area ?(reset_on_content_change = true) ?focus ui =
   let state = Lwd.var (Internal.default_scroll_state, Internal.default_scroll_state) in
   ui
   |> Internal.scroll_area_intern
