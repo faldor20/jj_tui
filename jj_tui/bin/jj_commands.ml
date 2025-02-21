@@ -269,7 +269,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       if is_sub && input == Lwd.peek ui_state.input then ui_state.input $= `Normal;
       `Handled
     | Jj_process.JJError (cmd, error) ->
-      handle_jj_error cmd error;
+      handle_jj_error ~cmd ~error;
       `Unhandled
 
 

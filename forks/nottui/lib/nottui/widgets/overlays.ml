@@ -81,13 +81,13 @@ type text_prompt_data =
   }
 
 let text_prompt
-  ?pad_h
-  ?pad_w
-  ?(modify_body = fun x -> x)
-  ?(focus = Focus.make ())
-  ?(char_count = false)
-  ~(show_prompt_var : text_prompt_data Option.t Lwd.var)
-  ui
+      ?pad_h
+      ?pad_w
+      ?(modify_body = fun x -> x)
+      ?(focus = Focus.make ())
+      ?(char_count = false)
+      ~(show_prompt_var : text_prompt_data Option.t Lwd.var)
+      ui
   =
   let prompt_input = Lwd.var ("", 0) in
   let prompt_val = Lwd.get prompt_input in
@@ -135,12 +135,12 @@ type 'a selection_list_prompt_data =
 (* TODO: Write a ui resize function that takes an optional version of the layout spec where eveyr field is optional too, then we can use that when we want to make a widget with a custom internal state, or i can just use w mw h mw etc *)
 
 let selection_list_prompt
-  ?pad_w
-  ?pad_h
-  ?(modify_body = fun x -> x)
-  ?(focus = Focus.make ())
-  ~show_prompt_var
-  ui
+      ?pad_w
+      ?pad_h
+      ?(modify_body = fun x -> x)
+      ?(focus = Focus.make ())
+      ~show_prompt_var
+      ui
   =
   (*Build the ui so that it is either the prompt or nothing depending on whether show prompt is enabled*)
   let prompt_args =
@@ -183,12 +183,12 @@ type 'a filterable_selection_list_prompt_data =
   }
 
 let selection_list_prompt_filterable
-  ?pad_w
-  ?pad_h
-  ?(modify_body = fun x -> x)
-  ?(focus = Focus.make ())
-  ~show_prompt_var
-  ui
+      ?pad_w
+      ?pad_h
+      ?(modify_body = fun x -> x)
+      ?(focus = Focus.make ())
+      ~show_prompt_var
+      ui
   =
   (*Build the ui so that it is either the prompt or nothing depending on whether show prompt is enabled*)
   let prompt_args =
@@ -229,7 +229,13 @@ let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
         Focus.request_reversable focus;
         prompt_field |> Ui.resize ~w:5 ~sw:1
       in
-      ui |> BB.focusable ~focus ~label_top:label ?on_key |> clear_bg
+      ui
+      |> BB.focusable ~focus ~label_top:label ?on_key
+      |> clear_bg
+      (*This is a little confusing, but by wrapping the content in 2 nested keyboard areas we make it the user cannot escape the popup.
+      becasue focus moves between keyboard areas within a current keyboard area by adding 2 we make escape impossible *)
+      |> Lwd.map  ~f:(fun ui ->
+        ui |> Ui.keyboard_area (fun x -> `Unhandled))
     | None ->
       Focus.release_reversable focus;
       Ui.empty |> Lwd.pure

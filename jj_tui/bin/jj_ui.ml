@@ -57,14 +57,20 @@ module Make (Vars : Global_vars.Vars) = struct
                  | `ASCII 'q', _ ->
                    Vars.quit $= true;
                    `Handled
-                 |`Arrow _,[`Meta]->
-                   (*totatlly disable all forced focus navigation*)
-                   `Handled
+                 (* | `Arrow _, [ `Ctrl ] *)
+                 (* | `Arrow _, [ `Meta ] *)
+                 (* | `Tab, [ `Meta ] *)
+                 (* | `Tab, [ `Meta; `Shift ] -> *)
+                 (* `Handled *)
                  | _ ->
                    `Unhandled)
              ; (fun event ->
-                 match Lwd.peek ui_state.input, Lwd.peek ui_state.show_prompt, Lwd.peek ui_state.show_popup with
-                 | `Mode _, _,_ ->
+                 match
+                   ( Lwd.peek ui_state.input
+                   , Lwd.peek ui_state.show_prompt
+                   , Lwd.peek ui_state.show_popup )
+                 with
+                 | `Mode _, _, _ ->
                    (match event with
                     | `Escape, [] ->
                       ui_state.show_popup $= None;
@@ -72,7 +78,8 @@ module Make (Vars : Global_vars.Vars) = struct
                       `Handled
                     | _ ->
                       `Unhandled)
-                 | `Normal, None,None -> (* only control focus when no popup and no input mode is active*)
+                 | `Normal, None, None ->
+                   (* only control focus when no popup and no input mode is active*)
                    (match event with
                     | `Arrow `Left, _ ->
                       `Remap (`Focus `Up, [])
@@ -134,11 +141,8 @@ module Make (Vars : Global_vars.Vars) = struct
           ; W.Scroll.v_area (ui_state.jj_branches $-> Ui.atom)
             |> W.is_focused ~focus:branch_focus (fun ui focused ->
               ui
-              |> Ui.keyboard_area (function
-                | k ->
-                  Jj_commands.handleInputs Jj_commands.default_list k
-                | _ ->
-                  `Unhandled)
+              |> Ui.keyboard_area (fun k ->
+                Jj_commands.handleInputs Jj_commands.default_list k)
               |> Ui.resize
                    ~w:5
                    ~sw:1
@@ -161,18 +165,10 @@ module Make (Vars : Global_vars.Vars) = struct
     |> W.Overlay.popup ~show_popup_var:ui_state.show_popup
     |> W.Overlay.selection_list_prompt_filterable
          ~show_prompt_var:ui_state.show_string_selection_prompt
-    |> inputs ~custom:(function
-      | k ->
-        Jj_commands.handleInputs Jj_commands.default_list k
-      | `Arrow _, [ `Ctrl ]
-      | `Arrow _, [ `Meta ]
-      | `Tab, [ `Meta ]
-      | `Tab, [ `Meta; `Shift ] ->
-        (* block all normal focus keys *)
-        `Handled
-      | _ ->
-        `Unhandled)
+    |> inputs ~custom:(fun x -> Jj_commands.handleInputs Jj_commands.default_list x)
   ;;
+
+  (* block all normal focus keys *)
 
   (** Shows the op log *)
   let log_view () =
@@ -188,7 +184,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   let mainUi () =
     (* first lets load the config*)
-    Vars.config $= Config.load_config();
+    Vars.config $= Config.load_config ();
     [%log info "loaded config"];
     (*we want to initialize our states and keep them up to date*)
     let$* startup_result = check_startup () in
