@@ -261,7 +261,7 @@ module Make (Vars : Global_vars.Vars) = struct
                           {
                             key = key_map.git.push
                           ; description = "proceed"
-                          ; cmd = Cmd ([ "git"; "push"; "--allow-new"; "-r" ] @ revs)
+                          ; cmd = Cmd ([ "git"; "push"; "--allow-new" ] @ (revs|>List.concat_map(fun x-> ["-r";x])))
                           }
                         ; {
                             key = key_map.git.fetch
@@ -277,7 +277,7 @@ module Make (Vars : Global_vars.Vars) = struct
                       let log =
                         jj_no_log
                           ~get_stderr:true
-                          ([ "git"; "push"; "--allow-new"; "--dry-run"; "-r" ] @ revs)
+                          ([ "git"; "push"; "--allow-new"; "--dry-run";  ] @ (revs|>List.concat_map(fun x-> ["-r";x])))
                         |> AnsiReverse.colored_string
                         |> Ui.atom
                         |> Lwd.pure

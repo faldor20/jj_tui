@@ -234,8 +234,8 @@ let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
       |> clear_bg
       (*This is a little confusing, but by wrapping the content in 2 nested keyboard areas we make it the user cannot escape the popup.
       becasue focus moves between keyboard areas within a current keyboard area by adding 2 we make escape impossible *)
-      |> Lwd.map  ~f:(fun ui ->
-        ui |> Ui.keyboard_area (fun x -> `Unhandled))
+      (* |> Lwd.map  ~f:(fun ui -> *)
+        (* ui |> Ui.keyboard_area (fun x -> `Unhandled)) *)
     | None ->
       Focus.release_reversable focus;
       Ui.empty |> Lwd.pure
