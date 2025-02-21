@@ -7,7 +7,7 @@ A TUI for the new version control system Jujutsu
 
 
 Press `?` to show the help. (commands are different between graph and files view).
-Press `Alt+Up`and`Alt+Down` to navigate windows
+Press `Arrows` to navigate windows, `Enter` to focus file view
 List of graph commands:
 
 ![jj_tui commands](https://github.com/user-attachments/assets/1e446a3d-1736-4207-b311-29d8e4bdc333)
@@ -15,22 +15,27 @@ List of graph commands:
 
 Please provide any suggestions. I'm new to jujutsu so I'm sure people have workflows I couldn't even dream of.  
 ## Installing
-If you are on linux, just grab the latest release. It's statically linked and should work on any linux machine.
-If you are on mac, also grab a prebuild, let me know if you have any issues as I can't test on a mac.
+`linux`: Grab the latest release. It's statically linked and should work on any linux machine.
+`mac`: Grab a prebuild. Let me know if you have any issues as I can't test on a mac.
 
-
-To open a shell with jj_tui on nix:`nix shell github:faldor20/jj_tui`
-
-To install without nix: **This is definitely broken right now. Please just use nix 🙏**
-1. Install opam with your package manager
-2. clone the repo
-3. Run: `opam install .`
+To open a shell with jj_tui on nix:`nix shell github:faldor20/jj_tui``
 
 ## Dependencies
 The jujutsu CLI.
 I haven't tested on windows or Mac.
 I believe it won't work outside Unix so Windows users will currently have to use wsl. 
 
+
+
+# Config file:
+You can make a `config.yaml` config file int the following directories to customize key inputs
+`linux`: $XDG_CONFIG_HOME/jj_tui/
+`macos`: ~/Library/preferences/jj_tui/
+see `./jj_tui/lib/key_map.ml` for a spec for the keymap
+# logs: 
+`linux`: $XDG_STATE_HOME/jj_tui/
+`macos`: ~/Library/logs/jj_tui/
+
 # Dev
 Can be built with nix `nix build` or open a nix shell with `nix develop`
-For non-nix the project can be buit with dune or opam. 
+For non-nix the project is currently not setup to build with dune or opam. Sorry, I'll get there one day.
