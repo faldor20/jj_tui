@@ -30,7 +30,7 @@ let get_config_dir () =
 
 let load_config () =
   [%log info "Loading config..."];
-  let config_file = Filename.concat (get_config_dir ()) "config.json" in
+  let config_file = Filename.concat (get_config_dir ()) "config.yaml" in
   try
     let ic = open_in config_file in
     let content = really_input_string ic (in_channel_length ic) in
