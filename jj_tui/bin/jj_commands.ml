@@ -316,7 +316,7 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (**`Prompt`:Allows running one command and then running another using the input of the first*)
   let confirm_prompt prompt cmd =
-    SubCmd [ { key = { key = 'y'; modifiers = [] }; description = "Yes I want to " ^ prompt; cmd } ]
+    SubCmd [ {key=(Lwd.peek Vars.ui_state.config).key_map.confirm; description = "Yes I want to " ^ prompt; cmd } ]
   ;;
 
   (** Handles raw command mapping without regard for modes or the current intput state. Should be used when setting a new input mode*)

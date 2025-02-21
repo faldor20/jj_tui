@@ -77,6 +77,7 @@ type git_keys = {
   menu:key;
   push : key;
   fetch : key;
+  fetch_all : key;
 }[@@deriving yaml, record_updater ~derive: yaml]
 
 type squash_keys = {
@@ -140,6 +141,8 @@ type graph_keys = {
 }[@@deriving yaml, record_updater ~derive: yaml]
 
 type t = {
+  confirm:key;
+  decline:key;
   graph : graph_keys; [@updater]
   file : file_keys;[@updater]
 }[@@deriving yaml, record_updater ~derive: yaml]
@@ -149,6 +152,8 @@ let simple_key c = { key = c; modifiers = [] }
 
 (* Default key bindings matching current implementation *)
 let default:t = {
+    confirm= simple_key 'y';
+    decline= simple_key 'n';
   graph = {
     show_help = simple_key '?';
     prev = simple_key 'P';
@@ -191,6 +196,7 @@ let default:t = {
       menu = simple_key 'g';
       push = simple_key 'p';
       fetch = simple_key 'f';
+      fetch_all = simple_key 'F';
     };
     parallelize = simple_key 'z';
     abandon = simple_key 'a';

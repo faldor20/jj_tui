@@ -28,7 +28,8 @@ module Make (Vars : Global_vars.Vars) = struct
     |> ignore
   ;;
 
-  let rec make_command_mapping (key_map : Key_map.graph_keys) : 'acommand list =
+  let rec make_command_mapping (key_map_base : Key_map.t) : 'acommand list =
+    let key_map = key_map_base.graph in
     [
       {
         key = key_map.show_help
@@ -259,12 +260,15 @@ module Make (Vars : Global_vars.Vars) = struct
                       let subcmds =
                         [
                           {
-                            key = key_map.git.push
+                            key = key_map_base.confirm
                           ; description = "proceed"
-                          ; cmd = Cmd ([ "git"; "push"; "--allow-new" ] @ (revs|>List.concat_map(fun x-> ["-r";x])))
+                          ; cmd =
+                              Cmd
+                                ([ "git"; "push"; "--allow-new" ]
+                                 @ (revs |> List.concat_map (fun x -> [ "-r"; x ])))
                           }
                         ; {
-                            key = key_map.git.fetch
+                            key = key_map_base.decline
                           ; description = "exit"
                           ; cmd =
                               Fun
@@ -277,7 +281,8 @@ module Make (Vars : Global_vars.Vars) = struct
                       let log =
                         jj_no_log
                           ~get_stderr:true
-                          ([ "git"; "push"; "--allow-new"; "--dry-run";  ] @ (revs|>List.concat_map(fun x-> ["-r";x])))
+                          ([ "git"; "push"; "--allow-new"; "--dry-run" ]
+                           @ (revs |> List.concat_map (fun x -> [ "-r"; x ])))
                         |> AnsiReverse.colored_string
                         |> Ui.atom
                         |> Lwd.pure
@@ -290,6 +295,11 @@ module Make (Vars : Global_vars.Vars) = struct
                 key = key_map.git.fetch
               ; description = "git fetch"
               ; cmd = Cmd [ "git"; "fetch" ]
+              }
+            ; {
+                key = key_map.git.fetch_all
+              ; description = "git fetch all remotes"
+              ; cmd = Cmd [ "git"; "fetch"; "--all-remotes" ]
               }
             ]
       }
@@ -428,7 +438,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | Some mapping ->
       mapping
     | None ->
-      let mapping = make_command_mapping (Lwd.peek ui_state.config).key_map.graph in
+      let mapping = make_command_mapping (Lwd.peek ui_state.config).key_map in
       command_mapping := Some mapping;
       mapping
   ;;
