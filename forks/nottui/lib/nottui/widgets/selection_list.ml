@@ -16,6 +16,7 @@ type 'a maybe_multi_selectable =
   | Filler of Ui.t Lwd.t
 
 module MyMap = Map.Make (Int)
+let singe_space= Shared.string " ";;
 
 (** Get a map of all the selectable items*)
 let get_selectable_items_map (items : 'a maybe_multi_selectable array Lwd.t) =
@@ -152,7 +153,8 @@ let multi_selection_list_exclusions
       items
       |> Array.mapi (fun i x ->
         match x with
-        | Filler ui -> ui
+        (*Becasue selectable has a space used for the selection pointer, filler also needs a space*)
+        | Filler ui -> ui|>$(fun x-> Ui.hcat[ singe_space ; x])
         | Selectable x ->
           let hovered = hovered_id == x.id in
           let selected = selected_items |> MyMap.mem x.id in
@@ -297,7 +299,8 @@ let selection_list_exclusions
       items
       |> Array.mapi (fun i x ->
         match x with
-        | Filler ui -> ui
+        (*Becasue selectable has a space used for the selection pointer, filler also needs a space*)
+        | Filler ui ->  ui|>$(fun x-> Ui.hcat[ singe_space ; x])
         | Selectable x ->
           if hovered == i
           then

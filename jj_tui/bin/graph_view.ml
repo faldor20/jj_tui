@@ -481,7 +481,8 @@ module Make (Vars : Global_vars.Vars) = struct
           | `Selectable x ->
             let ui =
               W.Lists.selectable_item
-                (x ^ "\n"
+                (
+                x ^ "\n"
                  (* TODO This won't work if we are on a branch, because that puts the @ further out*)
                  |> Jj_tui.AnsiReverse.colored_string
                  |> Ui.atom)
@@ -501,7 +502,7 @@ module Make (Vars : Global_vars.Vars) = struct
             W.Lists.(Selectable data)
           | `Filler x ->
             W.Lists.(
-              Filler (" " ^ x |> Jj_tui.AnsiReverse.colored_string |> Ui.atom |> Lwd.pure)))
+              Filler (  x  |> Jj_tui.AnsiReverse.colored_string |> Ui.atom |> Lwd.pure)))
       in
       items
     in
