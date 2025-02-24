@@ -2,6 +2,11 @@ open Picos_std_sync
 open Picos_std_structured
 open Jj_tui.Logging
 
+type detail_state =
+  | Loading
+  | Loaded of Notty.image
+  | Failed
+
 type status_state =
   | File_preview of (string * string) (*revision,filepath*)
   | Graph_preview of string (*revision*)
@@ -28,26 +33,49 @@ module Make (Vars : Global_vars.Vars) = struct
   open Global_vars
   open Jj_tui
 
-  let viewState = Lwd.var I.empty
+  type view_state = {
+      summary : Notty.image
+    ; detail : detail_state
+  }
 
-  let render_file_preview (rev, file) =
-    (* we yield a bunch here to provide places for the computation to be terminated*)
-    if file != ""
-    then (
-      let log = jj_no_log [ "diff"; "-r"; rev; file ] in
+  let viewState = Lwd.var { summary = I.empty; detail = Loading }
+
+  let render_summary = function
+    | File_preview (rev, file) ->
+      let command =
+        if file != ""
+        then [ "diff"; "--summary"; "-r"; rev; file ]
+        else [ "show"; "--summary"; "-r"; rev ]
+      in
+      let log = jj_no_log command in
       Control.yield ();
       let res = log |> AnsiReverse.colored_string in
       Control.yield ();
-      res)
-    else I.string A.empty ""
+      res
+    | Graph_preview rev ->
+      let log = jj_no_log ~snapshot:false [ "show"; "--summary"; "-r"; rev ] in
+      Control.yield ();
+      let res = log |> AnsiReverse.colored_string in
+      Control.yield ();
+      res
   ;;
 
-  let render_graph_preview rev =
-    let log = jj_no_log ~snapshot:false [ "show"; "-s"; "--color-words"; "-r"; rev ] in
-    Control.yield ();
-    let res = log |> AnsiReverse.colored_string in
-    Control.yield ();
-    res
+  let render_detail = function
+    | File_preview (rev, file) ->
+      let command =
+        if file != "" then [ "diff"; "-r"; rev; file ] else [ "show"; "-r"; rev ]
+      in
+      let log = jj_no_log command in
+      Control.yield ();
+      let res = log |> AnsiReverse.colored_string in
+      Control.yield ();
+      res
+    | Graph_preview rev ->
+      let log = jj_no_log ~snapshot:false [ "diff"; "--color-words"; "-r"; rev ] in
+      Control.yield ();
+      let res = log |> AnsiReverse.colored_string in
+      Control.yield ();
+      res
   ;;
 
   (* Wait for messages to come in the stream.
@@ -55,36 +83,66 @@ module Make (Vars : Global_vars.Vars) = struct
      If a new message comes, we cancel the current computation and then start the new rendering
   *)
   let render_loop stream =
-    let current_computation = ref (Promise.of_value ()) in
+    let current_summary_computation = ref (Promise.of_value ()) in
+    let current_detail_computation = ref (Promise.of_value ()) in
+    let current_loading_computation = ref (Promise.of_value ()) in
     let cursor = ref (Stream.tap stream) in
     while true do
       let msg, new_cursor = !cursor |> Stream.read in
       cursor := new_cursor;
-      Promise.terminate_after ~seconds:0. !current_computation;
-      current_computation
+      Promise.terminate_after ~seconds:0. !current_summary_computation;
+      Promise.terminate_after ~seconds:0. !current_detail_computation;
+      Promise.terminate_after ~seconds:0. !current_loading_computation;
+      current_summary_computation
       := Flock.fork_as_promise (fun () ->
            try
-             [%log debug "Rendering status view with: %a" pp_status_state msg];
-             viewState
-             $=
-             match msg with
-             | File_preview (rev, file) ->
-               render_file_preview (rev, file)
-             | Graph_preview rev ->
-               render_graph_preview rev
+             [%log debug "Rendering status summary with: %a" pp_status_state msg];
+             let summary = render_summary msg in
+             viewState $= { (Lwd.peek viewState) with summary }
            with
            | _ ->
              [%log
                warn
-                 "preview render failed. If this happens once it's probably just because \
-                  a node was deleted. If it keeps happening and the user can't see anything, obviously this is important"])
+                 "summary render failed. If this happens once it's probably just because \
+                  a node was deleted. If it keeps happening and the user can't see \
+                  anything, obviously this is important"]);
+      current_loading_computation
+      := Flock.fork_as_promise (fun () ->
+          (* If it's been more than half a second, show the state as loading*)
+           Control.sleep ~seconds:0.3;
+           viewState $= { (Lwd.peek viewState) with detail = Loading });
+      current_detail_computation
+      := Flock.fork_as_promise (fun () ->
+           try
+             [%log debug "Rendering status detail with: %a" pp_status_state msg];
+             let detail = Loaded (render_detail msg) in
+          (*Make sure the loading is done*)
+             !current_loading_computation |> Promise.terminate;
+             viewState $= { (Lwd.peek viewState) with detail }
+           with
+           | _ ->
+             [%log
+               warn
+                 "detail render failed. If this happens once it's probably just because \
+                  a node was deleted. If it keeps happening and the user can't see \
+                  anything, obviously this is important"];
+             viewState $= { (Lwd.peek viewState) with detail = Failed })
     done
   ;;
 
   let render focus =
     Flock.fork (fun () -> render_loop statusStream);
-    Lwd.get viewState |>$ fun x ->
-    x
+    Lwd.get viewState |>$ fun { summary; detail } ->
+    let detail_view =
+      match detail with
+      | Loading ->
+        I.string A.empty "Loading..."
+      | Loaded image ->
+        image
+      | Failed ->
+        I.string A.empty "Failed to load diff"
+    in
+    I.vcat [ summary; I.void 0 1; detail_view ]
     |> Ui.atom
     |> Ui.keyboard_area (function
       | `Escape, [] ->
