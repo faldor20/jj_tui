@@ -2,6 +2,7 @@ open Global_vars
 open Lwd_infix
 open Jj_process.Make (Global_vars.Vars)
 open Picos_std_structured
+open Jj_tui.Logging
 
 let colored_string = Jj_tui.AnsiReverse.colored_string
 
@@ -50,6 +51,7 @@ let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
    This should be called after any command that performs a change *)
 let update_views ?(cause_snapshot = false) () =
   safe_jj (fun () ->
+    [%log debug "updating views"];
     let rev = Vars.get_hovered_rev () in
     let branches =
       jj_no_log ~snapshot:cause_snapshot [ "bookmark"; "list"; "-a" ] |> colored_string
@@ -73,4 +75,23 @@ let update_views_async ?(cause_snapshot = false) () =
   Promise.terminate_after ~seconds:0. !current_computation;
   let comp = Flock.fork_as_promise (fun () -> update_views ~cause_snapshot ()) in
   current_computation := comp
+;;
+
+let last_op_id = ref ""
+
+(** Update all the jj views, if there has been some kind of change*)
+let update_if_changed () =
+  (* If the last op_id has changed then there has been a change somewhere and we should re-render. otherwise don't bother*)
+  [%log info "Checking if there has been a change to the repo"];
+  let this_op =
+    jj_no_log
+      ~color:false
+      ~snapshot:true
+      [ "op"; "log"; "--limit"; "1"; "-T"; "self.id()"; "--no-graph" ]
+  in
+  if !last_op_id <> this_op
+  then (
+    [%log info "updating ui state becasue of a change in the repo"];
+    last_op_id := this_op;
+    update_status ())
 ;;

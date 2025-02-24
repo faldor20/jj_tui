@@ -143,6 +143,8 @@ type graph_keys = {
 type t = {
   confirm:key;
   decline:key;
+  left_alt:key;
+  right_alt:key;
   graph : graph_keys; [@updater]
   file : file_keys;[@updater]
 }[@@deriving yaml, record_updater ~derive: yaml]
@@ -154,6 +156,8 @@ let simple_key c = { key = c; modifiers = [] }
 let default:t = {
     confirm= simple_key 'y';
     decline= simple_key 'n';
+    left_alt= simple_key 'h';
+    right_alt= simple_key 'l';
   graph = {
     show_help = simple_key '?';
     prev = simple_key 'P';

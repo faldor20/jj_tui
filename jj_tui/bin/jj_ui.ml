@@ -193,8 +193,7 @@ module Make (Vars : Global_vars.Vars) = struct
       Flock.fork (fun () ->
         while true do
           Picos.Fiber.sleep ~seconds:5.0;
-          update_status ~cause_snapshot:true ()
-          (*we need to lock this becasue we could end up updating while the ui is rendering*)
+          update_if_changed ()
         done;
         ());
       let$* running = Lwd.get ui_state.view in

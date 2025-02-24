@@ -108,7 +108,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   anything, obviously this is important"]);
       current_loading_computation
       := Flock.fork_as_promise (fun () ->
-          (* If it's been more than half a second, show the state as loading*)
+           (* If it's been more than half a second, show the state as loading*)
            Control.sleep ~seconds:0.3;
            viewState $= { (Lwd.peek viewState) with detail = Loading });
       current_detail_computation
@@ -116,7 +116,7 @@ module Make (Vars : Global_vars.Vars) = struct
            try
              [%log debug "Rendering status detail with: %a" pp_status_state msg];
              let detail = Loaded (render_detail msg) in
-          (*Make sure the loading is done*)
+             (*Make sure the loading is done*)
              !current_loading_computation |> Promise.terminate;
              viewState $= { (Lwd.peek viewState) with detail }
            with
