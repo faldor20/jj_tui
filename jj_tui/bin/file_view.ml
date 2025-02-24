@@ -10,84 +10,26 @@ module Make (Vars : Global_vars.Vars) = struct
   open Jj_tui
   open Picos_std_structured
 
+  (* Import file commands *)
+  module FileCommands = File_commands.Make (Vars)
+  
   open Jj_tui.Key_map
   let active_files = Lwd.var [ "" ]
 
-  let rec make_command_mapping (key_map: Key_map.file_keys) =
-    [
-      {
-        key = key_map.show_help
-      ; description = "Show help"
-      ; cmd =
-          Fun
-            (fun _ ->
-              ui_state.show_popup
-              $= Some (commands_list_ui ~include_arrows:true (get_command_mapping ()), "Help");
-              ui_state.input $= `Mode (fun _ -> `Unhandled))
-      }
-    ; {
-        key = key_map.move_to_rev
-      ; description = "Move file to other commit"
-      ; cmd =
-          PromptThen
-            ( "Revision to move file to"
-            , fun rev ->
-                Cmd
-                  ([
-                     "squash"
-                   ; "-u"
-                   ; "--keep-emptied"
-                   ; "--from"
-                   ; get_hovered_rev ()
-                   ; "--into"
-                   ; rev
-                   ]
-                   @ Lwd.peek active_files) )
-      }
-    ; {
-        key = key_map.move_to_child
-      ; description = "Move file to child commit"
-      ; cmd =
-          Dynamic_r
-            (fun rev ->
-              Cmd
-                ([ "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "+" ]
-                 @ Lwd.peek active_files))
-      }
-    ; {
-        key = key_map.move_to_parent
-      ; description = "Move file to parent commit"
-      ; cmd =
-          Dynamic_r
-            (fun rev ->
-              Cmd
-                ([ "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "-" ]
-                 @ Lwd.peek active_files))
-      }
-    ; {
-        key = key_map.discard
-      ; description = "Restore to previous revision (git discard)"
-      ; cmd =
-          Dynamic_r
-            (fun rev ->
-              let selected = Lwd.peek active_files in
-              confirm_prompt
-                ("discard all changes to:\n"
-                 ^ (selected |> String.concat "\n")
-                 ^ "\nin rev "
-                 ^ rev)
-                (Cmd ([ "restore"; "--to"; rev; "--from"; rev ^ "-" ] @ selected)))
-      }
-    ]
-  and command_mapping = ref None
-  and get_command_mapping () =
+  (* Remove the hardcoded make_command_mapping function and use the dynamic one *)
+  let command_mapping = ref None
+  
+  let rec get_command_mapping () =
     match !command_mapping with
     | Some mapping -> mapping
-    | None -> 
-      let mapping = make_command_mapping (Lwd.peek ui_state.config).key_map.file in
+    | None ->
+      let key_map = (Lwd.peek ui_state.config).key_map.file in
+      let registry = FileCommands.get_command_registry active_files get_command_mapping in
+      let mapping = build_command_list key_map registry in
       command_mapping := Some mapping;
       mapping
   ;;
+  
   let hovered_var = ref "./"
 
   let file_view ~focus summary_focus =

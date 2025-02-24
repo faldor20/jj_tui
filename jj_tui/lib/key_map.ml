@@ -1,229 +1,222 @@
-type modifier = [ `Meta | `Shift | `Ctrl ]
+module Key_Map = struct
+  include Map.Make ( Key)
 
-type key = {
-  key: char;
-  modifiers: modifier list;
+  let pp inner_pp fmt this =
+    Format.fprintf fmt "@[<v>";
+    this |> iter (fun k v -> Format.fprintf fmt "@[<h>%a@ %a@]" Key.pp k inner_pp v);
+    Format.fprintf fmt "@]"
+  ;;
+
+  let show inner_pp this =
+    pp inner_pp Format.str_formatter this;
+    Format.flush_str_formatter ()
+  ;;
+end
+
+type command = { command : string } [@@deriving show]
+
+type sub_menu = {
+    title : string
+  ; subcommands : key_map
 }
 
-let sort_and_dedup_modifiers mods =
-  let modifier_order = function
-    | `Shift -> 0
-    | `Meta -> 1
-    | `Ctrl -> 2
-  in
-  mods
-  |> List.sort_uniq (fun a b -> compare (modifier_order a) (modifier_order b))
+and key_map_item =
+  | Sub_menu of sub_menu
+  | Command of command
 
-let key_of_string str =
-  let parts = String.split_on_char '+' str in
-  let rec process_parts mods = function
-    | [] -> Error "No key character provided"
-    | [k] when String.length k = 1 ->
-        let key = k.[0] in
-        Ok { key = key; modifiers = sort_and_dedup_modifiers ( mods) }
-    | mod_str :: rest ->
-      let modifier = match String.uppercase_ascii mod_str with
-        | "C" | "CTRL" -> Ok `Ctrl
-        | "S" | "SHIFT" -> Ok `Shift
-        | "A" | "ALT" -> Ok `Meta
-        | other -> Error (Printf.sprintf "Unknown modifier: %s" other)
-      in
-      match modifier with
-      | Ok m -> process_parts (m :: mods) rest
-      | Error e -> Error e
-  in
-  process_parts [] parts
+and key_map = key_map_item Key_Map.t[@@deriving show]
+and key_map_update_t = key_map
 
-let key_of_string_exn str= key_of_string str|>Result.get_ok
+let ( let* ) = Base.Result.Let_syntax.( >>= )
+let ( let+ ) = Base.Result.Let_syntax.( >>| )
 
-let key_to_string { key; modifiers } =
-  let modifier_str =
-    modifiers
-    |> List.map (function
-      | `Shift -> "S"
-      | `Meta -> "A"
-      | `Ctrl -> "C")
-    |> String.concat "+"
-  in
-  if modifier_str = "" then
-    String.make 1 key
-  else
-    modifier_str ^ "+" ^ (String.make 1 key)
+let rec key_map_item_of_yaml (value : string * Yaml.value) =
+  match value with
+  | key, `O [ ("sub", `O sub); ("title", `String title) ]
+  | key, `O [ ("title", `String title); ("sub", `O sub) ] ->
+    let* sub_items =
+      List.map key_map_item_of_yaml sub
+      |> Base.Result.all
+      |> Result.map (fun x -> Key_Map.of_seq (List.to_seq x))
+      |> Result.map_error (fun (`Msg msg) -> `Msg ("Invalid submenu: " ^ msg))
+    in
+    let+ key =
+      Key.key_of_string key |> Result.map_error (fun msg -> `Msg ("Invalid key: " ^ msg))
+    in
+    key, Sub_menu { title; subcommands = sub_items }
+  | key, `String command ->
+    let+ key =
+      Key.key_of_string key |> Result.map_error (fun msg -> `Msg ("Invalid key: " ^ msg))
+    in
+    key, Command { command }
+  | _ ->
+    Error (`Msg "Invalid YAML structure")
+;;
 
-let key_of_yaml = function
-  | `String s ->
-    (match key_of_string s with
-     | Ok k -> Ok k
-     | Error msg -> Error (`Msg("Invalid key format: " ^ msg)))
-  | _ -> Error (`Msg "Expected string for key")
+let key_map_of_yaml (yaml : Yaml.value) =
+  match yaml with
+  | `O top_level ->
+    List.map key_map_item_of_yaml top_level
+    |> Base.Result.all
+    |> Result.map (fun x -> Key_Map.of_seq (List.to_seq x))
+  | _ ->
+    Error (`Msg "Invalid YAML structure")
+;;
 
-let key_to_yaml k =
-  `String (key_to_string k)
+let key_map_of_yaml_exn yaml =
+  match key_map_of_yaml yaml with
+  | Ok key_map ->
+    key_map
+  | Error (`Msg msg) ->
+    failwith ("Invalid YAML structure: " ^ msg)
+;;
 
-let pp_key fmt k = Format.fprintf fmt "%s" (key_to_string k)
-(* Update all the types to use key instead of char *)
-type bookmark_keys = {
-  menu:key;
-  create : key;
-  delete : key;
-  forget : key;
-  rename : key;
-  set : key;
-  track : key;
-  untrack : key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+open Yaml.Util
 
-type git_keys = {
-  menu:key;
-  push : key;
-  fetch : key;
-  fetch_all : key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+let rec key_map_item_to_yaml = function
+  | key, Sub_menu { title; subcommands } ->
+    let sub_yaml = key_map_to_yaml subcommands in
+    let key = Key.key_to_string key in
+    key, obj [ "title", string title; "sub", sub_yaml ]
+  | key, Command { command } ->
+    let key = Key.key_to_string key in
+    key, string command
 
-type squash_keys = {
-  menu:key;
-  into_parent : key;
-  into_rev : key;
-  unsquash : key;
-  interactive_parent : key;
-  interactive_rev : key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+and key_map_to_yaml (key_map : key_map) : Yaml.value =
+  obj (key_map |> Key_Map.to_seq |> Seq.map key_map_item_to_yaml |> List.of_seq)
+;;
 
-type rebase_keys = {
-  menu:key;
-  single : key;
-  with_descendants : key;
-  with_bookmark : key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+let key_map_update_t_to_yaml (key_map : key_map_update_t) : Yaml.value =
+  key_map_to_yaml key_map
+;;
 
-type file_keys = {
-  show_help : key;
-  move_to_rev : key;
-  move_to_child : key;
-  move_to_parent : key;
-  discard : key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+let key_map_update_t_of_yaml (yaml : Yaml.value) = key_map_of_yaml yaml
 
-type new_child_keys= {
-  menu:key;
-  base:key;
-  no_edit:key;
-  inline:key;
-  inline_no_edit:key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+(* let rec key_map_merge (key_map1 : key_map) (key_map2 : key_map) : key_map =
+  let merged = Key_Map.create (Key_Map.length key_map1 + Key_Map.length key_map2) in
+  Key_Map.iter (fun k v -> Key_Map.add merged k v) key_map1;
+  Key_Map.iter
+    (fun k v ->
+      (**Find if the key is already in the merged map*)
+      match Key_Map.find_opt merged k with
+      | Some (Sub_menu { title = t1; subcommands = s1 }) ->
+        (match v with
+         | Sub_menu { title = t2; subcommands = s2 } ->
+          let merged_subcommands = key_map_merge s1 s2 in
+            Key_Map.replace
+              merged
+              k
+              (Sub_menu { title = t2; subcommands = merged_subcommands })
+         | Command _ ->
+           Key_Map.replace merged k v)
+      | Some (Command _) | None -> Key_Map.replace merged k v)
+    key_map2;
+  merged
+;; *)
 
-type commit_keys = {
-  menu:key;
-  base:key;
-  no_edit:key;
-  open_editor:key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+(**Merge two key maps, checking for duplicate keys*)
+let key_map_apply_update override og =
+  Key_Map.merge
+    (fun k v1 v2 ->
+      match v1, v2 with
+      | Some og, Some override -> Some (override)
+      | Some v, None | None, Some v -> Some v
+      | None, None -> None)
+    og
+    override
+;;
 
-type graph_keys = {
-  show_help : key;
-  prev : key;
-  new_child : new_child_keys; [@updater]
-  duplicate : key;
-  undo : key;
-  commit : commit_keys;[@updater]
-  split : key;
-  squash : squash_keys;[@updater]
-  edit : key;
-  describe : key;
-  describe_editor : key;
-  resolve : key;
-  rebase : rebase_keys;[@updater]
-  git : git_keys;[@updater]
-  parallelize : key;
-  abandon : key;
-  bookmark : bookmark_keys;[@updater]
-  filter : key;
-}[@@deriving yaml, record_updater ~derive: yaml]
+let cmd key id =
+  let key = Key.key_of_string_exn key in
+  key, Command { command = id }
+;;
 
-type t = {
-  confirm:key;
-  decline:key;
-  left_alt:key;
-  right_alt:key;
-  graph : graph_keys; [@updater]
-  file : file_keys;[@updater]
-}[@@deriving yaml, record_updater ~derive: yaml]
+let sub key title sub =
+  let key = Key.key_of_string_exn key in
+  key, Sub_menu { title; subcommands = sub |> List.to_seq |> Key_Map.of_seq }
+;;
 
-(* Helper to create a simple key without modifiers *)
-let simple_key c = { key = c; modifiers = [] }
+let k_map list = list |> List.to_seq |> Key_Map.of_seq
+
+type key_config = {
+    global : key_map [@updater]
+  ; graph : key_map [@updater]
+  ; file : key_map [@updater]
+}
+[@@deriving yaml, record_updater ~derive:yaml]
 
 (* Default key bindings matching current implementation *)
-let default:t = {
-    confirm= simple_key 'y';
-    decline= simple_key 'n';
-    left_alt= simple_key 'h';
-    right_alt= simple_key 'l';
-  graph = {
-    show_help = simple_key '?';
-    prev = simple_key 'P';
-
-    new_child={
-      menu= simple_key 'n';
-      base= simple_key 'n';
-      no_edit= key_of_string_exn "N";
-      inline= simple_key 'i';
-      inline_no_edit= simple_key 'I';
-    };
-    duplicate = simple_key 'y';
-    undo = simple_key 'u';
-    commit = {
-      menu = simple_key 'c';
-      base = simple_key 'c';
-      no_edit = simple_key 'C';
-      open_editor = simple_key 'D';
-    };
-    split = simple_key 'S';
-    squash = {
-      menu = simple_key 's';
-      into_parent = simple_key 's';
-      into_rev = simple_key 'S';
-      unsquash = simple_key 'u';
-      interactive_parent = simple_key 'i';
-      interactive_rev = simple_key 'I';
-    };
-    edit = simple_key 'e';
-    describe = simple_key 'd';
-    describe_editor = simple_key 'D';
-    resolve = simple_key 'R';
-    rebase = {
-      menu = simple_key 'r';
-      single = simple_key 'r';
-      with_descendants = simple_key 's';
-      with_bookmark = simple_key 'b';
-    };
-    git = {
-      menu = simple_key 'g';
-      push = simple_key 'p';
-      fetch = simple_key 'f';
-      fetch_all = simple_key 'F';
-    };
-    parallelize = simple_key 'z';
-    abandon = simple_key 'a';
-    bookmark = {
-      menu = simple_key 'b';
-      create = simple_key 'c';
-      delete = simple_key 'd';
-      forget = simple_key 'f';
-      rename = simple_key 'r';
-      set = simple_key 's';
-      track = simple_key 't';
-      untrack = simple_key 'u';
-    };
-    filter = simple_key 'f';
-  };
-  file = {
-    show_help = simple_key '?';
-    move_to_rev = simple_key 'm';
-    move_to_child = simple_key 'N';
-    move_to_parent = simple_key 'P';
-    discard = simple_key 'd';
-  };
-}
+let default : key_config =
+  let open Key in
+  {
+    global =
+      k_map
+        [ cmd "y" "confirm"; cmd "n" "decline"; cmd "h" "left_alt"; cmd "l" "right_alt" ]
+  ; graph =
+      k_map
+        [
+          sub "?" "Help" [ cmd "?" "show_help" ]
+        ; cmd "?" "show_help"
+        ; cmd "P" "prev"
+        ; sub
+            "n"
+            "New Child"
+            [
+              cmd "n" "new_base"
+            ; cmd "N" "new_no_edit"
+            ; cmd "i" "new_inline"
+            ; cmd "I" "new_inline_no_edit"
+            ]
+        ; cmd "y" "duplicate"
+        ; cmd "u" "undo"
+        ; sub "c" "Commit" [ cmd "c" "commit_base"; cmd "C" "commit_no_edit"; cmd "D" "describe_editor" ]
+        ; cmd "S" "split"
+        ; sub
+            "s"
+            "Squash"
+            [
+              cmd "s" "squash_into_parent"
+            ; cmd "S" "squash_into_rev"
+            ; cmd "u" "squash_unsquash"
+            ; cmd "i" "squash_interactive_parent"
+            ; cmd "I" "squash_interactive_rev"
+            ]
+        ; cmd "e" "edit"
+        ; cmd "d" "describe"
+        ; cmd "D" "describe_editor"
+        ; cmd "R" "resolve"
+        ; sub
+            "r"
+            "Rebase"
+            [ cmd "r" "rebase_single"; cmd "s" "rebase_with_descendants"; cmd "b" "rebase_with_bookmark" ]
+        ; sub "g" "Git" [ cmd "p" "git_push"; cmd "f" "git_fetch"; cmd "F" "git_fetch_all" ]
+        ; cmd "z" "parallelize"
+        ; cmd "a" "abandon"
+        ; sub
+            "b"
+            "Bookmark"
+            [
+              cmd "c" "bookmark_create"
+            ; cmd "d" "bookmark_delete"
+            ; cmd "f" "bookmark_forget"
+            ; cmd "r" "bookmark_rename"
+            ; cmd "s" "bookmark_set"
+            ; cmd "t" "bookmark_track"
+            ; cmd "u" "bookmark_untrack"
+            ]
+        ; cmd "f" "filter"
+        ]
+  ; file =
+      k_map
+        [
+          cmd "?" "show_help"
+        ; cmd "m" "move_to_rev"
+        ; cmd "N" "move_to_child"
+        ; cmd "P" "move_to_parent"
+        ; cmd "d" "discard"
+        ]
+  }
+;;
 
 (* Example usage:
    key_of_string "C+S+A+a" = Ok { key = 'a'; modifiers = [`Ctrl; `Shift; `Meta] }
@@ -232,3 +225,61 @@ let default:t = {
    key_of_string "C+S+" = Error "No key character provided"
    key_of_string "X+a" = Error "Unknown modifier: X"
 *)
+
+let sample =
+  {|
+  c:
+    title: "Commit"
+    sub:
+      a: amend
+      n: new
+      s: 
+        sub:
+          p: into_parent
+          r: into_rev
+          u: unsquash
+          C+r: interactive_parent
+          C+i: interactive_rev
+        title: "Squash"
+|}
+;;
+
+let%expect_test "parse yaml" =
+  let yaml = Yaml.of_string_exn sample in
+  let key_map = key_map_of_yaml_exn yaml in
+  print_endline (Yaml.to_string_exn (key_map_to_yaml key_map));
+  [%expect
+    {|
+    c:
+      title: Commit
+      sub:
+        s:
+          title: Squash
+          sub:
+            p: into_parent
+            u: unsquash
+            r: into_rev
+            C+r: interactive_parent
+            C+i: interactive_rev
+        "n": new
+        a: amend
+    |}]
+;;
+
+let%expect_test "merge" =
+  let yaml = Yaml.of_string_exn sample in
+  let key_map = key_map_of_yaml_exn yaml in
+  let overrides =
+    k_map [ cmd "c" "override"; sub "s" "Squash" [ cmd "c" "override2" ] ]
+  in
+  let merged = key_map_apply_update overrides key_map in
+  print_endline (Yaml.to_string_exn (key_map_to_yaml merged));
+  [%expect
+    {|
+    c: override
+    s:
+      title: Squash
+      sub:
+        c: override2
+    |}]
+;;

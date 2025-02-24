@@ -1,7 +1,8 @@
 open Util
 open Logging
 
-type t = { key_map : Key_map.t[@updater] } [@@deriving yaml, record_updater ~derive: yaml]
+
+type t = { key_map : Key_map.key_config[@updater] } [@@deriving yaml, record_updater ~derive: yaml]
 
 
 let default_config:t =

@@ -4,7 +4,9 @@
 
 open Jj_tui.Logging
 open Jj_tui.Key_map
-open Jj_tui.Key_map
+open Jj_tui.Key
+open Jj_tui
+
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
 module Shared = struct
   type cmd_args = string list [@@deriving show]
@@ -38,7 +40,7 @@ module Shared = struct
     (** Same as prompt except you can run another command after. Useful if you want multiple prompts *)
     | Prompt_I of string * cmd_args
     (** Same as prompt but expects the command to be interactive same as [Cmd_I] *)
-    | SubCmd of 'a command list
+    | SubCmd of 'a command Key_Map.t
     (** Allows nesting of commands, shows a popup with command options and waits for the user to press the appropriate key*)
     | Fun of (unit -> unit)
     (** Execute an arbitrary function. Prefer other command types if possible *)
@@ -46,11 +48,18 @@ module Shared = struct
 
   (** A command that should be run when it's key is pressed*)
   and 'a command = {
-      key : key
+      key : Key.t
     ; description : string
     ; cmd : 'a command_variant
   }
   [@@deriving show]
+
+  (* Common type for command definition registry *)
+  type 'a command_definition = {
+      id : string
+    ; description : string
+    ; make_cmd : unit -> 'a command_variant
+  }
 end
 
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
@@ -99,7 +108,8 @@ module Intern (Vars : Global_vars.Vars) = struct
 
   let rec render_commands ?(indent_level = 0) commands =
     commands
-    |> List.concat_map @@ fun command ->
+    |> Key_Map.to_list
+    |> List.concat_map @@ fun (key,command) ->
        match command with
        | {
          key
@@ -126,10 +136,7 @@ module Intern (Vars : Global_vars.Vars) = struct
 
   let commands_list_ui ?(include_arrows = false) commands =
     let move_command =
-      render_command_line
-        ~indent_level:0
-        ("Arrows" )
-        "navigation between windows"
+      render_command_line ~indent_level:0 "Arrows" "navigation between windows"
     in
     ((commands |> render_commands) @ if include_arrows then [ move_command ] else [])
     |> I.vcat
@@ -248,21 +255,20 @@ module Intern (Vars : Global_vars.Vars) = struct
   and command_input ~is_sub keymap key =
     (* Use exceptions so we can break out of the list*)
     let input = Lwd.peek ui_state.input in
-   
     try
-        keymap
-      |> List.iter (fun cmd ->        
-        (*log keys*)
       match key with
-      |`ASCII k,modifiers->
-
-        (*log keys*)
-        [%log info "key: %s"(key_to_string {key=k;modifiers})];
-        if (`ASCII cmd.key.key,cmd.key.modifiers) = key then 
-          handleCommand cmd.description cmd.cmd;
-        |_->()
-        );
-      `Unhandled
+      | `ASCII k, modifiers ->
+        let key = { key = k; modifiers } in
+        [%log info "key: %s" (key_to_string key)];
+        let cmd = keymap|>Key_Map.find_opt  key in
+        (match cmd with
+         | Some cmd ->
+           handleCommand cmd.description cmd.cmd;
+           `Handled
+         | None ->
+           `Unhandled)
+      | _ ->
+        `Unhandled
     with
     | Handled ->
       (*If this is a sub command and we didn't change to some other subcommand we should exit back to  normal command operation*)
@@ -271,7 +277,6 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Jj_process.JJError (cmd, error) ->
       handle_jj_error ~cmd ~error;
       `Unhandled
-
 
   and command_no_input description cmd =
     (* Use exceptions so we can break out of the list*)
@@ -296,7 +301,7 @@ module Make (Vars : Global_vars.Vars) = struct
   include Shared
 
   (** A handy command_list that just has this help command for areas that don't have any commands to still show help*)
-  let rec default_list =
+  let rec make_default_list (): string command Key_Map.t=
     [
       {
         key = { key = '?'; modifiers = [] }
@@ -305,18 +310,25 @@ module Make (Vars : Global_vars.Vars) = struct
           Fun
             (fun _ ->
               ui_state.show_popup
-              $= Some (commands_list_ui ~include_arrows:true default_list, "Help");
+              $= Some (commands_list_ui ~include_arrows:true (make_default_list ()), "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ]
+    |> List.to_seq
+    |> Seq.map (fun x -> x.key, x)
+    |> Key_Map.of_seq
   ;;
+  let default_list=make_default_list()
 
   (**Generate a UI object with all the commands nicely formatted and layed out. Useful for help text*)
   let commands_list_ui = commands_list_ui
 
   (**`Prompt`:Allows running one command and then running another using the input of the first*)
   let confirm_prompt prompt cmd =
-    SubCmd [ {key=(Lwd.peek Vars.ui_state.config).key_map.confirm; description = "Yes I want to " ^ prompt; cmd } ]
+    let key = key_of_string_exn "y" in
+    
+   let sub_cmd= Key_Map.of_list  [key, { key; description = "Yes I want to " ^ prompt; cmd }] in
+    SubCmd sub_cmd
   ;;
 
   (** Handles raw command mapping without regard for modes or the current intput state. Should be used when setting a new input mode*)
@@ -330,4 +342,38 @@ module Make (Vars : Global_vars.Vars) = struct
     | `Normal ->
       command_input ~is_sub:false command_mapping
   ;;
+
+  (* Function to build command list from key_map and a command registry *)
+  let build_command_list key_map command_registry =
+   
+    (* Process a key_map item *)
+    let rec process_key_map_item key item =
+      match item with
+      | Command { command = id } ->
+        (match Hashtbl.find_opt command_registry id with
+         | Some cmd_def ->
+           Some { key; description = cmd_def.description; cmd = cmd_def.make_cmd () }
+         | None ->
+           [%log warn "Unknown command ID: %s" id];
+           None)
+      | Sub_menu { title; subcommands } ->
+        (* Process submenu items *)
+        let sub_cmds =
+          subcommands
+          |> Key_Map.to_seq
+          |> Seq.filter_map (fun (k, v) ->
+            process_key_map_item k v |> Option.map (fun x -> k, x))
+          |> Key_Map.of_seq
+        in
+        Some { key; description = title; cmd = SubCmd sub_cmds }
+    in
+    (* Process all items in the key_map *)
+    key_map
+    |> Key_Map.to_seq
+    |> Seq.filter_map (fun (k, v) ->
+      process_key_map_item k v |> Option.map (fun x -> k, x))
+    |> Key_Map.of_seq
+  ;;
+
+  (* List.rev !result *)
 end
