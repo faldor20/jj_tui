@@ -82,6 +82,25 @@ module Make (Vars : Global_vars.Vars) = struct
               (fun () ->
                 Cmd ([ "new"; "--no-edit"; "--insert-after" ] @ Vars.get_active_revs ())))
       }
+      ; {
+        id = "new_before"
+      ; sorting_key = 6.0
+      ; description = "Make a new change and insert it before the selected rev"
+      ; make_cmd =
+          (fun () ->
+            Dynamic
+              (fun () -> Cmd ([ "new"; "--insert-before" ] @ Vars.get_active_revs ())))
+      }
+    ; {
+        id = "new_before_no_edit"
+      ; sorting_key = 7.0
+      ; description = "Same as 'new insert', but without editing the new commit"
+      ; make_cmd =
+          (fun () ->
+            Dynamic
+              (fun () ->
+                Cmd ([ "new"; "--no-edit"; "--insert-before" ] @ Vars.get_active_revs ())))
+      }
     ; {
         id = "duplicate"
       ; sorting_key = 6.0

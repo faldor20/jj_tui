@@ -166,6 +166,8 @@ let default : key_config =
             ; cmd "N" "new_no_edit"
             ; cmd "i" "new_inline"
             ; cmd "I" "new_inline_no_edit"
+            ; cmd "p" "new_before"
+            ; cmd "P" "new_before_no_edit"
             ]
         ; cmd "y" "duplicate"
         ; cmd "u" "undo"

@@ -111,7 +111,7 @@ module Intern (Vars : Global_vars.Vars) = struct
   let rec render_commands ?(indent_level = 0) commands =
     commands
     |> Key_Map.to_list
-    |> List.sort_uniq (fun (_, a) (_, b) -> Float.compare a.sort_key b.sort_key)
+    |> List.sort (fun (_, a) (_, b) -> Float.compare a.sort_key b.sort_key)
     |> List.concat_map @@ fun (key, command) ->
        match command with
        | {
