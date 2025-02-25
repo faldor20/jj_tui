@@ -36,6 +36,7 @@ module Make (Vars : Global_vars.Vars) = struct
       {
         id = "show_help"
       ; description = "Show help"
+      ; sorting_key = 0.0
       ; make_cmd =
           (fun () ->
             Fun
@@ -46,21 +47,25 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "prev"
+      ; sorting_key = 1.0
       ; description = "Move the working copy to the previous child"
       ; make_cmd = (fun () -> Cmd [ "prev" ])
       }
     ; {
         id = "new_base"
+      ; sorting_key = 2.0
       ; description = "Make new child commit"
       ; make_cmd = (fun () -> Cmd_with_revs (Active [ "new" ]))
       }
     ; {
         id = "new_no_edit"
+      ; sorting_key = 3.0
       ; description = "Same as 'new', but without editing the new commit"
       ; make_cmd = (fun () -> Cmd_with_revs (Active [ "new"; "--no-edit" ]))
       }
     ; {
         id = "new_inline"
+      ; sorting_key = 4.0
       ; description = "Make a new change and insert it after the selected rev"
       ; make_cmd =
           (fun () ->
@@ -69,6 +74,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "new_inline_no_edit"
+      ; sorting_key = 5.0
       ; description = "Same as 'new insert', but without editing the new commit"
       ; make_cmd =
           (fun () ->
@@ -78,17 +84,20 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "duplicate"
+      ; sorting_key = 6.0
       ; description = "Duplicate the current selected commits "
       ; make_cmd =
           (fun () -> Dynamic (fun () -> Cmd ([ "duplicate" ] @ Vars.get_active_revs ())))
       }
     ; {
         id = "undo"
+      ; sorting_key = 7.0
       ; description = "Undo the last operation"
       ; make_cmd = (fun () -> Cmd [ "undo" ])
       }
     ; {
         id = "commit_base"
+      ; sorting_key = 8.0
       ; description =
           "Describe this change and start working on a new rev (same as `describe` then \
            `new`)"
@@ -98,6 +107,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "commit_no_edit"
+      ; sorting_key = 9.0
       ; description = "Same as commit but without editing the new commit"
       ; make_cmd =
           (fun () ->
@@ -106,11 +116,13 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "split"
+      ; sorting_key = 10.0
       ; description = "Split the current commit interacively"
       ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd_I [ "split"; "-r"; rev; "-i" ]))
       }
     ; {
         id = "squash_into_parent"
+      ; sorting_key = 11.0
       ; description = "Squash into parent"
       ; make_cmd =
           (fun () ->
@@ -123,6 +135,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "squash_into_rev"
+      ; sorting_key = 12.0
       ; description = "Squash into any commit"
       ; make_cmd =
           (fun () ->
@@ -149,17 +162,20 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "squash_unsquash"
+      ; sorting_key = 13.0
       ; description = "Interactivaly unsquash"
       ; make_cmd =
           (fun () -> Dynamic_r (fun rev -> Cmd_I [ "unsquash"; "-r"; rev; "-i" ]))
       }
     ; {
         id = "squash_interactive_parent"
+      ; sorting_key = 14.0
       ; description = "Interactively choose what to squash into parent"
       ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd_I [ "squash"; "-r"; rev; "-i" ]))
       }
     ; {
         id = "squash_interactive_rev"
+      ; sorting_key = 15.0
       ; description = "Interactively choose what to squash into a commit"
       ; make_cmd =
           (fun () ->
@@ -169,11 +185,13 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "edit"
+      ; sorting_key = 16.0
       ; description = "Edit the selected revision"
       ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd [ "edit"; rev ]))
       }
     ; {
         id = "describe"
+      ; sorting_key = 17.0
       ; description = "Describe this revision"
       ; make_cmd =
           (fun () ->
@@ -181,16 +199,19 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "describe_editor"
+      ; sorting_key = 18.0
       ; description = "Describe this revision using an editor"
       ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd_I [ "describe"; "-r"; rev ]))
       }
     ; {
         id = "resolve"
+      ; sorting_key = 19.0
       ; description = "Resolve conflicts at this revision"
       ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd_I [ "resolve"; "-r"; rev ]))
       }
     ; {
         id = "rebase_single"
+      ; sorting_key = 20.0
       ; description = "Rebase single revision "
       ; make_cmd =
           (fun () ->
@@ -199,6 +220,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "rebase_with_descendants"
+      ; sorting_key = 21.0
       ; description = "Rebase revision and its decendents"
       ; make_cmd =
           (fun () ->
@@ -210,6 +232,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "rebase_with_bookmark"
+      ; sorting_key = 22.0
       ; description = "Rebase revision and all other revissions on its bookmark"
       ; make_cmd =
           (fun () ->
@@ -220,6 +243,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "git_push"
+      ; sorting_key = 23.0
       ; description = "git push"
       ; make_cmd =
           (fun () ->
@@ -230,6 +254,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   [
                     {
                       key = Key.key_of_string_exn "y"
+                      ; sort_key = 0.0
                     ; description = "proceed"
                     ; cmd =
                         Cmd
@@ -238,6 +263,7 @@ module Make (Vars : Global_vars.Vars) = struct
                     }
                   ; {
                       key = Key.key_of_string_exn "n"
+                    ; sort_key = 1.0
                     ; description = "exit"
                     ; cmd =
                         Fun
@@ -264,16 +290,19 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "git_fetch"
+      ; sorting_key = 24.0
       ; description = "git fetch"
       ; make_cmd = (fun () -> Cmd [ "git"; "fetch" ])
       }
     ; {
         id = "git_fetch_all"
+      ; sorting_key = 25.0
       ; description = "git fetch all remotes"
       ; make_cmd = (fun () -> Cmd [ "git"; "fetch"; "--all-remotes" ])
       }
     ; {
         id = "parallelize"
+      ; sorting_key = 26.0
       ; description =
           "Parallelize commits. Takes 2 commits and makes them have the\n\
            same parent and child. Run `jj parallelize` --help for details"
@@ -285,6 +314,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "abandon"
+      ; sorting_key = 27.0
       ; description = "Abandon this change(removes just this change and rebases parents)"
       ; make_cmd =
           (fun () ->
@@ -297,6 +327,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "bookmark_create"
+      ; sorting_key = 28.0
       ; description = "Create new bookmark"
       ; make_cmd =
           (fun () ->
@@ -309,6 +340,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "bookmark_delete"
+      ; sorting_key = 29.0
       ; description = "Delete bookmark"
       ; make_cmd =
           (fun () ->
@@ -325,6 +357,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "bookmark_forget"
+      ; sorting_key = 30.0
       ; description = "Forget bookmark"
       ; make_cmd =
           (fun () ->
@@ -341,6 +374,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "bookmark_rename"
+      ; sorting_key = 31.0
       ; description = "Rename bookmark"
       ; make_cmd =
           (fun () ->
@@ -352,6 +386,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "bookmark_set"
+      ; sorting_key = 32.0
       ; description = "Set bookmark to this change"
       ; make_cmd =
           (fun () ->
@@ -365,6 +400,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "bookmark_track"
+      ; sorting_key = 33.0
       ; description = "track given remote bookmark"
       ; make_cmd =
           (fun () ->
@@ -375,6 +411,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "bookmark_untrack"
+      ; sorting_key = 34.0
       ; description = "untrack given remote bookmark"
       ; make_cmd =
           (fun () ->
@@ -385,6 +422,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "filter"
+      ; sorting_key = 35.0
       ; description = "Filter using revset"
       ; make_cmd =
           (fun () ->
@@ -399,6 +437,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "absorb"
+      ; sorting_key = 36.0
       ; description =
           "Absorb: Move changes of each file in this commit into the closest mutable \
            parent that modified that file"

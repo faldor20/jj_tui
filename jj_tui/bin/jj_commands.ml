@@ -49,6 +49,7 @@ module Shared = struct
   (** A command that should be run when it's key is pressed*)
   and 'a command = {
       key : Key.t
+    ; sort_key : float
     ; description : string
     ; cmd : 'a command_variant
   }
@@ -57,6 +58,7 @@ module Shared = struct
   (* Common type for command definition registry *)
   type 'a command_definition = {
       id : string
+    ; sorting_key : float
     ; description : string
     ; make_cmd : unit -> 'a command_variant
   }
@@ -109,7 +111,8 @@ module Intern (Vars : Global_vars.Vars) = struct
   let rec render_commands ?(indent_level = 0) commands =
     commands
     |> Key_Map.to_list
-    |> List.concat_map @@ fun (key,command) ->
+    |> List.sort_uniq (fun (_, a) (_, b) -> Float.compare a.sort_key b.sort_key)
+    |> List.concat_map @@ fun (key, command) ->
        match command with
        | {
          key
@@ -127,9 +130,10 @@ module Intern (Vars : Global_vars.Vars) = struct
            | Cmd_r _
            | Prompt_r _
            | Dynamic_r _ )
+       ; sort_key = _
        } ->
          [ render_command_line ~indent_level (key_to_string key) description ]
-       | { key; description; cmd = SubCmd subs } ->
+       | { key; description; cmd = SubCmd subs; sort_key = _ } ->
          render_command_line ~indent_level (key_to_string key) description
          :: render_commands ~indent_level:(indent_level + 1) subs
   ;;
@@ -260,7 +264,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       | `ASCII k, modifiers ->
         let key = { key = k; modifiers } in
         [%log info "key: %s" (key_to_string key)];
-        let cmd = keymap|>Key_Map.find_opt  key in
+        let cmd = keymap |> Key_Map.find_opt key in
         (match cmd with
          | Some cmd ->
            handleCommand cmd.description cmd.cmd;
@@ -301,16 +305,18 @@ module Make (Vars : Global_vars.Vars) = struct
   include Shared
 
   (** A handy command_list that just has this help command for areas that don't have any commands to still show help*)
-  let rec make_default_list (): string command Key_Map.t=
+  let rec make_default_list () : string command Key_Map.t =
     [
       {
         key = { key = '?'; modifiers = [] }
       ; description = "Show help"
+      ; sort_key = 0.0
       ; cmd =
           Fun
             (fun _ ->
               ui_state.show_popup
-              $= Some (commands_list_ui ~include_arrows:true (make_default_list ()), "Help");
+              $= Some
+                   (commands_list_ui ~include_arrows:true (make_default_list ()), "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
     ]
@@ -318,7 +324,8 @@ module Make (Vars : Global_vars.Vars) = struct
     |> Seq.map (fun x -> x.key, x)
     |> Key_Map.of_seq
   ;;
-  let default_list=make_default_list()
+
+  let default_list = make_default_list ()
 
   (**Generate a UI object with all the commands nicely formatted and layed out. Useful for help text*)
   let commands_list_ui = commands_list_ui
@@ -326,8 +333,10 @@ module Make (Vars : Global_vars.Vars) = struct
   (**`Prompt`:Allows running one command and then running another using the input of the first*)
   let confirm_prompt prompt cmd =
     let key = key_of_string_exn "y" in
-    
-   let sub_cmd= Key_Map.of_list  [key, { key; description = "Yes I want to " ^ prompt; cmd }] in
+    let sub_cmd =
+      Key_Map.of_list
+        [ key, { key; description = "Yes I want to " ^ prompt; cmd; sort_key = 0.0 } ]
+    in
     SubCmd sub_cmd
   ;;
 
@@ -345,14 +354,19 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* Function to build command list from key_map and a command registry *)
   let build_command_list key_map command_registry =
-   
     (* Process a key_map item *)
     let rec process_key_map_item key item =
       match item with
       | Command { command = id } ->
         (match Hashtbl.find_opt command_registry id with
          | Some cmd_def ->
-           Some { key; description = cmd_def.description; cmd = cmd_def.make_cmd () }
+           Some
+             {
+               key
+             ; description = cmd_def.description
+             ; cmd = cmd_def.make_cmd ()
+             ; sort_key = cmd_def.sorting_key
+             }
          | None ->
            [%log warn "Unknown command ID: %s" id];
            None)
@@ -365,7 +379,14 @@ module Make (Vars : Global_vars.Vars) = struct
             process_key_map_item k v |> Option.map (fun x -> k, x))
           |> Key_Map.of_seq
         in
-        Some { key; description = title; cmd = SubCmd sub_cmds }
+        let sort_key =
+          match Key_Map.to_seq sub_cmds |> Seq.uncons with
+          | Some ((_, (x : 'a command)), _) ->
+            x.sort_key
+          | None ->
+            0.0
+        in
+        Some { key; description = title; cmd = SubCmd sub_cmds; sort_key }
     in
     (* Process all items in the key_map *)
     key_map

@@ -205,6 +205,7 @@ let default : key_config =
             ; cmd "u" "bookmark_untrack"
             ]
         ; cmd "f" "filter"
+        ; cmd "A" "absorb"
         ]
   ; file =
       k_map
@@ -213,7 +214,8 @@ let default : key_config =
         ; cmd "m" "move_to_rev"
         ; cmd "N" "move_to_child"
         ; cmd "P" "move_to_parent"
-        ; cmd "d" "discard"
+        ; cmd "a" "abandon"
+        ; cmd "A" "absorb"
         ]
   }
 ;;
