@@ -59,9 +59,10 @@ module Make (Vars : Global_vars.Vars) = struct
                    `Handled
                  (* | `Arrow _, [ `Ctrl ] *)
                  (* | `Arrow _, [ `Meta ] *)
-                 (* | `Tab, [ `Meta ] *)
-                 (* | `Tab, [ `Meta; `Shift ] -> *)
-                 (* `Handled *)
+                 | `Tab,[]->`Handled
+                 | `Tab, [ `Meta ]
+                 | `Tab, [ `Meta; `Shift ] ->
+                 `Handled
                  | _ ->
                    `Unhandled)
              ; (fun event ->
