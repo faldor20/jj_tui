@@ -1065,6 +1065,7 @@ module Ui_loop = struct
       ?process_event:bool
       -> ?timeout:float
       -> renderer:Renderer.t
+    -> cache: image option ref
       -> Term.t
       -> ui Lwd.root
       -> unit
@@ -1082,17 +1083,16 @@ module Ui_loop = struct
     (* FIXME Uses of [quick_sample] and [quick_release] should be replaced by
        [sample] and [release] with the appropriate release management. *)
 
-    let cache = ref None
-
     let step
           ?(await_read = await_read_unix)
           ?(process_event = true)
           ?(timeout = -1.0)
           ~renderer
+          ~cache
           term
           root
       =
-    Printf.eprintf "running step\n";
+      Printf.eprintf "running step\n";
       let size = Term.size term in
       let image =
         if (not (Lwd.is_damaged root)) && !cache |> Option.is_some
@@ -1105,9 +1105,7 @@ module Ui_loop = struct
             (* If we are already damaged then we should re-calculate*)
             if Lwd.is_damaged root then stabilize () else image
           in
-          stabilize ()
-          
-          )
+          stabilize ())
       in
       cache := Some image;
       Term.image term image;
@@ -1165,11 +1163,12 @@ module Ui_loop = struct
         t ->
       let quit = Lwd.observe (Lwd.get quit) in
       let root = Lwd.observe ~on_invalidate t in
+      let cache = ref None in
       let rec loop () =
         let quit = Lwd.quick_sample quit in
         if not quit
         then (
-          step ~process_event:true ?timeout:tick_period ~renderer term root;
+          step ~process_event:true ?timeout:tick_period ~renderer ~cache term root ;
           tick ();
           loop ())
       in

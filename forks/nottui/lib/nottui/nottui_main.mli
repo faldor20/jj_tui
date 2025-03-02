@@ -374,6 +374,7 @@ module Ui_loop : sig
     :  ?process_event:bool
     -> ?timeout:float
     -> renderer:Renderer.t
+    -> cache: image option ref
     -> Term.t
     -> ui Lwd.root
     -> unit
@@ -412,6 +413,7 @@ module Ui_loop : sig
       ?process_event:bool
       -> ?timeout:float
       -> renderer:Renderer.t
+    -> cache: image option ref
       -> Term.t
       -> ui Lwd.root
       -> unit
@@ -430,6 +432,7 @@ module Ui_loop : sig
       -> ?process_event:bool
       -> ?timeout:float
       -> renderer:Renderer.t
+    -> cache: image option ref
       -> Term.t
       -> ui Lwd.root
       -> unit
