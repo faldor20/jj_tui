@@ -55,7 +55,7 @@ let ui_loop ~quit ~term root =
 
 let start_ui () =
   (*initialse the state*)
-  let term = Notty_unix.Term.create () in
+  let term = Notty_unix.Term.create ~mouse:false () in
   Vars.term := Some term;
   ui_loop ~quit:Vars.quit ~term (Jj_ui.mainUi ());
   Flock.terminate ()
