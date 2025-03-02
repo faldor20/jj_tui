@@ -82,7 +82,7 @@ module Make (Vars : Global_vars.Vars) = struct
               (fun () ->
                 Cmd ([ "new"; "--no-edit"; "--insert-after" ] @ Vars.get_active_revs ())))
       }
-      ; {
+    ; {
         id = "new_before"
       ; sorting_key = 6.0
       ; description = "Make a new change and insert it before the selected rev"
@@ -273,7 +273,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   [
                     {
                       key = Key.key_of_string_exn "y"
-                      ; sort_key = 0.0
+                    ; sort_key = 0.0
                     ; description = "proceed"
                     ; cmd =
                         Cmd
@@ -460,7 +460,7 @@ module Make (Vars : Global_vars.Vars) = struct
       ; description =
           "Absorb: Move changes of each file in this commit into the closest mutable \
            parent that modified that file"
-      ; make_cmd = (fun () -> Cmd_r [ "absorb"; "--from"; ])
+      ; make_cmd = (fun () -> Dynamic_r (fun r -> Cmd [ "absorb"; "--from"; r ]))
       }
     ]
     |> List.to_seq

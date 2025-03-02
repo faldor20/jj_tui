@@ -102,7 +102,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "absorb"
-      ; description = "Absorb changes from index to working copy"
+      ; description = "Move changes from this revision to the nearest parent that modified the same linesq"
       ; sorting_key = 5.0
       ; make_cmd =
           (fun () ->
@@ -115,6 +115,31 @@ module Make (Vars : Global_vars.Vars) = struct
                    ^ "\nin rev "
                    ^ rev)
                   (Cmd (["absorb"; "--from"; rev] @ selected))))
+      }
+    ; {
+        id = "absorb-into"
+      ; description = "Absorb changes from index to working copy"
+      ; sorting_key = 5.0
+      ; make_cmd =
+          (fun () ->
+            PromptThen
+              ( "Revision to move file to"
+              , fun dest ->
+                Dynamic_r
+                  (fun rev ->
+                    let selected = Lwd.peek active_files in
+                    confirm_prompt
+                      ("absorb all changes to:\n"
+                       ^ (selected |> String.concat "\n")
+                       ^ "\nin rev "
+                       ^ rev)
+                      (Cmd (["absorb"; "--from"; rev;"--to"; dest] @ selected)))))
+      }
+    ; {
+        id = "undo"
+      ; sorting_key = 7.0
+      ; description = "Undo the last operation"
+      ; make_cmd = (fun () -> Cmd [ "undo" ])
       }
     ]
     |> List.to_seq
