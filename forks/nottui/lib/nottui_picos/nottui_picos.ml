@@ -10,27 +10,16 @@ module Ui_loop = struct
   let step computation in_fd =
     Ui_loop.Internal.step ~await_read:(fun _ timeout ->
       let rec select () =
-        Printf.eprintf "waiting on events\n";
-        computation := Ivar.create ();
-        let cancelEvent = Ivar.read_evt !computation in
         let ret =
           Event.select
             [ Picos_io_select.on in_fd `R |> Event.map (fun x -> `Ready)
-            ; Picos_io_select.on in_fd `W |> Event.map (fun _ -> `Ready)
-            ; cancelEvent
-              |> Event.map (fun x ->
-                Printf.eprintf "rerun-invalidation\n";
-                `LwdStateUpdate)
-            ; Picos_io_select.timeout ~seconds:10.0
-              |> Event.map (fun x -> `NotReady)
+              (* This doesn't seem to be needed *)
+              (* ; Picos_io_select.on in_fd `W |> Event.map (fun _ -> `Ready) *)
+            ; Event.from_computation !computation |> Event.map (fun _ -> `LwdStateUpdate)
             ]
         in
-        Printf.eprintf "finished waiting\n";
+        Printf.eprintf "done waiting\n";
         ret
-        (* match Picos_io.Unix.select [ in_fd ] [] [ in_fd ] timeout with *)
-        (* | [], [], [] -> `NotReady *)
-        (* | _ -> `Ready *)
-        (* | exception Unix.Unix_error (Unix.EINTR, _, _) -> select () *)
       in
       select ())
   ;;
@@ -45,16 +34,14 @@ module Ui_loop = struct
       then Picos_io.Unix.stdin
       else Picos_io_fd.create ~dispose:false in_fd
     in
-    let trigger = ref (Ivar.create ()) in
+    let trigger = ref (Computation.create ()) in
     let step = step trigger in_picos_fd in
     a := !a + 1;
     Ui_loop.Internal.run_with_term
-      ~on_invalidate:(fun _ ->
-        Printf.eprintf "invalidated\n";
-        Ivar.fill !trigger ())
+      ~on_invalidate:(fun _ -> Computation.finish !trigger;)
       ~step
       term
   ;;
 
-  let run = Ui_loop.Internal.run ~run_with_term
+  let run = Ui_loop.Internal.run ~run_with_term ~tick_period:100.0
 end

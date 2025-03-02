@@ -1092,6 +1092,7 @@ module Ui_loop = struct
           term
           root
       =
+    Printf.eprintf "running step\n";
       let size = Term.size term in
       let image =
         if (not (Lwd.is_damaged root)) && !cache |> Option.is_some
@@ -1104,7 +1105,9 @@ module Ui_loop = struct
             (* If we are already damaged then we should re-calculate*)
             if Lwd.is_damaged root then stabilize () else image
           in
-          stabilize ())
+          stabilize ()
+          
+          )
       in
       cache := Some image;
       Term.image term image;
@@ -1122,7 +1125,6 @@ module Ui_loop = struct
         (* let has_event =Term.pending term  in *)
         if wait_for_event ()
         then (
-          Printf.eprintf "getting term event\n";
           match Term.event term with
           | `End -> ()
           | `Resize _ -> ()
@@ -1184,7 +1186,7 @@ module Ui_loop = struct
           ?term
           ?(renderer = Renderer.make ())
           ?quit
-          ?(quit_on_escape = true)
+          ?(quit_on_escape = false)
           ?(quit_on_ctrl_q = true)
           t
       =

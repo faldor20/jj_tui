@@ -41,7 +41,6 @@ module Ui_loop : sig
 
   val run
     :  ?on_invalidate:(ui -> unit)
-    -> ?tick_period:float
     -> ?tick:(unit -> unit)
     -> ?term:Term.t
     -> ?renderer:Renderer.t
