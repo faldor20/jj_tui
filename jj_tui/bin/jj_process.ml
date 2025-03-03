@@ -13,16 +13,40 @@ exception JJError of string * string
 (* this mutex should be global*)
 let access_lock = Mutex.create ()
 
+let read_fd_contents fd =
+  let buffer_size = 4096 in
+  let buffer = Bytes.create buffer_size in
+  let output = Buffer.create buffer_size in
+  let rec read_loop () =
+    match Unix.read fd buffer 0 buffer_size with
+    | 0 -> Buffer.contents output  (* EOF reached *)
+    | n ->
+      Buffer.add_subbytes output buffer 0 n;
+      read_loop ()
+    | exception Unix.Unix_error (Unix.EBADF, _, _) ->
+      Buffer.contents output  (* Handle EBADF error *)
+    | exception Unix.Unix_error (Unix.EAGAIN, _, _) ->
+      Unix.sleepf 0.01;  (* Short sleep to avoid busy waiting *)
+      read_loop ()
+  in
+  read_loop ()
+
 module Make (Vars : Global_vars.Vars) = struct
   (** Makes a new process that has acess to all input and output
       This should be used for running other tui sub-programs *)
   let switch_to_process command =
     let stdout = Unix.stdout in
     let stdin = Unix.stdin in
-    let stderr = Unix.stderr in
-    let pid = Unix.create_process command.(0) command stdin stdout stderr in
-    let _, status = Unix.waitpid [] pid in
-    status
+    (* Create a pipe for stderr to capture it *)
+      let stderr_r, stderr_w = Unix.pipe () in
+    let pid = Unix.create_process command.(0) command stdin stdout stderr_w in
+    (* Close write end in parent *)
+      Unix.close stderr_w;
+      let _, status = Unix.waitpid [] pid in
+      (* Read stderr contents *)
+      let stderr_content = read_fd_contents stderr_r in
+      Unix.close stderr_r;
+      status, stderr_content
   ;;
 
   (*

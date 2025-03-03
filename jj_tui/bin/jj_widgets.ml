@@ -145,31 +145,38 @@ module Make (Vars : Global_vars.Vars) = struct
       Global_funcs.update_status ();
       Lwd.set ui_state.view new_view
     in
-    let exit_status_to_str (y : Unix.process_status) =
+    let exit_status_to_str (y : Unix.process_status) stderr_string =
       let open Unix in
       match match y with WSTOPPED x -> x | WEXITED x -> x | WSIGNALED x -> x with
       | 0 ->
-        "success"
+        None
       | 1 ->
-        "failure%s"
+        Some (Printf.sprintf "1, Failure\nStderr:\n%s" stderr_string)
       | a ->
-        Printf.sprintf "unknown code %d" a
+        Some (Printf.sprintf "unknown code %d\nStderr:\n%s" a stderr_string)
     in
-    let res = switch_to_process (cmd |> Array.of_list) in
-    let$ ui =
-      W.vbox
-        [
-          W.string (Printf.sprintf "exit code:%s" (res |> exit_status_to_str)) |> Lwd.pure
-        ; W.button "back to main UI" (fun _ -> post_change `Main) |> Lwd.pure
-        ]
-    in
-    ui
-    |> Ui.keyboard_area (fun event ->
-      match event with
-      | `ASCII ' ', _ ->
-        post_change `Main;
-        `Handled
-      | _ ->
-        `Unhandled)
+    let exit_code, stderr_string = switch_to_process (cmd |> Array.of_list) in
+    let error_msg = exit_status_to_str exit_code stderr_string in
+    match error_msg with
+    | None ->
+      post_change `Main;
+      Ui.empty |> Lwd.pure
+    | Some exit_msg ->
+      let$ ui =
+        W.vbox
+          [
+            W.string (Printf.sprintf "exit code: %s" exit_msg) |> Lwd.pure
+          ; W.button "Press space to return to main UI" (fun _ -> post_change `Main)
+            |> Lwd.pure
+          ]
+      in
+      ui
+      |> Ui.keyboard_area (fun event ->
+        match event with
+        | `Escape, _ | `Enter, _ | `ASCII ' ', _ ->
+          post_change `Main;
+          `Handled
+        | _ ->
+          `Unhandled)
   ;;
 end
