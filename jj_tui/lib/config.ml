@@ -2,12 +2,13 @@ open Util
 open Logging
 
 
-type t = { key_map : Key_map.key_config[@updater] } [@@deriving yaml, record_updater ~derive: yaml]
+type t = { key_map : Key_map.key_config[@updater]; single_pane_width_threshold:int } [@@deriving yaml, record_updater ~derive: yaml]
 
 
 let default_config:t =
   {
-    key_map= Key_map.default
+    key_map= Key_map.default;
+    single_pane_width_threshold=100;
   }
 ;;
 

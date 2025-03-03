@@ -59,10 +59,10 @@ module Make (Vars : Global_vars.Vars) = struct
                    `Handled
                  (* | `Arrow _, [ `Ctrl ] *)
                  (* | `Arrow _, [ `Meta ] *)
-                 | `Tab,[]->`Handled
-                 | `Tab, [ `Meta ]
-                 | `Tab, [ `Meta; `Shift ] ->
-                 `Handled
+                 | `Tab, [] ->
+                   `Handled
+                 | `Tab, [ `Meta ] | `Tab, [ `Meta; `Shift ] ->
+                   `Handled
                  | _ ->
                    `Unhandled)
              ; (fun event ->
@@ -111,6 +111,27 @@ module Make (Vars : Global_vars.Vars) = struct
     |> inputs
   ;;
 
+  (** Makes a UI element responsive to terminal width and focus state 
+      - When focused: shows at full width if terminal is wide enough, or fills terminal if narrow
+      - When unfocused: shows at normal width if terminal is wide enough, or collapses if narrow *)
+  let responsive_view  ?(shrunk_width=0) ?(shrink_on= `Focus)  ui =
+    let$* w, h = Lwd.get Vars.term_width_height in 
+  let$ ui = ui in
+
+    let should_shrink = match shrink_on with
+      | `Focus -> Ui.has_focus ui 
+      | `Unfocus -> not (Ui.has_focus ui)
+    in
+    let threhold=(Lwd.peek Vars.config).single_pane_width_threshold in
+    if should_shrink
+    then if w < threhold 
+      then ui |> Ui.resize ~w:w ~mw:w
+      else ui
+    else if w < threhold
+      then ui |> Ui.resize ~w:shrunk_width ~mw:shrunk_width
+      else ui
+  ;;
+
   (** The primary view for the UI with the file_view graph_view and summary*)
   let main_view () =
     let file_focus = Focus.make () in
@@ -153,13 +174,17 @@ module Make (Vars : Global_vars.Vars) = struct
                    ~mw:1000)
             |> W.Box.focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
           ]
+          |> responsive_view  ~shrunk_width:0 
       ; (*Right side summary/status/fileinfo view*)
-        Show_view.render summary_focus
-        |> W.Scroll.area
-        (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
-        |>$ Ui.resize ~w:0 ~sh:3 ~sw:1 ~mw:10000 ~mh:10000
-        |> W.on_focus ~focus:summary_focus (Ui.resize ~sw:3 ~mw:1000)
-        |> W.Box.focusable ~focus:summary_focus ~pad_h:0 ~pad_w:1
+        (let ui =
+           Show_view.render summary_focus
+           |> W.Scroll.area
+           (* let mw=Int.max (Ui.layout_max_width ui) 100 in *)
+           |>$ Ui.resize ~w:3 ~sh:3 ~sw:1 ~mw:10000 ~mh:10000
+           |> W.on_focus ~focus:summary_focus (Ui.resize ~sw:3 ~mw:1000)
+           |> W.Box.focusable ~focus:summary_focus ~pad_h:0 ~pad_w:1
+         in
+         responsive_view ~shrunk_width:0  ui)
       ]
     (*These outer prompts can popup and show them selves over the main view*)
     |> W.Overlay.text_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt

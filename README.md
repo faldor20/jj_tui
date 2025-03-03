@@ -42,6 +42,8 @@ key_map:
       sub:
         # sub menu command
         s: "squash_into_parent" 
+# If the terminal is smaller than this width, the UI will change to a single pane view
+single_pane_width_threshold: 110
 ```
 For a full list of commands ids see [`jj_tui/bin/graph_commands.ml`](jj_tui/bin/graph_commands.ml) and [`jj_tui/bin/file_commands.ml`](jj_tui/bin/file_commands.ml)
 
