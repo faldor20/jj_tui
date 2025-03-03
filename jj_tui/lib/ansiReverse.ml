@@ -26,10 +26,14 @@ module Internal = struct
     print_endline (Format.flush_str_formatter ())
   ;;
 
+  (** Prints the attribute in a human readable format.
+  Also replaces the escape character with \e. 
+  This means the output can be copy pasted into a terminal to test.
+  like: `echo -e "attr: \e[0;31mTEXT\e[0m"` *)
   let print_attr img =
     print_endline "attr:";
     img |> Notty.Render.pp_attr @@ Format.str_formatter;
-    print_endline (Format.flush_str_formatter ())
+    print_endline (Format.flush_str_formatter ()|>Str.global_replace (Str.regexp "\027") "\\e")
   ;;
 
   (** Like fold left except we run the first element through init to get the state*)
@@ -193,8 +197,9 @@ module Parser = struct
     
     [%expect
       {|
-    attr:
-    [0m<[0;32mATTR[0m[K[0m>[0m |}]
+      attr:
+      \e[0m<\e[0;32mATTR\e[0m\e[K\e[0m>\e[0m
+      |}]
   ;;
 
   let parse_ansi_escape_codes (input : string) =

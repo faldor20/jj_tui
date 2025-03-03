@@ -264,16 +264,16 @@ let%expect_test "parse yaml" =
     c:
       title: Commit
       sub:
+        a: amend
+        "n": new
         s:
           title: Squash
           sub:
+            C+i: interactive_rev
             p: into_parent
-            u: unsquash
             r: into_rev
             C+r: interactive_parent
-            C+i: interactive_rev
-        "n": new
-        a: amend
+            u: unsquash
     |}]
 ;;
 
