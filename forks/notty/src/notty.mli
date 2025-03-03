@@ -104,6 +104,7 @@ module A : sig
   val lightmagenta : color
   val lightcyan    : color
   val lightwhite   : color
+  val no_color     : color
 
   (** {2 Extended 256-color palette} *)
 
@@ -145,6 +146,10 @@ module A : sig
   val underline : style
   val blink     : style
   val reverse   : style
+  val hidden    : style
+  val strike    : style
+  val dim       : style
+  val no_style  : style
 
   (** {1 Attribute construction and composition} *)
 
@@ -162,6 +167,13 @@ module A : sig
       is [a1]'s, and the union of both style sets.
 
       [++] is left-associative, and forms a monoid with [empty]. *)
+
+  val (--) : attr -> attr -> attr
+  (** [a1 -- a2] is the difference of [a1] and [a2], the attribute that has
+      [a1]'s foreground (resp. background), unless {e unset}, in which case it
+      is [a2]'s, and the difference of both style sets.
+
+      [--] is left-associative, and forms a monoid with [empty]. *)
 
   val fg : color -> attr
   (** [fg c] is [empty] with foreground [c]. *)

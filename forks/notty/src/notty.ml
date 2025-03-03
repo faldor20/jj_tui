@@ -195,6 +195,7 @@ module A = struct
   and lightmagenta = 0x0100000d
   and lightcyan    = 0x0100000e
   and lightwhite   = 0x0100000f
+  and no_color     = 0x01000010
 
   let tag c = (c land 0x03000000) lsr 24
 
@@ -223,6 +224,11 @@ module A = struct
   and underline = 4
   and blink     = 8
   and reverse   = 16
+  and hidden    = 32
+  and strike    = 64
+  and dim       = 128
+  and no_style  = 0
+
 
   let empty = { fg = 0; bg = 0; st = 0 }
 
@@ -231,6 +237,12 @@ module A = struct
      { fg = (match a2.fg with 0 -> a1.fg | x -> x)
      ; bg = (match a2.bg with 0 -> a1.bg | x -> x)
      ; st = a1.st lor a2.st }
+
+  let (--) a1 a2 =
+    if a1 == empty then a2 else if a2 == empty then a1 else
+      { fg = (match a2.fg with no_color -> 0 | _ -> a1.fg)
+      ; bg = (match a2.bg with no_color -> 0 | _ -> a1.bg)
+      ; st = a1.st land (lnot a2.st) }
 
   let fg fg = { empty with fg }
   let bg bg = { empty with bg }
@@ -520,7 +532,7 @@ module Cap = struct
 
   let ((<|), (<.), (<!)) = Buffer.(add_string, add_char, add_decimal)
 
-  let sts = [ ";1"; ";3"; ";4"; ";5"; ";7" ]
+  let sts = [ ";1"; ";3"; ";4"; ";5"; ";7"; ";8"; ";9";";2" ]
 
   let sgr { A.fg; bg; st } buf =
     buf <| "\x1b[0";
