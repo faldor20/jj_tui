@@ -102,7 +102,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "absorb"
-      ; description = "Move changes from this revision to the nearest parent that modified the same linesq"
+      ; description = "Move changes from this revision to the nearest parent that modified the same lines"
       ; sorting_key = 5.0
       ; make_cmd =
           (fun () ->
@@ -118,7 +118,7 @@ module Make (Vars : Global_vars.Vars) = struct
       }
     ; {
         id = "absorb-into"
-      ; description = "Absorb changes from index to working copy"
+      ; description = "Absorb into a specific revision"
       ; sorting_key = 5.0
       ; make_cmd =
           (fun () ->

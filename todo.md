@@ -37,3 +37,9 @@ Basically we want to observe all invalidation that isn't processed already
 - Nottui will reprocess the node before rendering if it's already invalid
 - Lwd has oninvalidate but it runs event lwd.set that is being delayed because we are during recomputation.
 I want to capture all invalidation between the last call to stabalize in nottui and the next event whether that be a invalidation event or a keypress
+
+
+
+
+# Small screen mode:
+mode that only shows the graph or diff for small screens
