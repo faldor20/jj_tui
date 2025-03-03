@@ -1092,7 +1092,6 @@ module Ui_loop = struct
           term
           root
       =
-      Printf.eprintf "running step\n";
       let size = Term.size term in
       let image =
         if (not (Lwd.is_damaged root)) && !cache |> Option.is_some

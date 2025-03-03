@@ -34,8 +34,7 @@ module Ui_loop = struct
           ; It.invalidated_evt invalidation_tracker
             |> Event.map (fun _ -> `LwdStateUpdate)
           ]
-      in
-      Printf.eprintf "done waiting\n";
+       in
       ret
     in
     select ()
@@ -51,7 +50,6 @@ module Ui_loop = struct
         term
         root
     =
-    Printf.eprintf "running step\n";
     let size = Term.size term in
     let image =
       if (not (Lwd.is_damaged root)) && !cache |> Option.is_some
