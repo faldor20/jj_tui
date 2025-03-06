@@ -74,7 +74,7 @@ module Make (Vars : Global_vars.Vars) = struct
                  | `Mode _, _, _ ->
                    (match event with
                     | `Escape, [] ->
-                      ui_state.show_popup $= None;
+                      show_popup None;
                       ui_state.input $= `Normal;
                       `Handled
                     | _ ->

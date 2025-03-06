@@ -68,6 +68,7 @@ module type Vars = sig
   val get_active_revs : unit -> string list
   val get_active_revs_lwd : unit -> string list Lwd.t
   val config : Config.t Lwd.var
+  val show_popup: ((ui Lwd.t * string) option ) ->unit
 end
 
 module Vars : Vars = struct
@@ -101,6 +102,7 @@ module Vars : Vars = struct
   let term = ref None
   let term_width_height : (int * int) Lwd.var = Lwd.var (0, 0)
   let get_term () = Option.get !term
+
 
   let reset_selection () =
     Flock.fork(fun _ ->
@@ -144,5 +146,8 @@ module Vars : Vars = struct
     else selected |> List.map get_unique_id
   ;;
 
+  let show_popup popup=
+    [%log debug "setting show popup"];
+    Lwd.set ui_state.show_popup popup 
   let config = ui_state.config
 end

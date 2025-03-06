@@ -6,6 +6,7 @@ open Jj_tui.Logging
 open Jj_tui.Key_map
 open Jj_tui.Key
 open Jj_tui
+open Log
 
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
 module Shared = struct
@@ -72,6 +73,7 @@ module Intern (Vars : Global_vars.Vars) = struct
   open Jj_process.Make (Vars)
   open Notty
   open Nottui
+  open Log
   open! Jj_tui.Util
 
   exception Handled
@@ -149,8 +151,9 @@ module Intern (Vars : Global_vars.Vars) = struct
     |> W.Scroll.area
   ;;
 
-  let rec handleCommand description cmd =
-    [%log info "Handling command: %s" description];
+  let rec handleCommand description (cmd:string command_variant) =
+    [%log
+      info "Handling command. description: %s"  description];
     let noOut args =
       let _ = args in
       let _result = jj args in
@@ -202,52 +205,52 @@ module Intern (Vars : Global_vars.Vars) = struct
     let send_cmd args = change_view (`Cmd_I args) in
     match cmd with
     | Cmd_I args ->
-      ui_state.show_popup $= None;
+      show_popup None;
       send_cmd args;
       raise Handled
     | Cmd args ->
-      ui_state.show_popup $= None;
+      show_popup None;
       noOut args;
       raise Handled
     | Cmd_r args ->
-      ui_state.show_popup $= None;
+      show_popup None;
       noOut (args @ [ "-r"; Vars.get_hovered_rev () ]);
       raise Handled
     | Cmd_with_revs rev_type ->
       let args, revs = get_revs rev_type in
-      ui_state.show_popup $= None;
+      show_popup None;
       noOut (args @ ("-r" :: revs));
       reset_selection_post_cmd rev_type;
       raise Handled
     | Prompt (str, args) ->
-      ui_state.show_popup $= None;
+      show_popup None;
       prompt str (`Cmd args);
       raise Handled
     | Prompt_r (str, args) ->
-      ui_state.show_popup $= None;
+      show_popup None;
       prompt str (`Cmd (args @ [ "-r"; Vars.get_hovered_rev () ]));
       raise Handled
     | PromptThen (label, next) ->
-      ui_state.show_popup $= None;
+      show_popup None;
       (*We run a prompt that then runs our next command when finished*)
       prompt label @@ `Fun (fun x -> next x |> command_no_input description);
       raise Handled
     | Prompt_I (str, args) ->
-      ui_state.show_popup $= None;
+      show_popup None;
       prompt str (`Cmd_I args);
       raise Handled
     | Selection_prompt (str, items, predicate, cmd) ->
-      ui_state.show_popup $= None;
+      show_popup None;
       ui_state.show_prompt $= None;
       prompt_selection str items predicate cmd;
       raise Handled
     | Fun func ->
-      ui_state.show_popup $= None;
+      show_popup None;
       func ();
       Global_funcs.update_status ();
       raise Handled
     | SubCmd sub_map ->
-      ui_state.show_popup $= Some (commands_list_ui sub_map, description);
+      show_popup @@ Some (commands_list_ui sub_map, description);
       ui_state.input $= `Mode (command_input ~is_sub:true sub_map);
       raise Handled
     | Dynamic f ->
@@ -314,8 +317,8 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              ui_state.show_popup
-              $= Some
+              show_popup@@
+              Some
                    (commands_list_ui ~include_arrows:true (make_default_list ()), "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }

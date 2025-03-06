@@ -43,3 +43,7 @@ I want to capture all invalidation between the last call to stabalize in nottui 
 
 # Small screen mode:
 mode that only shows the graph or diff for small screens
+
+
+## Fix focus issues.
+I need to use the new variant of Lwd.peek so that we are fetching the latest value when doing the focus switching. mostly the focus comparison is key

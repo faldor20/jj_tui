@@ -41,8 +41,8 @@ module Make (Vars : Global_vars.Vars) = struct
           (fun () ->
             Fun
               (fun _ ->
-                ui_state.show_popup
-                $= Some (commands_list_ui ~include_arrows:true (get_commands ()), "Help");
+                show_popup
+                @@ Some (commands_list_ui ~include_arrows:true (get_commands ()), "Help");
                 ui_state.input $= `Mode (fun _ -> `Unhandled)))
       }
     ; {
@@ -288,7 +288,7 @@ module Make (Vars : Global_vars.Vars) = struct
                         Fun
                           (fun _ ->
                             ui_state.input $= `Normal;
-                            ui_state.show_popup $= None)
+                            show_popup None)
                     }
                   ]
                   |> List.map (fun x -> x.key, x)
@@ -304,7 +304,7 @@ module Make (Vars : Global_vars.Vars) = struct
                   |> Lwd.pure
                 in
                 let ui = W.vbox [ log; commands_list_ui subcmds ] in
-                ui_state.show_popup $= Some (ui, "Git push will:");
+                show_popup @@ Some (ui, "Git push will:");
                 ui_state.input $= `Mode (command_input ~is_sub:true subcmds)))
       }
     ; {

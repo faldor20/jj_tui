@@ -3,6 +3,7 @@
 open Nottui_main
 open Shared
 open Lwd_infix
+module Log = (val Logs.src_log (Logs.Src.create "nottui_widgets"))
 
 open struct
   module BB = Border_box
@@ -225,8 +226,8 @@ let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
     match show_popup with
     | Some (content, label) ->
       let ui =
-        let$ prompt_field = content in
         Focus.request_reversable focus;
+        let$ prompt_field = content in
         prompt_field |> Ui.resize ~w:5 ~sw:1
       in
       ui

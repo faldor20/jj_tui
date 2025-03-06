@@ -61,6 +61,10 @@ end = struct
   let clock = ref 0
   let currently_focused : var ref = ref (make () |> fst)
   let focus_stack : var list ref = ref []
+  let focus_stack_to_str ()= 
+    (!focus_stack|>List.map Lwd.peek|>List.map (string_of_int)|>String.concat ","|>Printf.sprintf "[%s]")
+
+  let focusLock= Mutex.create()
 
   let request_var (v : var) =
     incr clock;
@@ -68,27 +72,33 @@ end = struct
     currently_focused := v
   ;;
 
-  let request ((v, _) : handle) = request_var v
+  let request ((v, _) : handle) =
+    Mutex.protect focusLock @@ fun _->
+    request_var v
 
   let release ((v, _) : handle) =
+    Mutex.protect focusLock @@ fun _->
     incr clock;
     Lwd.set v 0
   ;;
 
   let var_equal a b = Lwd.peek a = Lwd.peek b
 
+
   let request_reversable ((v, _) : handle) =
-    Log.debug (fun m -> m "Maybe requesting revesable focus %d" (Lwd.peek v));
+    Mutex.protect focusLock @@ fun _->
+    Log.debug (fun m -> m "Maybe requesting reversable focus %d" (Lwd.peek v));
     if not @@ var_equal !currently_focused v
     then (
       focus_stack := !currently_focused :: !focus_stack;
       request_var v;
-      Log.debug (fun m -> m "Requested reversable focus %d" (Lwd.peek v)))
+      Log.debug (fun m -> m "Requested reversable focus %d. stack:%s" (Lwd.peek v) (focus_stack_to_str ())))
   ;;
 
   let release_reversable ((v, _) : handle) =
+    (* Mutex.protect focusLock @@ fun _-> *)
     Log.debug (fun m ->
-      m "Maybe release or remove %d from reversable focus stack" (Lwd.peek v));
+      m "Maybe release or remove %d from reversable focus stack. stack: %s" (Lwd.peek v) (focus_stack_to_str ()));
     (* we should only release if we actually have the focus*)
     if var_equal !currently_focused v
     then (
@@ -97,7 +107,7 @@ end = struct
       | hd :: tl ->
         request_var hd;
         Log.debug (fun m ->
-          m "Released reversable focus %d in echange form %d" (Lwd.peek v) (Lwd.peek v));
+          m "Released reversable focus %d in exchange for: %d" (Lwd.peek v) (Lwd.peek hd));
         focus_stack := tl
       | _ -> ())
     else (
