@@ -195,7 +195,7 @@ module A = struct
   and lightmagenta = 0x0100000d
   and lightcyan    = 0x0100000e
   and lightwhite   = 0x0100000f
-  and no_color     = 0x01000010
+  and color_reset     = 0x01000010
 
   let tag c = (c land 0x03000000) lsr 24
 
@@ -240,8 +240,9 @@ module A = struct
 
   let (--) a1 a2 =
     if a1 == empty then a2 else if a2 == empty then a1 else
-      { fg = (match a2.fg with no_color -> 0 | _ -> a1.fg)
-      ; bg = (match a2.bg with no_color -> 0 | _ -> a1.bg)
+      (* 0x01000010 is the color reset color defined above*)
+      { fg = (match a2.fg with 0x01000010-> 0 | _ -> if a1.fg==a2.fg then 0 else a1.fg)
+      ; bg = (match a2.bg with 0x01000010-> 0 | _ -> if a1.bg==a2.bg then 0 else a1.bg)
       ; st = a1.st land (lnot a2.st) }
 
   let fg fg = { empty with fg }

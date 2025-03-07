@@ -33,7 +33,8 @@ module Internal = struct
   let print_attr img =
     print_endline "attr:";
     img |> Notty.Render.pp_attr @@ Format.str_formatter;
-    print_endline (Format.flush_str_formatter ()|>Str.global_replace (Str.regexp "\027") "\\e")
+    print_endline
+      (Format.flush_str_formatter () |> Str.global_replace (Str.regexp "\027") "\\e")
   ;;
 
   (** Like fold left except we run the first element through init to get the state*)
@@ -54,6 +55,7 @@ module Parser = struct
     | Apply of A.t
     | Reset of A.t
     | FullyReset
+
   let parse_escape_seq =
     let open A in
     let open Angstrom in
@@ -63,6 +65,7 @@ module Parser = struct
     let param = digits <* option ' ' (char ';') in
     let params = many (param >>| int_of_string) in
     let escape_sequence = char '\027' *> char '[' *> params <* char 'm' in
+    let full_seq=many1 escape_sequence in
     let attr_of_params = function
       | [] ->
         Apply empty
@@ -91,7 +94,7 @@ module Parser = struct
       | 23 :: _ ->
         Reset (st italic) (* Reset italic *)
       | 24 :: _ ->
-        Reset (st underline ) (* Reset underline *)
+        Reset (st underline) (* Reset underline *)
       | 25 :: _ ->
         Reset (st blink) (* Reset blink *)
       | 27 :: _ ->
@@ -121,7 +124,7 @@ module Parser = struct
       | 38 :: 2 :: r :: g :: b :: _ ->
         Apply (fg (rgb_888 ~r ~g ~b))
       | 39 :: _ ->
-        Reset (fg no_color) (* Default foreground color *)
+        Reset (fg color_reset) (* Default foreground color *)
       | 40 :: _ ->
         Apply (bg black)
       | 41 :: _ ->
@@ -143,7 +146,7 @@ module Parser = struct
       | 48 :: 2 :: r :: g :: b :: _ ->
         Apply (bg (rgb_888 ~r ~g ~b))
       | 49 :: _ ->
-        Reset (bg no_color) (* Default background color *)
+        Reset (bg color_reset) (* Default background color *)
       | 90 :: _ ->
         Apply (fg lightblack) (* Bright black (gray) *)
       | 91 :: _ ->
@@ -179,7 +182,7 @@ module Parser = struct
       | _ ->
         Apply empty
     in
-    escape_sequence >>| attr_of_params
+    full_seq>>| List.map attr_of_params
   ;;
 
   let%expect_test "escape_parser" =
@@ -187,6 +190,7 @@ module Parser = struct
     let res =
       Angstrom.parse_string ~consume:All parse_escape_seq test_str |> Result.get_ok
     in
+    res|>List.iter(fun res->
     (match res with
      | Apply attr ->
        print_attr attr
@@ -194,7 +198,27 @@ module Parser = struct
        print_endline "Reset attribute"
      | FullyReset ->
        print_endline "Fully reset attribute");
-    
+     );
+    [%expect
+      {|
+      attr:
+      \e[0m<\e[0;32mATTR\e[0m\e[K\e[0m>\e[0m
+      |}]
+  ;;
+  let%expect_test "escape_parser_2" =
+    let test_str = "\027[32m" in
+    let res =
+      Angstrom.parse_string ~consume:All parse_escape_seq test_str |> Result.get_ok
+    in
+    res|>List.iter(fun res->
+    (match res with
+     | Apply attr ->
+       print_attr attr
+     | Reset _ ->
+       print_endline "Reset attribute"
+     | FullyReset ->
+       print_endline "Fully reset attribute");
+     );
     [%expect
       {|
       attr:
@@ -208,9 +232,10 @@ module Parser = struct
     let attr = parse_escape_seq in
     let substring = take_while (fun c -> c <> '\027') in
     let pair =
-      attr >>= fun action ->
+      attr >>= fun actions ->
       substring >>= fun s ->
-      (match action with
+      actions|>List.iter(fun action->
+      match action with
        | Apply a ->
          attr_state := A.( ++ ) !attr_state a
        | Reset a ->
@@ -264,8 +289,9 @@ module Parser = struct
       Text: "rest"
       |}]
   ;;
+
   let%expect_test "parse_ansi_strikethrough_test" =
-  let open A in
+    let open A in
     print_attr (A.st A.strike);
     print_attr (A.st A.strike ++ A.fg A.red);
     print_attr (A.st A.blink);
@@ -275,7 +301,6 @@ module Parser = struct
     print_attr (A.st A.bold);
     print_attr (A.st A.reverse ++ A.fg A.red);
     print_attr (A.st A.hidden);
-  
     [%expect
       {|
       attr:
@@ -299,11 +324,10 @@ module Parser = struct
       |}]
   ;;
 
-  
   let%expect_test "attribute_removal_test" =
     let open A in
     (* Test removing styles *)
-    let base_attr = st bold ++ st underline ++ st italic in
+    let base_attr = st bold ++ st underline ++ st italic  in
     let result = base_attr -- st italic in
     Internal.print_attr result;
     [%expect
@@ -321,12 +345,20 @@ module Parser = struct
       |}];
     (* Test removing foreground color *)
     let colored = base_attr ++ fg red in
-    let no_color = colored -- fg no_color in
-    Internal.print_attr no_color;
+    let color_reset = colored -- fg color_reset in
+    Internal.print_attr color_reset;
     [%expect
       {|
       attr:
       \e[0m<\e[0;1;3;4mATTR\e[0m\e[K\e[0m>\e[0m
+      |}];
+    (* Test removing a style from colored *)
+    let no_underline = colored -- st underline in
+    Internal.print_attr no_underline;
+    [%expect
+      {|
+      attr:
+      \e[0m<\e[0;1;3mATTR\e[0m\e[K\e[0m>\e[0m
       |}];
     (* Test removing background color *)
     let bg_colored = base_attr ++ bg blue in
@@ -345,6 +377,41 @@ module Parser = struct
       {|
       attr:
       \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
+      |}]
+  ;;
+
+  let%expect_test "edge_case_1" =
+    let test_str =
+      {|[38;5;2m 145[39m: [4m[38;5;2mone[24mscript[4m10|}
+    in
+    (match parse_ansi_escape_codes test_str with
+     | Error err ->
+       Printf.printf "Error: %s\n" err
+     | Ok result ->
+       Printf.printf "Parsed %d segments:\n" (List.length result);
+       List.iter
+         (fun (attr, text) ->
+            print_attr attr;
+            Printf.printf "Text: %s" (String.escaped text))
+         result);
+    [%expect
+      {|
+      Parsed 7 segments:
+      attr:
+      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
+      Text: attr:
+      \e[0m<\e[0;32mATTR\e[0m\e[K\e[0m>\e[0m
+      Text:  145attr:
+      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
+      Text: : attr:
+      \e[0m<\e[0;4mATTR\e[0m\e[K\e[0m>\e[0m
+      Text: attr:
+      \e[0m<\e[0;32;4mATTR\e[0m\e[K\e[0m>\e[0m
+      Text: oneattr:
+      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
+      Text: scriptattr:
+      \e[0m<\e[0;4mATTR\e[0m\e[K\e[0m>\e[0m
+      Text: 10
       |}]
   ;;
 end
