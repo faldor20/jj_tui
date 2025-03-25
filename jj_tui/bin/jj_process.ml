@@ -23,6 +23,8 @@ let read_fd_contents fd =
     | n ->
       Buffer.add_subbytes output buffer 0 n;
       read_loop ()
+    | exception Unix.Unix_error (Unix.EINTR, _, _) ->
+      read_loop ()
     | exception Unix.Unix_error (Unix.EBADF, _, _) ->
       Buffer.contents output  (* Handle EBADF error *)
     | exception Unix.Unix_error (Unix.EAGAIN, _, _) ->
