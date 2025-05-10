@@ -1,6 +1,7 @@
 open Picos_std_sync
 open Picos_std_structured
 open Jj_tui.Logging
+module Log = (val src_log ~src:(Logs.Src.create "status view"))
 
 type detail_state =
   | Loading
@@ -78,6 +79,25 @@ module Make (Vars : Global_vars.Vars) = struct
       res
   ;;
 
+  let get_latest_message cursor =
+
+      let rec seek_latest last cursor=
+        let peeked=Stream.peek_opt cursor in
+        match peeked with
+        |Some (last,new_cursor)->
+          seek_latest last new_cursor
+        |None->
+          [%log debug "skipping to next status because two were queued"];
+          (last,cursor)
+      in
+      let msg, new_cursor = cursor |> Stream.read in
+
+      (*little 50ms delay to let us move to the next one if it's ready*)
+      Picos.Fiber.sleep ~seconds:0.05;
+      (*if the queue isn't empty just skip the current because we really only ever want the newest*)
+      seek_latest msg new_cursor
+
+
   (* Wait for messages to come in the stream.
      When a message comes, we try to render it.
      If a new message comes, we cancel the current computation and then start the new rendering
@@ -88,8 +108,10 @@ module Make (Vars : Global_vars.Vars) = struct
     let current_loading_computation = ref (Promise.of_value ()) in
     let cursor = ref (Stream.tap stream) in
     while true do
-      let msg, new_cursor = !cursor |> Stream.read in
-      cursor := new_cursor;
+      [%log debug "waiting for next status"];
+      let msg,new_cursor=get_latest_message  !cursor in
+      cursor:=new_cursor;
+      [%log debug "cancelling older status because of new message"];
       Promise.terminate_after ~seconds:0. !current_summary_computation;
       Promise.terminate_after ~seconds:0. !current_detail_computation;
       Promise.terminate_after ~seconds:0. !current_loading_computation;

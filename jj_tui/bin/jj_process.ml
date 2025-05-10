@@ -162,7 +162,7 @@ module Make (Vars : Global_vars.Vars) = struct
           if not !isDone
           then (
             try
-              [%log debug "Cleaning up cancelled command %s" (args |> String.concat " ")];
+              [%log debug "pid: %i Cleaning up cancelled command %s" pid (args |> String.concat " ")];
               Unix.kill pid Sys.sigkill;
               Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
             with
@@ -177,6 +177,8 @@ module Make (Vars : Global_vars.Vars) = struct
             stdout_i
             stderr_i)
     in
+
+    [%log debug "pid: %i started" pid ];
     let prom = Flock.fork_as_promise (fun () -> Unix.waitpid [] pid) in
     (* Close unused pipe ends in the parent process *)
     Unix.close stdout_i;
@@ -191,17 +193,29 @@ module Make (Vars : Global_vars.Vars) = struct
     isDone := true;
     (* let stderr = read_fd_to_end stderr_i in *)
     (* let stdout= ""in *)
-    code, status, stdout, stderr
+    code, status, stdout, stderr,pid
   ;;
 
   (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
   let cmdArgs cmd args =
     let start_time = Unix.gettimeofday () in
-    let code, status, out_content, err_content = picos_process cmd args in
+    let code, status, out_content, err_content,pid = picos_process cmd args in
     let end_time = Unix.gettimeofday () in
+    let exit_code_text=
+      match status with
+      | Unix.WEXITED code ->
+        Printf.sprintf "exit: %i" code
+      | Unix.WSIGNALED x->
+        Printf.sprintf "signalled: %i" x
+      | Unix.WSTOPPED x->
+        Printf.sprintf "stopped: %i" x
+      in
+
     [%log
       debug
-        "Executing '%s %s' took: %fms "
+        "Executing pid:%i %s '%s %s' took: %fms "
+        pid
+        exit_code_text
         cmd
         (args |> String.concat " ")
         ((end_time -. start_time) *. 1000.)];

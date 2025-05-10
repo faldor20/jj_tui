@@ -291,6 +291,67 @@ module Ui = struct
     | `Paste of Unescape.paste
     ]
 
+  let pp_semantic_key ppf = function
+    | `Copy -> Format.pp_print_string ppf "Copy"
+    | `Paste -> Format.pp_print_string ppf "Paste"
+    | `Focus `Out -> Format.pp_print_string ppf "Focus(Out)"
+    | `Focus `Next -> Format.pp_print_string ppf "Focus(Next)"
+    | `Focus `Prev -> Format.pp_print_string ppf "Focus(Prev)"
+    | `Focus `Left -> Format.pp_print_string ppf "Focus(Left)"
+    | `Focus `Right -> Format.pp_print_string ppf "Focus(Right)"
+    | `Focus `Up -> Format.pp_print_string ppf "Focus(Up)"
+    | `Focus `Down -> Format.pp_print_string ppf "Focus(Down)"
+  ;;
+
+  let pp_special_key ppf = function
+    | `Arrow `Up -> Format.pp_print_string ppf "↑"
+    | `Arrow `Down -> Format.pp_print_string ppf "↓"
+    | `Arrow `Left -> Format.pp_print_string ppf "←"
+    | `Arrow `Right -> Format.pp_print_string ppf "→"
+    | `Enter -> Format.pp_print_string ppf "Enter"
+    | `Tab -> Format.pp_print_string ppf "Tab"
+    | `Backspace -> Format.pp_print_string ppf "Backspace"
+    | `Delete -> Format.pp_print_string ppf "Delete"
+    | `Escape -> Format.pp_print_string ppf "Escape"
+    | `Function n -> Format.fprintf ppf "F%d" n
+    | `Page `Up -> Format.pp_print_string ppf "PgUp"
+    | `Page `Down -> Format.pp_print_string ppf "PgDn"
+    | `Home -> Format.pp_print_string ppf "Home"
+    | `End -> Format.pp_print_string ppf "End"
+    | `Insert -> Format.pp_print_string ppf "Insert"
+  ;;
+
+  let pp_main_key ppf = function
+    | #Unescape.special as special -> pp_special_key ppf special
+    | `Uchar u -> 
+      if Uchar.is_char u then
+        Format.fprintf ppf "'%c'" (Uchar.to_char u)
+      else
+        Format.fprintf ppf "U+%04X" (Uchar.to_int u)
+    | `ASCII c -> Format.fprintf ppf "'%c'" c
+    | #semantic_key as sem -> pp_semantic_key ppf sem
+  ;;
+
+  let pp_modifier ppf = function
+    | `Ctrl -> Format.pp_print_string ppf "Ctrl"
+    | `Alt -> Format.pp_print_string ppf "Alt"
+    | `Shift -> Format.pp_print_string ppf "Shift"
+    | `Meta -> Format.pp_print_string ppf "Meta"
+  ;;
+
+  let pp_key ppf (main_key, mods) =
+    match mods with
+    | [] -> pp_main_key ppf main_key
+    | _ ->
+      Format.pp_print_list
+        ~pp_sep:(fun ppf () -> Format.pp_print_string ppf "+")
+        pp_modifier
+        ppf
+        mods;
+      Format.pp_print_string ppf "+";
+      pp_main_key ppf main_key
+  ;;
+
   type layout_spec =
     { w : int
     ; h : int
@@ -575,9 +636,9 @@ module Ui = struct
     | Focus_area (u, _)
     | Shift_area (u, _, _)
     | Event_filter (u, _) -> f u
-    | X (u1, u2) | Y (u1, u2) | Z (u1, u2) ->
-      f u1;
-      f u2
+    | X (a, b) | Y (a, b) | Z (a, b) ->
+      f a;
+      f b
   ;;
 end
 

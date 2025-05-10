@@ -14,28 +14,52 @@ let time_to_string tm =
     ms
 ;;
 
+module type MYLOG = sig
+  include Logs.LOG
 
-
-module Log = struct
-  let timestamp_tag =
-    Logs.Tag.def "timestamp" ~doc:"Timestamp" (fun fmt tm ->
-      time_to_string tm |> Format.pp_print_string fmt)
-  ;;
-
-  let timestamp_wrap fn : ('a, 'b) Logs.msgf =
-    fun m ->
-    fn (fun ?header ?(tags = Logs.Tag.empty) fmt ->
-      let timestamp = Unix.gettimeofday () in
-      let tags = Logs.Tag.add timestamp_tag timestamp tags in
-      m ?header ~tags fmt)
-  ;;
-
-  let debug ?src fn = Logs.debug ?src (timestamp_wrap fn)
-  let info ?src fn = Logs.info ?src (timestamp_wrap fn)
-  let warn ?src fn = Logs.warn ?src (timestamp_wrap fn)
-  let err ?src fn = Logs.err ?src (timestamp_wrap fn)
-  let app ?src fn = Logs.app ?src (timestamp_wrap fn)
+  val timestamp_tag : float Logs.Tag.def
 end
+
+let timestamp_tag =
+  Logs.Tag.def "timestamp" ~doc:"Timestamp" (fun fmt tm ->
+    time_to_string tm |> Format.pp_print_string fmt)
+;;
+
+(**
+my own custom version of src log that also includes a timestamp
+*)
+let src_log ~src =
+  let open Logs in
+  let module Log = struct
+    let timestamp_wrap fn : ('a, 'b) Logs.msgf =
+      fun m ->
+      fn (fun ?header ?(tags = Logs.Tag.empty) fmt ->
+        let timestamp = Unix.gettimeofday () in
+        let tags = Logs.Tag.add timestamp_tag timestamp tags in
+        m ?header ~tags fmt)
+    ;;
+
+    let msg level msgf = msg ~src level (timestamp_wrap msgf)
+    let kmsg k level msgf = kmsg k ~src level (timestamp_wrap msgf)
+    let app msgf = msg App msgf
+    let err msgf = msg Error msgf
+    let warn msgf = msg Warning msgf
+    let info msgf = msg Info msgf
+    let debug msgf = msg Debug msgf
+
+    let on_error ?level ?header ?tags ~pp ~use =
+      on_error ~src ?level ?header ?tags ~pp ~use
+    ;;
+
+    let on_error_msg ?level ?header ?tags ~use =
+      on_error_msg ~src ?level ?header ?tags ~use
+    ;;
+  end
+  in
+  (module Log : Logs.LOG)
+;;
+
+module Log = (val src_log ~src:(Logs.Src.create "app"))
 
 module Internal = struct
   let reporter ppf =
@@ -50,17 +74,18 @@ module Internal = struct
           | None ->
             None
           | Some tags ->
-            Logs.Tag.find Log.timestamp_tag tags
+            Logs.Tag.find timestamp_tag tags
         in
-        let dt = Format.pp_print_option (Logs.Tag.printer Log.timestamp_tag) in
+        let dt = Format.pp_print_option (Logs.Tag.printer timestamp_tag) in
         Format.kfprintf
           k
           ppf
-          ("%a[%a] @[" ^^ fmt ^^ "@]@.")
+          ("%a[%a][%s] @[" ^^ fmt ^^ "@]@.")
           Logs.pp_header
           (level, h)
           dt
           stamp
+          (Logs.Src.name src)
       in
       msgf @@ fun ?header ?tags fmt -> with_stamp header tags k ppf fmt
     in
@@ -80,19 +105,17 @@ module Internal = struct
     then
       List.iteri
         (fun i file ->
-          if i >= 20
-          then (
-            let file_path = Filename.concat log_path file in
-            Unix.unlink file_path;
-            [%log debug "deleted log file:%s" file_path]))
+           if i >= 20
+           then (
+             let file_path = Filename.concat log_path file in
+             Unix.unlink file_path;
+             [%log debug "deleted log file:%s" file_path]))
         log_files
   ;;
 
   let normalise_os raw =
     match String.lowercase_ascii raw with "darwin" | "osx" -> "macos" | s -> s
   ;;
-
- 
 
   (*tries to get the logging dir for macos and linux*)
   let get_log_dir () =

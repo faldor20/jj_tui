@@ -199,6 +199,9 @@ module Ui : sig
     [ Unescape.special | `Uchar of Uchar.t | `ASCII of char | semantic_key ]
     * Unescape.mods
 
+  (** Pretty print a key *)
+  val pp_key : Format.formatter -> key -> unit
+
   (** An event is propagated until it gets handled.
       Handler functions return a value of type [may_handle] to indicate
       whether the event was handled, not handled, or should be remapped to aonother event. *)

@@ -263,10 +263,10 @@ module Intern (Vars : Global_vars.Vars) = struct
     (* Use exceptions so we can break out of the list*)
     let input = Lwd.peek ui_state.input in
     try
+      [%log debug "command recieved key: %a" Ui.pp_key key];
       match key with
       | `ASCII k, modifiers ->
         let key = { key = k; modifiers } in
-        [%log info "key: %s" (key_to_string key)];
         let cmd = keymap |> Key_Map.find_opt key in
         (match cmd with
          | Some cmd ->
