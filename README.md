@@ -20,7 +20,7 @@ Please provide any suggestions. I'm new to jujutsu so I'm sure people have workf
 To open a shell with jj_tui on nix:`nix shell github:faldor20/jj_tui``
 
 ## Dependencies
-The jujutsu CLI.
+The jujutsu CLI (minimum version 0.30.0)
 I haven't tested on windows or Mac.
 I believe it won't work outside Unix so Windows users will currently have to use wsl. 
 

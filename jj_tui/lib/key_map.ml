@@ -217,6 +217,7 @@ let default : key_config =
         ; cmd "N" "move_to_child"
         ; cmd "P" "move_to_parent"
         ; cmd "a" "abandon"
+        ; cmd "c" "commit"
         ; sub
             "A"
             "absorb"

@@ -85,6 +85,24 @@ module Make (Vars : Global_vars.Vars) = struct
                   @ Lwd.peek active_files )))
       }
     ; {
+        id = "commit"
+      ; description = "Create a commit with the selected files"
+      ; sorting_key = 3.0
+      ; make_cmd =
+          (fun () ->
+            PromptThen
+              ( "Commit message"
+              , fun message ->
+              
+                    Fun
+                    (fun _-> (* I need this to work with any commit. So i should split then describe instead*)
+                      let rev=Vars.get_hovered_rev () in
+                      jj
+                        ( [ "split";"-r"; rev; "-m";message; "--insert-before"; "@" ]
+                        @ Lwd.peek active_files )|>ignore;
+                        )))
+      }
+    ; {
         id = "abandon"
       ; description = "Restore to previous revision (git discard)"
       ; sorting_key = 4.0
