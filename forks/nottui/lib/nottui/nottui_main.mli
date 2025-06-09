@@ -377,7 +377,7 @@ module Ui_loop : sig
     :  ?process_event:bool
     -> ?timeout:float
     -> renderer:Renderer.t
-    -> cache: image option ref
+    -> cache:image option ref
     -> Term.t
     -> ui Lwd.root
     -> unit
@@ -416,12 +416,15 @@ module Ui_loop : sig
       ?process_event:bool
       -> ?timeout:float
       -> renderer:Renderer.t
-    -> cache: image option ref
+      -> cache:image option ref
       -> Term.t
       -> ui Lwd.root
       -> unit
 
-    val await_read_unix : Unix.file_descr -> float -> [ `NotReady | `Ready | `LwdStateUpdate]
+    val await_read_unix
+      :  Unix.file_descr
+      -> float
+      -> [ `NotReady | `Ready | `LwdStateUpdate ]
 
     (** Run one step of the main loop.
 
@@ -435,7 +438,7 @@ module Ui_loop : sig
       -> ?process_event:bool
       -> ?timeout:float
       -> renderer:Renderer.t
-    -> cache: image option ref
+      -> cache:image option ref
       -> Term.t
       -> ui Lwd.root
       -> unit

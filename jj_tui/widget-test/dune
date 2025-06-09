@@ -1,5 +1,5 @@
 (executable
  (public_name widget_test)
  (name main)
- (libraries jj_tui nottui base stdio )
+ (libraries jj_tui lwd_stdlib nottui base stdio )
  )

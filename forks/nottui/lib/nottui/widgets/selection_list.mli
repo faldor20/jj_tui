@@ -4,7 +4,7 @@ module MyMap : Map.S with type key = int
 (**Selectable list item with a ui and some data *)
 type 'a multi_selectable_item =
   { data : 'a
-  (**info attached to each ui elment in the list,  used for filtering and on_select callback *)
+    (**info attached to each ui elment in the list,  used for filtering and on_select callback *)
   ; id : int
   ; ui : selected:bool -> hovered:bool -> Ui.t Lwd.t
   }

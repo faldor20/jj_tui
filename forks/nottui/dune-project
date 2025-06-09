@@ -63,6 +63,8 @@
  (documentation "https://let-def.github.io/lwd/doc")
  (depends
   (picos(>= 0.6.0))
+  (lwd_picos
+   (= :version))
   (nottui
    (= :version))
   (notty

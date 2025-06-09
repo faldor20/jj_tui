@@ -55,10 +55,10 @@ let menu_overlay wm g ?(dx = 0) ?(dy = 0) body around =
         let catchall =
           Ui.mouse_area
             (fun ~x:_ ~y:_ -> function
-              | `Left ->
-                Lwd_table.remove row;
-                `Handled
-              | _ -> `Handled)
+               | `Left ->
+                 Lwd_table.remove row;
+                 `Handled
+               | _ -> `Handled)
             (Ui.resize ~sw:1 ~sh:1 ~mw:1000 ~mh:1000 Ui.empty)
         in
         Ui.join_z catchall @@ Ui.join_y v_pad @@ Ui.join_x h_pad @@ Ui.join_z bg body)
@@ -305,8 +305,7 @@ let tabs (tabs : (string * (unit -> Ui.t Lwd.t)) list) : Ui.t Lwd.t =
   | [] -> Lwd.return Ui.empty
   | _ ->
     let cur = Lwd.var 0 in
-    Lwd.get cur
-    >>= fun idx_sel ->
+    Lwd.get cur >>= fun idx_sel ->
     let _, f = List.nth tabs idx_sel in
     let tab_bar =
       tabs
@@ -315,14 +314,13 @@ let tabs (tabs : (string * (unit -> Ui.t Lwd.t)) list) : Ui.t Lwd.t =
         let tab_annot = printf ~attr "[%s]" s in
         Ui.mouse_area
           (fun ~x:_ ~y:_ l ->
-            if l = `Left
-            then (
-              Lwd.set cur i;
-              `Handled)
-            else `Unhandled)
+             if l = `Left
+             then (
+               Lwd.set cur i;
+               `Handled)
+             else `Unhandled)
           tab_annot)
       |> Ui.hcat
     in
     f () >|= Ui.join_y tab_bar
 ;;
-

@@ -11,6 +11,7 @@ depends: [
   "dune" {>= "3.5"}
   "lwd" {= version}
   "notty" {>= "0.2"}
+  "logs" {>= "0.7.0"}
   "cbor" {with-test}
   "containers" {with-test}
   "odoc" {with-doc}

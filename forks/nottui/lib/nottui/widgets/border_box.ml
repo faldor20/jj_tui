@@ -45,15 +45,15 @@ module Internal = struct
 
   (** Internal function for rendering a border box with known dimensions and padding.*)
   let border_box_intern
-    ?(border_attr = A.empty)
-    ?(label_top = I.empty)
-    ?(label_bottom = I.empty)
-    ~w
-    ~h
-    ~pad
-    ~pad_w
-    ~pad_h
-    input
+        ?(border_attr = A.empty)
+        ?(label_top = I.empty)
+        ?(label_bottom = I.empty)
+        ~w
+        ~h
+        ~pad
+        ~pad_w
+        ~pad_h
+        input
     =
     (*can't go below 1 internal width or things get weird*)
     let h = if pad_h < 1 then Int.max h 1 else h in
@@ -87,13 +87,13 @@ end
 open Internal
 
 let with_border_attr
-  ?(pad = neutral_grav)
-  ?(pad_w = 2)
-  ?(pad_h = 1)
-  ?label_top
-  ?label_bottom
-  get_border
-  input
+      ?(pad = neutral_grav)
+      ?(pad_w = 2)
+      ?(pad_h = 1)
+      ?label_top
+      ?label_bottom
+      get_border
+      input
   =
   let size = Lwd.var (0, 0) in
   let layout_width = Lwd.var 0 in
@@ -129,16 +129,16 @@ let with_border_attr
 ;;
 
 let focusable
-  ?pad
-  ?pad_w
-  ?pad_h
-  ?label_top
-  ?label_bottom
-  ?(border_attr = A.empty)
-  ?(focus_attr = A.fg A.blue)
-  ?(focus = Focus.make ())
-  ?(on_key = fun _ -> `Unhandled)
-  input
+      ?pad
+      ?pad_w
+      ?pad_h
+      ?label_top
+      ?label_bottom
+      ?(border_attr = A.empty)
+      ?(focus_attr = A.fg A.blue)
+      ?(focus = Focus.make ())
+      ?(on_key = fun _ -> `Unhandled)
+      input
   =
   let input =
     input
@@ -168,13 +168,13 @@ let box ?pad ?pad_w ?pad_h ?label_top ?label_bottom ?(border_attr = A.empty) inp
 ;;
 
 let static
-  ?(pad = neutral_grav)
-  ?(pad_w = 2)
-  ?(pad_h = 1)
-  ?label_top
-  ?label_bottom
-  ?(border_attr = A.empty)
-  ui
+      ?(pad = neutral_grav)
+      ?(pad_w = 2)
+      ?(pad_h = 1)
+      ?label_top
+      ?label_bottom
+      ?(border_attr = A.empty)
+      ui
   =
   let Ui.{ w; h; _ } = Ui.layout_spec ui in
   Internal.border_box_intern

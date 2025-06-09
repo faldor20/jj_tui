@@ -10,24 +10,30 @@ open Jj_tui.Util
 
 let pString s = W.string s |> Lwd.pure
 
+let test_input=
+  let inp_var =("hi there",5)|>Lwd.var in
+  let inp_text= inp_var|>Lwd.get in
+
+  W.edit_field  inp_text  ~on_change:(fun x->Lwd.set inp_var x) ~on_submit:(fun x->()) 
 let w_0 =
   W.hbox
     [
-      pString " |"
-    ; (let og =
-         Ui.vcat
-           [
-             W.string "123456789000000000000000000000000000000000000000000000000000end"
-           ; W.string "123456789000000000000000000000000000000000000000000000000000end"
-           ]
-       in
-       og
-       |> Lwd.pure
-       |> W.Scroll.area
-       |> W.Box.box
-       |>$ Ui.resize ~sh:1 ~mh:1000
-       |> W.size_logger)
-    ; pString "| "
+      (* pString " |" *)
+    (* ; (let og = *)
+         (* Ui.vcat *)
+           (* [ *)
+             (* W.string "123456789000000000000000000000000000000000000000000000000000end" *)
+           (* ; W.string "123456789000000000000000000000000000000000000000000000000000end" *)
+           (* ] *)
+       (* in *)
+       (* og *)
+       (* |> Lwd.pure *)
+       (* |> W.Scroll.area *)
+       (* |> W.Box.box *)
+       (* |>$ Ui.resize ~sh:1 ~mh:1000 *)
+       (* |> W.size_logger) *)
+    (* ; pString "| " *)
+    test_input
     ]
 ;;
 

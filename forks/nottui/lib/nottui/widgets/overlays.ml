@@ -25,9 +25,8 @@ let size_logger ui =
 let set_bg ~attr ui =
   let size = Lwd.var (0, 0) in
   W.zbox
-    [ (size
-       |> Lwd.get
-       |>$ fun (w, h) -> I.char attr ' ' w h |> Ui.atom |> Ui.resize ~w:0 ~h:0)
+    [ ( size |> Lwd.get |>$ fun (w, h) ->
+        I.char attr ' ' w h |> Ui.atom |> Ui.resize ~w:0 ~h:0 )
     ; ui |>$ Ui.size_sensor (fun ~w ~h -> if (w, h) <> Lwd.peek size then size $= (w, h))
     ]
 ;;
@@ -50,8 +49,7 @@ let prompt_internal ?pad_w ?pad_h ~focus ~show_prompt ui =
     let$* show_prompt_val = show_prompt in
     let prompt_ui =
       show_prompt_val
-      |> Option.map
-         @@ fun (label, label_bottom, on_exit, prompt_content) ->
+      |> Option.map @@ fun (label, label_bottom, on_exit, prompt_content) ->
          (*we need focus because the base ui is rendering first and so *)
          Focus.request_reversable focus;
          let$* label_bottom = label_bottom in
@@ -96,8 +94,7 @@ let text_prompt
   let prompt_args =
     let$ show_prompt_val = Lwd.get show_prompt_var in
     show_prompt_val
-    |> Option.map
-       @@ fun { label; pre_fill; on_exit } ->
+    |> Option.map @@ fun { label; pre_fill; on_exit } ->
        let on_exit result =
          Focus.release_reversable focus;
          show_prompt_var $= None;
@@ -147,8 +144,7 @@ let selection_list_prompt
   let prompt_args =
     let$ show_prompt_val = Lwd.get show_prompt_var in
     show_prompt_val
-    |> Option.map
-       @@ fun { label; items; on_exit } ->
+    |> Option.map @@ fun { label; items; on_exit } ->
        let on_exit result =
          Focus.release_reversable focus;
          show_prompt_var $= None;
@@ -195,8 +191,7 @@ let selection_list_prompt_filterable
   let prompt_args =
     let$ show_prompt_val = Lwd.get show_prompt_var in
     show_prompt_val
-    |> Option.map
-       @@ fun { label; items; filter_predicate; on_exit } ->
+    |> Option.map @@ fun { label; items; filter_predicate; on_exit } ->
        let on_exit result =
          Focus.release_reversable focus;
          show_prompt_var $= None;
@@ -230,13 +225,11 @@ let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
         let$ prompt_field = content in
         prompt_field |> Ui.resize ~w:5 ~sw:1
       in
-      ui
-      |> BB.focusable ~focus ~label_top:label ?on_key
-      |> clear_bg
+      ui |> BB.focusable ~focus ~label_top:label ?on_key |> clear_bg
       (*This is a little confusing, but by wrapping the content in 2 nested keyboard areas we make it the user cannot escape the popup.
       becasue focus moves between keyboard areas within a current keyboard area by adding 2 we make escape impossible *)
       (* |> Lwd.map  ~f:(fun ui -> *)
-        (* ui |> Ui.keyboard_area (fun x -> `Unhandled)) *)
+      (* ui |> Ui.keyboard_area (fun x -> `Unhandled)) *)
     | None ->
       Focus.release_reversable focus;
       Ui.empty |> Lwd.pure

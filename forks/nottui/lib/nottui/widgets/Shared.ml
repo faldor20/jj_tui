@@ -3,30 +3,22 @@ open Nottui_main
 
 let neutral_grav = Gravity.make ~h:`Neutral ~v:`Neutral
 let make_even num = num + (num mod 2 * 1)
-
 let empty_lwd = Lwd.return Ui.empty
 let mini, maxi, clampi = Lwd_utils.(mini, maxi, clampi)
-
 let attr_clickable = A.(bg lightblue)
 
 (** This is for shifting something away from the edge it is pushed against *)
 let pad_edge x_pad y_pad grav ui =
   let y_pad =
     match grav |> Gravity.v with
-    | `Negative ->
-      -y_pad
-    | `Neutral ->
-      0
-    | `Positive ->
-      y_pad
+    | `Negative -> -y_pad
+    | `Neutral -> 0
+    | `Positive -> y_pad
   in
   match grav |> Gravity.h with
-  | `Negative ->
-    ui |> Ui.shift_area (-x_pad) y_pad
-  | `Neutral ->
-    ui
-  | `Positive ->
-    ui |> Ui.shift_area x_pad y_pad
+  | `Negative -> ui |> Ui.shift_area (-x_pad) y_pad
+  | `Neutral -> ui
+  | `Positive -> ui |> Ui.shift_area x_pad y_pad
 ;;
 
 (** Ui element from a string *)
@@ -88,8 +80,9 @@ let input_field ?(focus = Focus.make ()) start_state ~on_change ~on_submit =
     let content =
       Ui.atom @@ I.hcat [ I.string A.(st underline) (if text = "" then " " else text) ]
     in
-    let handler = (fun x->
-      x|>function
+    let handler =
+      fun x ->
+      x |> function
       | `ASCII 'U', [ `Ctrl ] ->
         on_change "";
         `Handled (* clear *)
@@ -111,9 +104,7 @@ let input_field ?(focus = Focus.make ()) start_state ~on_change ~on_submit =
       | `Enter, _ ->
         on_submit text;
         `Handled
-      | _ ->
-        `Unhandled
-    )
+      | _ -> `Unhandled
     in
     Ui.keyboard_area ~focus handler content
   in
@@ -130,17 +121,14 @@ let vbox l = Lwd_utils.pack Ui.pack_y l
 (** Stacks Ui elements infront of one another *)
 let zbox l = Lwd_utils.pack Ui.pack_z l
 
-
 (** Horizontal/vertical box. We fill lines until there is no room,
     and then go to the next ligne. All widgets in a line are considered to
     have the same height.
     @param width dynamic width  (default 80) *)
 let flex_box ?(w = Lwd.return 80) (l : Ui.t Lwd.t list) : Ui.t Lwd.t =
   let open Lwd.Infix in
-  Lwd_utils.flatten_l l
-  >>= fun l ->
-  w
-  >|= fun w_limit ->
+  Lwd_utils.flatten_l l >>= fun l ->
+  w >|= fun w_limit ->
   let rec box_render (acc : Ui.t) (i : int) l : Ui.t =
     match l with
     | [] -> acc
@@ -155,15 +143,15 @@ let flex_box ?(w = Lwd.return 80) (l : Ui.t Lwd.t list) : Ui.t Lwd.t =
   box_render Ui.empty 0 l
 ;;
 
-module List = struct 
+module List = struct
   include List
 
-(** intersperse elements of the list with items *)
-let intersperse t ~sep =
-  match t with
-  | [] -> []
-  | x :: xs -> x :: fold_right (fun y acc -> sep :: y :: acc) xs []
-;;
+  (** intersperse elements of the list with items *)
+  let intersperse t ~sep =
+    match t with
+    | [] -> []
+    | x :: xs -> x :: fold_right (fun y acc -> sep :: y :: acc) xs []
+  ;;
 end
 
 (** [on_focus f ui]
@@ -179,4 +167,3 @@ let on_focus ~focus f ui =
 let is_focused ~focus f ui =
   Lwd.map2 ui (focus |> Focus.status) ~f:(fun ui focus -> f ui (focus |> Focus.has_focus))
 ;;
-

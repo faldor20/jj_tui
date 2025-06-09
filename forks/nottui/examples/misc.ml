@@ -1,11 +1,11 @@
 open Nottui
 
-
 (* App-specific widgets *)
 
 let simple_edit x =
   let var = Lwd.var (x, 0) in
   W.edit_field (Lwd.get var) ~on_change:(Lwd.set var) ~on_submit:ignore
+;;
 
 let strict_table () =
   let columns = Lwd_table.make () in
@@ -13,17 +13,15 @@ let strict_table () =
     let rows = Lwd_table.make () in
     Lwd_table.append' rows (W.printf "Column %d" colidx |> Lwd.pure);
     for rowidx = 0 to 99 do
-      Lwd_table.append' rows
-        (simple_edit (Printf.sprintf "Test-%03d-%03d" colidx rowidx))
+      Lwd_table.append' rows (simple_edit (Printf.sprintf "Test-%03d-%03d" colidx rowidx))
     done;
-    Lwd_table.append' columns
-      ( rows
-        |> Lwd_table.reduce (Lwd_utils.lift_monoid Ui.pack_y)
-        |> Lwd.join );
+    Lwd_table.append'
+      columns
+      (rows |> Lwd_table.reduce (Lwd_utils.lift_monoid Ui.pack_y) |> Lwd.join);
     Lwd_table.append' columns (Lwd.return (W.string " "))
   done;
-  W.Scroll.area
-  @@ Lwd.join (Lwd_table.reduce (Lwd_utils.lift_monoid Ui.pack_x) columns)
+  W.Scroll.area @@ Lwd.join (Lwd_table.reduce (Lwd_utils.lift_monoid Ui.pack_x) columns)
+;;
 
 (*let lazy_table t =
   let t = scroll_area t in
@@ -81,52 +79,46 @@ let strict_table () =
     else lazy_table body;
   in
   view_menu ()
- *)
+*)
 
 (* Entry point *)
 
 let top = Lwd.var (Lwd.return Ui.empty)
-
 let bot = Lwd.var (Lwd.return Ui.empty)
-
-let wm =
-  W.Old.window_manager @@
-  W.vbox [ Lwd.join (Lwd.get top); Lwd.join (Lwd.get bot) ]
+let wm = W.Old.window_manager @@ W.vbox [ Lwd.join (Lwd.get top); Lwd.join (Lwd.get bot) ]
 
 (*let () = Statmemprof_emacs.start 1E-4 30 5*)
 
 let () =
   let open W.Old in
-  Lwd.set top @@
-  Lwd_utils.pack Ui.pack_x
-    [
-      main_menu_item wm "File" (fun () ->
-          W.vbox
-            [
-              Lwd.return @@ sub_entry "New" ignore;
-              Lwd.return @@ sub_entry "Open" ignore;
-              sub_menu_item wm "Recent" (fun () ->
-                  W.vbox
-                    [
-                      Lwd.return @@ sub_entry "A" ignore;
-                      Lwd.return @@ sub_entry "B" ignore;
-                      Lwd.return @@ sub_entry "CD" ignore;
-                    ]);
-              Lwd.return @@ sub_entry "Quit" (fun () -> raise Exit);
-            ]);
-      main_menu_item wm "View" (fun _ ->
-          Lwd.set bot (Lwd.return (W.string "<View>"));
-          Lwd.return Ui.empty);
-      main_menu_item wm "Edit" (fun _ ->
-          Lwd.set bot (Lwd.return (W.string "<Edit>"));
-          Lwd.return Ui.empty);
-    ];
-  Lwd.set bot @@
-  W.vbox
-    [
-      simple_edit "Hello world";
-      W.v_pane (strict_table ()) (Lwd.return @@ W.string "B");
-      W.h_pane (Lwd.return (W.string "A")) (Lwd.return (W.string "B"));
-    ];
-  try Ui_loop.run ~tick_period:0.2 (window_manager_view wm)
-  with Exit -> ()
+  Lwd.set top
+  @@ Lwd_utils.pack
+       Ui.pack_x
+       [ main_menu_item wm "File" (fun () ->
+           W.vbox
+             [ Lwd.return @@ sub_entry "New" ignore
+             ; Lwd.return @@ sub_entry "Open" ignore
+             ; sub_menu_item wm "Recent" (fun () ->
+                 W.vbox
+                   [ Lwd.return @@ sub_entry "A" ignore
+                   ; Lwd.return @@ sub_entry "B" ignore
+                   ; Lwd.return @@ sub_entry "CD" ignore
+                   ])
+             ; Lwd.return @@ sub_entry "Quit" (fun () -> raise Exit)
+             ])
+       ; main_menu_item wm "View" (fun _ ->
+           Lwd.set bot (Lwd.return (W.string "<View>"));
+           Lwd.return Ui.empty)
+       ; main_menu_item wm "Edit" (fun _ ->
+           Lwd.set bot (Lwd.return (W.string "<Edit>"));
+           Lwd.return Ui.empty)
+       ];
+  Lwd.set bot
+  @@ W.vbox
+       [ simple_edit "Hello world"
+       ; W.v_pane (strict_table ()) (Lwd.return @@ W.string "B")
+       ; W.h_pane (Lwd.return (W.string "A")) (Lwd.return (W.string "B"))
+       ];
+  try Ui_loop.run ~tick_period:0.2 (window_manager_view wm) with
+  | Exit -> ()
+;;

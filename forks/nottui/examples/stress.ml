@@ -1,32 +1,35 @@
 open Nottui
 
-
 (* App-specific widgets *)
 
 let strict_table () =
   let columns = Lwd_table.make () in
   let cells =
     Array.init 100 (fun _ ->
-        let rows = Lwd_table.make () in
-        Lwd_table.append' columns rows;
-        Array.init 100 (fun _ -> Lwd_table.append rows ~set:0))
+      let rows = Lwd_table.make () in
+      Lwd_table.append' columns rows;
+      Array.init 100 (fun _ -> Lwd_table.append rows ~set:0))
   in
   let render_cell _ v = W.string (string_of_int v) in
   let render_column _ rows = Lwd_table.map_reduce render_cell Ui.pack_y rows in
   let table =
-    Lwd_table.map_reduce render_column
-      (Lwd_utils.lift_monoid Ui.pack_x)
-      columns
+    Lwd_table.map_reduce render_column (Lwd_utils.lift_monoid Ui.pack_x) columns
   in
-  (cells, Lwd.join table |> W.Scroll.area)
+  cells, Lwd.join table |> W.Scroll.area
+;;
 
 (* Entry point *)
 
 (*let () = Statmemprof_emacs.start 1E-4 30 5*)
 
 let walk cell =
-  let v = match Lwd_table.get cell with None -> 0 | Some x -> x in
+  let v =
+    match Lwd_table.get cell with
+    | None -> 0
+    | Some x -> x
+  in
   Lwd_table.set cell (v + Random.int 20 - 10)
+;;
 
 let () =
   let cells, table = strict_table () in
@@ -39,3 +42,4 @@ let () =
   done;
   Lwd.quick_release root;
   Notty_unix.Term.release term
+;;

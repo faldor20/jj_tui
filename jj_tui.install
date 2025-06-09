@@ -1,0 +1,13 @@
+lib: [
+  "_build/install/default/lib/jj_tui/META"
+  "_build/install/default/lib/jj_tui/dune-package"
+  "_build/install/default/lib/jj_tui/opam"
+]
+bin: [
+  "_build/install/default/bin/jj_tui"
+  "_build/install/default/bin/widget_test"
+]
+doc: [
+  "_build/install/default/doc/jj_tui/LICENSE"
+  "_build/install/default/doc/jj_tui/README.md"
+]

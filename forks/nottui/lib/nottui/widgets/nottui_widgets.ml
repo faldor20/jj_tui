@@ -1,5 +1,4 @@
 open Lwd.Infix
-
 open Notty
 open Nottui_main
 include Shared
@@ -30,16 +29,16 @@ let h_pane ?(splitter_color = A.lightyellow) left right =
     let splitter =
       Ui.mouse_area
         (fun ~x:_ ~y:_ -> function
-          | `Left ->
-            `Grab
-              ( (fun ~x ~y:_ ->
-                  match Lwd.peek state_var with
-                  | Split { pos; max } ->
-                    Lwd.set state_var (Re_split { pos; max; at = x })
-                  | Re_split { pos; max; at } ->
-                    if at <> x then Lwd.set state_var (Re_split { pos; max; at = x }))
-              , fun ~x:_ ~y:_ -> () )
-          | _ -> `Unhandled)
+           | `Left ->
+             `Grab
+               ( (fun ~x ~y:_ ->
+                   match Lwd.peek state_var with
+                   | Split { pos; max } ->
+                     Lwd.set state_var (Re_split { pos; max; at = x })
+                   | Re_split { pos; max; at } ->
+                     if at <> x then Lwd.set state_var (Re_split { pos; max; at = x }))
+               , fun ~x:_ ~y:_ -> () )
+           | _ -> `Unhandled)
         splitter
     in
     let ui = Ui.join_x l (Ui.join_x splitter r) in
@@ -50,8 +49,8 @@ let h_pane ?(splitter_color = A.lightyellow) left right =
       | Re_split { at; _ } ->
         Ui.transient_sensor
           (fun ~x ~y:_ ~w ~h:_ () ->
-            let newpos = clampi (at - x) ~min:0 ~max:w in
-            Lwd.set state_var (Split { pos = newpos; max = w }))
+             let newpos = clampi (at - x) ~min:0 ~max:w in
+             Lwd.set state_var (Split { pos = newpos; max = w }))
           ui
     in
     ui
@@ -71,16 +70,16 @@ let v_pane top bot =
     let splitter =
       Ui.mouse_area
         (fun ~x:_ ~y:_ -> function
-          | `Left ->
-            `Grab
-              ( (fun ~x:_ ~y ->
-                  match Lwd.peek state_var with
-                  | Split { pos; max } ->
-                    Lwd.set state_var (Re_split { pos; max; at = y })
-                  | Re_split { pos; max; at } ->
-                    if at <> y then Lwd.set state_var (Re_split { pos; max; at = y }))
-              , fun ~x:_ ~y:_ -> () )
-          | _ -> `Unhandled)
+           | `Left ->
+             `Grab
+               ( (fun ~x:_ ~y ->
+                   match Lwd.peek state_var with
+                   | Split { pos; max } ->
+                     Lwd.set state_var (Re_split { pos; max; at = y })
+                   | Re_split { pos; max; at } ->
+                     if at <> y then Lwd.set state_var (Re_split { pos; max; at = y }))
+               , fun ~x:_ ~y:_ -> () )
+           | _ -> `Unhandled)
         splitter
     in
     let ui = Ui.join_y top (Ui.join_y splitter bot) in
@@ -91,8 +90,8 @@ let v_pane top bot =
       | Re_split { at; _ } ->
         Ui.transient_sensor
           (fun ~x:_ ~y ~w:_ ~h () ->
-            let newpos = clampi (at - y) ~min:0 ~max:h in
-            Lwd.set state_var (Split { pos = newpos; max = h }))
+             let newpos = clampi (at - y) ~min:0 ~max:h in
+             Lwd.set state_var (Split { pos = newpos; max = h }))
           ui
     in
     ui
@@ -111,7 +110,7 @@ let edit_field ?(focus = Focus.make ()) state ~on_change ~on_submit =
       @@
       if Focus.has_focus focus
       then (
-        let attr = attr_clickable in
+        let attr = A.(st italic) in
         let len = String.length text in
         (if pos >= len
          then [ I.string attr text ]
@@ -119,10 +118,10 @@ let edit_field ?(focus = Focus.make ()) state ~on_change ~on_submit =
         @
         if pos < String.length text
         then
-          [ I.string A.(bg lightred) (sub' text pos 1)
+          [ I.string A.(bg lightblue ++ fg black ++ attr ++ st bold) (sub' text pos 1)
           ; I.string attr (sub' text (pos + 1) (len - pos - 1))
           ]
-        else [ I.string A.(bg lightred) " " ])
+        else [ I.string A.(bg lightblue ++ fg black) " " ])
       else [ I.string A.(st underline) (if text = "" then " " else text) ]
     in
     let handler = function
@@ -190,16 +189,13 @@ let edit_field ?(focus = Focus.make ()) state ~on_change ~on_submit =
   Lwd.map2 state node ~f:(fun state content -> Ui.mouse_area (mouse_grab state) content)
 ;;
 
-
-
 (** Prints the summary, but calls [f()] to compute a sub-widget
     when clicked on. Useful for displaying deep trees. Mouse only *)
 let unfoldable ?(folded_by_default = true) summary (f : unit -> Ui.t Lwd.t) : Ui.t Lwd.t =
   let open Lwd.Infix in
   let opened = Lwd.var (not folded_by_default) in
   let fold_content =
-    Lwd.get opened
-    >>= function
+    Lwd.get opened >>= function
     | true ->
       (* call [f] and pad a bit *)
       f () |> Lwd.map ~f:(Ui.join_x (string " "))
@@ -207,10 +203,8 @@ let unfoldable ?(folded_by_default = true) summary (f : unit -> Ui.t Lwd.t) : Ui
   in
   (* pad summary with a "> " when it's opened *)
   let summary =
-    Lwd.get opened
-    >>= fun op ->
-    summary
-    >|= fun s ->
+    Lwd.get opened >>= fun op ->
+    summary >|= fun s ->
     Ui.hcat [ string ~attr:attr_clickable (if op then "v" else ">"); string " "; s ]
   in
   let cursor ~x:_ ~y:_ = function
@@ -237,8 +231,6 @@ let unfoldable ?(folded_by_default = true) summary (f : unit -> Ui.t Lwd.t) : Ui
     else Ui.join_x summary fold)
 ;;
 
-
-
 (** A grid layout, with alignment in all rows/columns.
     @param max_h maximum height of a cell
     @param max_w maximum width of a cell
@@ -253,15 +245,15 @@ let unfoldable ?(folded_by_default = true) summary (f : unit -> Ui.t Lwd.t) : Ui
       TODO: horizontal rule below headers
       TODO: headers *)
 let grid
-  ?max_h
-  ?max_w
-  ?pad
-  ?crop
-  ?bg
-  ?(h_space = 0)
-  ?(v_space = 0)
-  ?(headers : Ui.t Lwd.t list option)
-  (rows : Ui.t Lwd.t list list)
+      ?max_h
+      ?max_w
+      ?pad
+      ?crop
+      ?bg
+      ?(h_space = 0)
+      ?(v_space = 0)
+      ?(headers : Ui.t Lwd.t list option)
+      (rows : Ui.t Lwd.t list list)
   : Ui.t Lwd.t
   =
   let rows =
@@ -270,18 +262,17 @@ let grid
     | Some r -> r :: rows
   in
   (* build a [ui list list Lwd.t] *)
-  Lwd_utils.map_l (fun r -> Lwd_utils.flatten_l r) rows
-  >>= fun (rows : Ui.t list list) ->
+  Lwd_utils.map_l (fun r -> Lwd_utils.flatten_l r) rows >>= fun (rows : Ui.t list list) ->
   (* determine width of each column and height of each row *)
   let n_cols = List.fold_left (fun n r -> maxi n (List.length r)) 0 rows in
   let col_widths = Array.make n_cols 1 in
   List.iter
     (fun row ->
-      List.iteri
-        (fun col_j cell ->
-          let w = (Ui.layout_spec cell).Ui.w in
-          col_widths.(col_j) <- maxi col_widths.(col_j) w)
-        row)
+       List.iteri
+         (fun col_j cell ->
+            let w = (Ui.layout_spec cell).Ui.w in
+            col_widths.(col_j) <- maxi col_widths.(col_j) w)
+         row)
     rows;
   (match max_w with
    | None -> ()
@@ -301,16 +292,18 @@ let grid
   let rows =
     List.map
       (fun row ->
-        let row_h = List.fold_left (fun n c -> maxi n (Ui.layout_spec c).Ui.h) 0 row in
-        let row_h =
-          match max_h with
-          | None -> row_h
-          | Some max_h -> mini row_h max_h
-        in
-        let row =
-          List.mapi (fun i c -> Ui.resize ~w:col_widths.(i) ~h:row_h ?crop ?pad ?bg c) row
-        in
-        Lwd_utils.reduce pack_pad_x row)
+         let row_h = List.fold_left (fun n c -> maxi n (Ui.layout_spec c).Ui.h) 0 row in
+         let row_h =
+           match max_h with
+           | None -> row_h
+           | Some max_h -> mini row_h max_h
+         in
+         let row =
+           List.mapi
+             (fun i c -> Ui.resize ~w:col_widths.(i) ~h:row_h ?crop ?pad ?bg c)
+             row
+         in
+         Lwd_utils.reduce pack_pad_x row)
       rows
   in
   (* TODO: mouse and keyboard handling *)
@@ -322,14 +315,13 @@ let grid
 let button_of ui f =
   Ui.mouse_area
     (fun ~x:_ ~y:_ _ ->
-      f ();
-      `Handled)
+       f ();
+       `Handled)
     ui
 ;;
 
 (** A clickable button that calls [f] when clicked, labelled with a string. *)
 let button ?(attr = attr_clickable) s f = button_of (string ~attr s) f
-
 
 let toggle, toggle' =
   let toggle_ st (lbl : string Lwd.t) (f : bool -> unit) : Ui.t Lwd.t =

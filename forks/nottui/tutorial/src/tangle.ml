@@ -48,9 +48,8 @@ module Parsing = struct
 
   (* Parser for $#<number> fold <name> *)
   let parse_fold =
-    string "$#" *> parse_number
-    <* string " fold "
-    >>= fun n -> take_while1 Char.(fun c -> c <> '\n') >>| fun name -> Fold (n, name)
+    string "$#" *> parse_number <* string " fold " >>= fun n ->
+    take_while1 Char.(fun c -> c <> '\n') >>| fun name -> Fold (n, name)
   ;;
 
   (* Combine all parsers *)
@@ -169,8 +168,8 @@ let process_folder input_path output_path =
     files
     |> List.filter_map ~f:(fun f ->
       let path = Stdlib.Filename.concat input_path f in
-      if (not (Stdlib.Filename.check_suffix f ".md"))
-         && not (Stdlib.Sys.is_directory path)
+      if
+        (not (Stdlib.Filename.check_suffix f ".md")) && not (Stdlib.Sys.is_directory path)
       then Some path
       else None)
   in

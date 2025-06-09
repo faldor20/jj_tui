@@ -72,19 +72,22 @@
               };
               picos = ocamlPackages.buildDunePackage {
                 pname = "picos";
-                version = "0.5.0";
+                version = "0.6.0";
                 duneVersion = "3";
                 src = picos_src;
                 buildInputs = with ocamlPackages; [
                   backoff
                   thread-local-storage
                 ];
-
+                propagatedBuildInputs = with ocamlPackages; [
+                  backoff
+                  thread-local-storage
+                ];
                 strictDeps = true;
               };
               picos_std = ocamlPackages.buildDunePackage {
                 pname = "picos_std";
-                version = "0.5.0";
+                version = "0.6.0";
                 duneVersion = "3";
                 src = picos_src;
                 buildInputs = with ocamlPackages; [
@@ -94,12 +97,17 @@
                   thread-local-storage
                   multicore-magic
                 ];
-
+                propagatedBuildInputs = with ocamlPackages; [
+                  backoff
+                  thread-local-storage
+                  multicore-magic
+                  picos_aux
+                ];
                 strictDeps = true;
               };
               picos_aux = ocamlPackages.buildDunePackage {
                 pname = "picos_aux";
-                version = "0.5.0";
+                version = "0.6.0";
                 duneVersion = "3";
                 src = picos_src;
                 buildInputs = with ocamlPackages; [
@@ -111,7 +119,7 @@
               };
               picos_mux = ocamlPackages.buildDunePackage {
                 pname = "picos_mux";
-                version = "0.5.0";
+                version = "0.6.0";
                 duneVersion = "3";
                 src = picos_src;
                 buildInputs = with ocamlPackages; [
@@ -123,12 +131,14 @@
                   thread-local-storage
                   psq
                 ];
-
+                propagatedBuildInputs = with ocamlPackages; [
+                  psq
+                ];
                 strictDeps = true;
               };
               picos_io = ocamlPackages.buildDunePackage {
                 pname = "picos_io";
-                version = "0.5.0";
+                version = "0.6.0";
                 duneVersion = "3";
                 src = picos_src;
                 buildInputs = with ocamlPackages; [
@@ -143,11 +153,16 @@
                   psq
                   thread-local-storage
                 ];
+                propagatedBuildInputs = with ocamlPackages; [
+                  psq
+                  mtime
+                ];
+
                 strictDeps = true;
               };
               picos_mux_with_io = ocamlPackages.buildDunePackage {
                 pname = "picos_mux";
-                version = "0.5.0";
+                version = "0.6.0";
                 duneVersion = "3";
                 src = picos_src;
                 buildInputs =
@@ -158,6 +173,11 @@
                     picos_aux
                     picos_std
                     picos_io
+                    backoff
+                    multicore-magic
+                    thread-local-storage
+                  ];
+                  propagatedBuildInputs = with ocamlPackages; [
                     backoff
                     multicore-magic
                     thread-local-storage
@@ -181,20 +201,38 @@
                 ];
                 strictDeps = true;
               };
-
               lwd = ocamlPackages.buildDunePackage {
                 pname = "lwd";
                 version = "0.1.0";
                 duneVersion = "3";
-                src = pkgs.fetchFromGitHub {
 
-                  owner = "faldor20";
-                  repo = "lwd";
-                  rev = "c19bc2fd55c2de977cdd283458ce06402b08febe";
-                  sha256 = "sha256-8QwDzRgffA4wnE9vWLpLfy9MdQ5Yc8wBF5jgRamGMfA=";
-                };
+                src = ./forks/lwd/.;
 
-                buildInputs = with ocamlPackages; [ seq ];
+                # pkgs.fetchFromGitHub {
+
+                #   owner = "faldor20";
+                #   repo = "lwd";
+                #   rev = "c19bc2fd55c2de977cdd283458ce06402b08febe";
+                #   sha256 = "sha256-8QwDzRgffA4wnE9vWLpLfy9MdQ5Yc8wBF5jgRamGMfA=";
+                # };
+
+                buildInputs = with ocamlPackages; [ seq logs ];
+                propagatedBuildInputs = with ocamlPackages; [ logs ];
+            
+                strictDeps = false;
+              };
+              lwd_picos = ocamlPackages.buildDunePackage {
+                pname = "lwd_picos";
+                version = "0.1.0";
+                duneVersion = "3";
+
+                src = ./forks/lwd/.;
+
+                buildInputs = with ocamlPackages; [ seq lwd picos picos_std backoff multicore-magic thread-local-storage ];
+                propagatedBuildInputs = with ocamlPackages; [
+                  
+                  lwd
+                ];
 
                 strictDeps = true;
               };
@@ -233,6 +271,46 @@
 
                   strictDeps = true;
                 };
+                 nottui_picos=
+                let
+                    pname = "nottui_picos";
+                  in
+                 ocamlPackages.buildDunePackage {
+                    pname = "nottui_picos";
+                  version = "dev";
+                  duneVersion = "3";
+                  src = ./forks/nottui/.;
+                  buildInputs = with ocamlPackages; [
+                    logs
+                    signal
+                    # lwd
+                    lwd_picos
+                    nottui
+                  picos
+                  picos_io
+                  picos_std
+                    notty-mine
+                    seq
+                  ];
+                  buildPhase = ''
+                    runHook preBuild
+                    rm -rf ./tutorial
+                    dune build -p ${pname}  ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
+                    runHook postBuild
+                  '';
+                  checkPhase = ''
+                    runHook preCheck
+                    dune runtest -p ${pname}''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
+                    runHook postCheck
+                  '';
+                  installPhase = ''
+                    runHook preInstall
+                    dune install --prefix $out --libdir $OCAMLFIND_DESTDIR ${pname}
+                    runHook postInstall
+                  '';
+
+                  strictDeps = true;
+                };
 
               jj_tui_build_pkgs =
 
@@ -241,8 +319,10 @@
                 ++ picos_aux.buildInputs
                 ++ [
                   lwd
+                  lwd_picos
                   notty-mine
                   nottui
+                  nottui_picos
                   picos
                   picos_std
                   picos_io
@@ -344,7 +424,7 @@
               inputsFrom = [ self'.packages.default ];
               packages = builtins.attrValues {
                 inherit (pkgs) gcc pkg-config;
-                inherit (ocamlPackages) ocaml-lsp ocamlformat-rpc-lib;
+                inherit (ocamlPackages) ocaml-lsp ocamlformat-rpc-lib earlybird;
               };
             };
           };

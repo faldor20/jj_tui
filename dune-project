@@ -26,6 +26,7 @@
  (description "A longer description")
  (depends
   lwd
+  lwd_picos
   ocaml
   dune
   stdio

@@ -1,10 +1,11 @@
 (executable
  (public_name jj_tui)
  (name main)
+ (modes byte native )
  (libraries
   signal
   jj_tui
-  nottui
+  ; nottui
   nottui_picos
   base
   stdio

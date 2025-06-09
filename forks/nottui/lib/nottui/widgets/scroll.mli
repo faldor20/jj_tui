@@ -2,7 +2,11 @@
 val v_area : ?reset_on_content_change:bool -> Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t
 
 (** A scroll area that allows keyboard scrolling in both x and y directions*)
-val area : ?reset_on_content_change:bool -> ?focus:Nottui_main.Focus.status -> Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t
+val area
+  :  ?reset_on_content_change:bool
+  -> ?focus:Nottui_main.Focus.status
+  -> Nottui_main.ui Lwd.t
+  -> Nottui_main.ui Lwd.t
 
 (** A scroll area that allows keyboard scrolling in both x and y directions and has no limits.
     This might be useful if you have some very dynamic content and the usual scroll area doesn't know how big things are*)

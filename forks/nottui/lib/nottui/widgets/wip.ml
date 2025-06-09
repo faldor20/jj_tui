@@ -67,8 +67,7 @@ let v_window_stack ~focus windows =
                  Focus.request x;
                  focused := focused_idx - 1);
              `Handled
-           | _ ->
-             `Unhandled
+           | _ -> `Unhandled
          else fun _ -> `Unhandled))
   |> Border_box.with_border_attr
        (let$ focus = focus |> Focus.status |>$ Focus.has_focus in
@@ -120,8 +119,7 @@ let h_window_stack ~focus windows =
                  Focus.request x;
                  focused := focused_idx - 1);
              `Handled
-           | _ ->
-             `Unhandled
+           | _ -> `Unhandled
          else fun _ -> `Unhandled))
   |> Border_box.with_border_attr
        (let$ focus = focus |> Focus.status |>$ Focus.has_focus in

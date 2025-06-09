@@ -2,6 +2,7 @@
  (name nottui_picos)
  (public_name nottui_picos)
  (libraries
+  lwd_picos
   nottui
   picos
   picos_std.structured

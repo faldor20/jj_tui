@@ -6,20 +6,21 @@ open Lwd_infix
 let selected_post_var : post option Lwd.var = Lwd.var None
 
 let post_ui
-  ?(focus = Focus.make ())
-  ({ title; url; score; comments; _ } as post : Hackernews_api.post)
+      ?(focus = Focus.make ())
+      ({ title; url; score; comments; _ } as post : Hackernews_api.post)
   =
   let website = List.nth (String.split_on_char '/' url) 2 in
   let update_focused =
     let$ focus = Focus.status focus in
     Lwd.may_update
       (fun x ->
-        if focus |> Focus.has_focus
+         if
+           focus |> Focus.has_focus
            && x
               |> Option.map (fun (x : post) -> x.id <> post.id)
               |> Option.value ~default:true
-        then Some (Some post)
-        else None)
+         then Some (Some post)
+         else None)
       selected_post_var
   in
   ()
@@ -27,19 +28,19 @@ let post_ui
   |> Lwd.fix ~wrt:update_focused
   (*We map on update_focused becasue we want it in our LWD tree so it updates with the rest of the ui, but we want it at the bottom becasue we don't want aything to re-render becasue of it changing*)
   |>$ (fun () ->
-        Ui.vcat
-          [ Ui.hcat
-              [ W.string ~attr:A.(st bold) title
-              ; W.string " "
-              ; W.printf ~attr:A.(st italic ++ fg lightblack) "(%s)" website
-              ]
-          ; Ui.hcat
-              [ W.printf ~attr:A.(st italic) "%d points" score
-              ; W.string "  "
-              ; W.printf ~attr:A.(st italic) "%d comments" comments
-              ]
-          ]
-        |> Ui.resize ~sw:1 ~mw:10000)
+  Ui.vcat
+    [ Ui.hcat
+        [ W.string ~attr:A.(st bold) title
+        ; W.string " "
+        ; W.printf ~attr:A.(st italic ++ fg lightblack) "(%s)" website
+        ]
+    ; Ui.hcat
+        [ W.printf ~attr:A.(st italic) "%d points" score
+        ; W.string "  "
+        ; W.printf ~attr:A.(st italic) "%d comments" comments
+        ]
+    ]
+  |> Ui.resize ~sw:1 ~mw:10000)
   |> W.Box.focusable ~focus
 ;;
 

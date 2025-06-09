@@ -84,7 +84,7 @@ let get_sort_func sorting =
 let shortcuts = Ui.vcat [ Ui.hcat [ W.string "[S]orting" ] ]
 
 let main_ui =
-(*$#S15*)
+  (*$#S15*)
   let sorted_by_ui =
     let$ sorting = Lwd.get sorting_mode_var in
     (match sorting with
@@ -92,8 +92,8 @@ let main_ui =
      | `Comments -> "Comments")
     |> W.fmt "Sorted by %s"
   in
-(*$#E15*)
-(*$#S14*)
+  (*$#E15*)
+  (*$#S14*)
   let posts =
     let$* sort_mode = Lwd.get sorting_mode_var in
     let sort_func = get_sort_func sort_mode in
@@ -103,12 +103,11 @@ let main_ui =
     |> W.vbox
     |> W.Scroll.v_area
   in
-(*$#E14*)
-(*$#S12*)
+  (*$#E14*)
+  (*$#S12*)
   W.vbox
-    [ 
-    sorted_by_ui|>W.Box.box ~pad_w:1 ~pad_h:0;
-    posts |> W.Box.box ~pad_w:1 ~pad_h:0
+    [ sorted_by_ui |> W.Box.box ~pad_w:1 ~pad_h:0
+    ; posts |> W.Box.box ~pad_w:1 ~pad_h:0
     ; shortcuts |> Ui.resize ~sw:1 ~mw:10000 |> Lwd.pure |> W.Box.box ~pad_w:1 ~pad_h:0
     ]
   |> sorting_prompt

@@ -15,9 +15,8 @@ let make_comment_ui_attr ~attr (comment : comment Lwd.t) =
 let make_comment_ui ?(focus = Focus.make ()) (comment : comment Lwd.t) =
   make_comment_ui_attr
     ~attr:
-      (focus
-       |> Focus.status
-       |>$ fun focus -> if Focus.has_focus focus then A.(fg blue) else A.empty)
+      ( focus |> Focus.status |>$ fun focus ->
+        if Focus.has_focus focus then A.(fg blue) else A.empty )
     comment
 ;;
 

@@ -14,7 +14,8 @@ module Focus : sig
   (** request the focus and add to the focus stack *)
   val request_reversable : handle -> unit
 
-  (** Release the focus (if the handle has it) and restore the last focus on the stack *)
+  (** Release the focus (if the handle has it) and restore the last focus on the
+      stack *)
   val release_reversable : handle -> unit
 
   type status =
@@ -61,10 +62,16 @@ end = struct
   let clock = ref 0
   let currently_focused : var ref = ref (make () |> fst)
   let focus_stack : var list ref = ref []
-  let focus_stack_to_str ()= 
-    (!focus_stack|>List.map Lwd.peek|>List.map (string_of_int)|>String.concat ","|>Printf.sprintf "[%s]")
 
-  let focusLock= Mutex.create()
+  let focus_stack_to_str () =
+    !focus_stack
+    |> List.map Lwd.peek
+    |> List.map string_of_int
+    |> String.concat ","
+    |> Printf.sprintf "[%s]"
+  ;;
+
+  let focusLock = Mutex.create ()
 
   let request_var (v : var) =
     incr clock;
@@ -72,33 +79,34 @@ end = struct
     currently_focused := v
   ;;
 
-  let request ((v, _) : handle) =
-    Mutex.protect focusLock @@ fun _->
-    request_var v
+  let request ((v, _) : handle) = Mutex.protect focusLock @@ fun _ -> request_var v
 
   let release ((v, _) : handle) =
-    Mutex.protect focusLock @@ fun _->
+    Mutex.protect focusLock @@ fun _ ->
     incr clock;
     Lwd.set v 0
   ;;
 
   let var_equal a b = Lwd.peek a = Lwd.peek b
 
-
   let request_reversable ((v, _) : handle) =
-    Mutex.protect focusLock @@ fun _->
+    Mutex.protect focusLock @@ fun _ ->
     Log.debug (fun m -> m "Maybe requesting reversable focus %d" (Lwd.peek v));
     if not @@ var_equal !currently_focused v
     then (
       focus_stack := !currently_focused :: !focus_stack;
       request_var v;
-      Log.debug (fun m -> m "Requested reversable focus %d. stack:%s" (Lwd.peek v) (focus_stack_to_str ())))
+      Log.debug (fun m ->
+        m "Requested reversable focus %d. stack:%s" (Lwd.peek v) (focus_stack_to_str ())))
   ;;
 
   let release_reversable ((v, _) : handle) =
     (* Mutex.protect focusLock @@ fun _-> *)
     Log.debug (fun m ->
-      m "Maybe release or remove %d from reversable focus stack. stack: %s" (Lwd.peek v) (focus_stack_to_str ()));
+      m
+        "Maybe release or remove %d from reversable focus stack. stack: %s"
+        (Lwd.peek v)
+        (focus_stack_to_str ()));
     (* we should only release if we actually have the focus*)
     if var_equal !currently_focused v
     then (
@@ -323,11 +331,10 @@ module Ui = struct
 
   let pp_main_key ppf = function
     | #Unescape.special as special -> pp_special_key ppf special
-    | `Uchar u -> 
-      if Uchar.is_char u then
-        Format.fprintf ppf "'%c'" (Uchar.to_char u)
-      else
-        Format.fprintf ppf "U+%04X" (Uchar.to_int u)
+    | `Uchar u ->
+      if Uchar.is_char u
+      then Format.fprintf ppf "'%c'" (Uchar.to_char u)
+      else Format.fprintf ppf "U+%04X" (Uchar.to_int u)
     | `ASCII c -> Format.fprintf ppf "'%c'" c
     | #semantic_key as sem -> pp_semantic_key ppf sem
   ;;
@@ -702,6 +709,8 @@ module Renderer = struct
     else a, b
   ;;
 
+  (** Allows the element to stretch if possible up to it's max and then returns
+      the position change + dimension. *)
   let pack ~max ~fixed ~stretch total g1 g2 =
     (*flex is the space we should expand into if we stretch*)
     let flex = total - fixed in
@@ -714,6 +723,7 @@ module Renderer = struct
       in
       let gravity = if flex >= 0 then g1 else g2 in
       match gravity with
+      (*if the gravity is negative then ofcourse it won't move even if it expands so we return 0 position change *)
       | `Negative -> 0, fixed
       | `Neutral -> flex / 2, fixed
       | `Positive -> flex, fixed)
@@ -748,6 +758,7 @@ module Renderer = struct
         update_sensors ox oy sw sh mw mh t;
         sensor ()
       | Resize (t, g, _) ->
+        (* think this is the real width and the real height plus the change in x and y position to account for that changed size*)
         let open Gravity in
         let dx, rw = pack ~max:t.mw ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
         let dy, rh = pack ~max:t.mh ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
@@ -1136,7 +1147,7 @@ module Ui_loop = struct
       ?process_event:bool
       -> ?timeout:float
       -> renderer:Renderer.t
-    -> cache: image option ref
+      -> cache:image option ref
       -> Term.t
       -> ui Lwd.root
       -> unit
@@ -1166,9 +1177,13 @@ module Ui_loop = struct
       let size = Term.size term in
       let image =
         if (not (Lwd.is_damaged root)) && !cache |> Option.is_some
-        then !cache |> Option.get
+        then 
+            let a= !cache |> Option.get in
+            Log.debug (fun m -> m "not damaged and cache is some returning cached image");
+            a
         else (
           let rec stabilize () =
+            Log.debug (fun m -> m "damaged stabilizing");
             let tree = Lwd.quick_sample root in
             Renderer.update renderer size tree;
             let image = Renderer.image renderer in
@@ -1235,10 +1250,11 @@ module Ui_loop = struct
       let root = Lwd.observe ~on_invalidate t in
       let cache = ref None in
       let rec loop () =
+        Log.debug (fun m -> m "loop");
         let quit = Lwd.quick_sample quit in
         if not quit
         then (
-          step ~process_event:true ?timeout:tick_period ~renderer ~cache term root ;
+          step ~process_event:true ?timeout:tick_period ~renderer ~cache term root;
           tick ();
           loop ())
       in

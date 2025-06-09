@@ -16,7 +16,8 @@ type 'a maybe_multi_selectable =
   | Filler of Ui.t Lwd.t
 
 module MyMap = Map.Make (Int)
-let singe_space= Shared.string " ";;
+
+let singe_space = Shared.string " "
 
 (** Get a map of all the selectable items*)
 let get_selectable_items_map (items : 'a maybe_multi_selectable array Lwd.t) =
@@ -26,9 +27,9 @@ let get_selectable_items_map (items : 'a maybe_multi_selectable array Lwd.t) =
     items
     |> Array.fold_left
          (fun map item ->
-           match item with
-           | Selectable item -> MyMap.add item.id (item.id, item) map
-           | Filler _ -> map)
+            match item with
+            | Selectable item -> MyMap.add item.id (item.id, item) map
+            | Filler _ -> map)
          MyMap.empty
   in
   selectable_items
@@ -46,12 +47,12 @@ let get_selectable_items (items : 'a maybe_multi_selectable array Lwd.t) =
       items
       |> Array.fold_left
            (fun (i, selectable_count) item ->
-             match item with
-             | Selectable item ->
-               (*copy any seletable items to the new array*)
-               Array.set selectable_items selectable_count (i, item);
-               i + 1, selectable_count + 1
-             | Filler _ -> i + 1, selectable_count)
+              match item with
+              | Selectable item ->
+                (*copy any seletable items to the new array*)
+                Array.set selectable_items selectable_count (i, item);
+                i + 1, selectable_count + 1
+              | Filler _ -> i + 1, selectable_count)
            (0, 0)
     in
     Array.sub selectable_items 0 final_len
@@ -60,11 +61,11 @@ let get_selectable_items (items : 'a maybe_multi_selectable array Lwd.t) =
 ;;
 
 let multi_selection_list_exclusions
-  ?(focus = Focus.make ())
-  ?reset_selections
-  ?(on_selection_change = fun ~hovered ~selected -> ())
-  ~custom_handler
-  (items : 'a maybe_multi_selectable array Lwd.t)
+      ?(focus = Focus.make ())
+      ?reset_selections
+      ?(on_selection_change = fun ~hovered ~selected -> ())
+      ~custom_handler
+      (items : 'a maybe_multi_selectable array Lwd.t)
   =
   (*
      The rough overview is:
@@ -111,19 +112,19 @@ let multi_selection_list_exclusions
         selectable_items
         |> Array.fold_left
              (fun (count, acc) (idx, item) ->
-               let nCount = count + 1 in
-               match acc with
-               | `Found _ -> nCount, acc
-               | `Same_idx _ ->
-                 if item.id = hovered_id
-                 then nCount, `Found (item.id, idx, count)
-                 else nCount, acc
-               | `Searching _ ->
-                 if item.id = hovered_id
-                 then nCount, `Found (item.id, idx, count)
-                 else if count == hovered_selection_idx
-                 then nCount, `Same_idx (item.id, idx, count)
-                 else nCount, `Searching (item.id, idx, count))
+                let nCount = count + 1 in
+                match acc with
+                | `Found _ -> nCount, acc
+                | `Same_idx _ ->
+                  if item.id = hovered_id
+                  then nCount, `Found (item.id, idx, count)
+                  else nCount, acc
+                | `Searching _ ->
+                  if item.id = hovered_id
+                  then nCount, `Found (item.id, idx, count)
+                  else if count == hovered_selection_idx
+                  then nCount, `Same_idx (item.id, idx, count)
+                  else nCount, `Searching (item.id, idx, count))
              (0, `Searching (0, 0, 0))
         |> snd
         |> function
@@ -144,7 +145,7 @@ let multi_selection_list_exclusions
     and$ _ = Lwd.get hover_changed
     and$ selected_items = Lwd.get selected_items_var in
     (* FIXME: can i just get rid of all the other parts of the hovered var now that we store the id?*)
-    let hovered_id, _, _= !hovered_var in
+    let hovered_id, _, _ = !hovered_var in
     (*==== Rendering The list ====*)
     (* Ui.vcat can be a little weird when the *)
     if items |> Array.length = 0
@@ -154,7 +155,7 @@ let multi_selection_list_exclusions
       |> Array.mapi (fun i x ->
         match x with
         (*Becasue selectable has a space used for the selection pointer, filler also needs a space*)
-        | Filler ui -> ui|>$(fun x-> Ui.hcat[ singe_space ; x])
+        | Filler ui -> ui |>$ fun x -> Ui.hcat [ singe_space; x ]
         | Selectable x ->
           let hovered = hovered_id == x.id in
           let selected = selected_items |> MyMap.mem x.id in
@@ -251,10 +252,10 @@ let multi_selection_list_exclusions
 ;;
 
 let selection_list_exclusions
-  ?(focus = Focus.make ())
-  ?(on_selection_change = fun _ -> ())
-  ~custom_handler
-  (items : 'a maybe_multi_selectable array Lwd.t)
+      ?(focus = Focus.make ())
+      ?(on_selection_change = fun _ -> ())
+      ~custom_handler
+      (items : 'a maybe_multi_selectable array Lwd.t)
   =
   (*
      The rough overview is:
@@ -300,7 +301,7 @@ let selection_list_exclusions
       |> Array.mapi (fun i x ->
         match x with
         (*Becasue selectable has a space used for the selection pointer, filler also needs a space*)
-        | Filler ui ->  ui|>$(fun x-> Ui.hcat[ singe_space ; x])
+        | Filler ui -> ui |>$ fun x -> Ui.hcat [ singe_space; x ]
         | Selectable x ->
           if hovered == i
           then
@@ -393,47 +394,45 @@ let selectable_item_lwd ui ~selected ~hovered =
 ;;
 
 let multi_selection_list_custom
-  ?(focus = Focus.make ())
-  ?reset_selections
-  ?(on_selection_change = fun ~hovered ~selected -> ())
-  ~custom_handler
-  (items : 'a multi_selectable_item list Lwd.t)
+      ?(focus = Focus.make ())
+      ?reset_selections
+      ?(on_selection_change = fun ~hovered ~selected -> ())
+      ~custom_handler
+      (items : 'a multi_selectable_item list Lwd.t)
   =
   multi_selection_list_exclusions
     ~focus
     ?reset_selections
     ~on_selection_change
     ~custom_handler
-    (items
-     |>$ fun items ->
-     let selectable_items = Array.make (List.length items) (Obj.magic ()) in
-     items |> List.iteri (fun i x -> Array.set selectable_items i (Selectable x));
-     selectable_items)
+    ( items |>$ fun items ->
+      let selectable_items = Array.make (List.length items) (Obj.magic ()) in
+      items |> List.iteri (fun i x -> Array.set selectable_items i (Selectable x));
+      selectable_items )
 ;;
 
 let selection_list_custom
-  ?(focus = Focus.make ())
-  ?(on_selection_change = fun _ -> ())
-  ~custom_handler
-  (items : 'a multi_selectable_item list Lwd.t)
+      ?(focus = Focus.make ())
+      ?(on_selection_change = fun _ -> ())
+      ~custom_handler
+      (items : 'a multi_selectable_item list Lwd.t)
   =
   selection_list_exclusions
     ~focus
     ~on_selection_change
     ~custom_handler
-    (items
-     |>$ fun items ->
-     let selectable_items = Array.make (List.length items) (Obj.magic ()) in
-     items |> List.iteri (fun i x -> Array.set selectable_items i (Selectable x));
-     selectable_items)
+    ( items |>$ fun items ->
+      let selectable_items = Array.make (List.length items) (Obj.magic ()) in
+      items |> List.iteri (fun i x -> Array.set selectable_items i (Selectable x));
+      selectable_items )
 ;;
 
 let filterable_selection_list_custom
-  ?(focus = Focus.make ())
-  ~(filter_predicate : string -> 'a -> bool)
-  ~custom_handler
-  ~filter_text_var
-  (items : 'a multi_selectable_item list Lwd.t)
+      ?(focus = Focus.make ())
+      ~(filter_predicate : string -> 'a -> bool)
+      ~custom_handler
+      ~filter_text_var
+      (items : 'a multi_selectable_item list Lwd.t)
   =
   (*filter the list whenever the input changes*)
   let items =
@@ -454,13 +453,13 @@ let filterable_selection_list_custom
 ;;
 
 let filterable_selection_list
-  ?(pad_w = 1)
-  ?(pad_h = 0)
-  ?(focus = Focus.make ())
-  ~filter_predicate
-  ?(on_esc = fun _ -> ())
-  ~on_confirm
-  list_items
+      ?(pad_w = 1)
+      ?(pad_h = 0)
+      ?(focus = Focus.make ())
+      ~filter_predicate
+      ?(on_esc = fun _ -> ())
+      ~on_confirm
+      list_items
   =
   let filter_text_var = Lwd.var "" in
   let filter_text_ui =
@@ -490,12 +489,10 @@ let filterable_selection_list
   let max_width = Lwd.var 5 in
   vbox
     [ filter_text_ui |> Border_box.box ~pad_w ~pad_h
-    ; (list_ui
-       |> Border_box.box ~pad_w ~pad_h
-       |>$ fun x ->
-       let mw = (x |> Ui.layout_spec).mw in
-       if mw > Lwd.peek max_width then max_width $= mw;
-       x)
+    ; ( list_ui |> Border_box.box ~pad_w ~pad_h |>$ fun x ->
+        let mw = (x |> Ui.layout_spec).mw in
+        if mw > Lwd.peek max_width then max_width $= mw;
+        x )
     ]
   |> Lwd.map2 (Lwd.get max_width) ~f:(fun mw ui -> ui |> Ui.resize ~mw)
 ;;

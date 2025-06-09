@@ -11,6 +11,7 @@ doc: "https://url/to/documentation"
 bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "lwd"
+  "lwd_picos"
   "ocaml"
   "dune" {>= "3.12"}
   "stdio"

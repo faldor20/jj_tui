@@ -2,7 +2,6 @@ open Nottui
 
 (* Put the UI here *)
 
-
 (*let node title ~f =
   let vopened = Lwd.var false in
   let label =
@@ -31,70 +30,111 @@ let rec count_to_10 () =
 
 let root = count_to_10 ()*)
 
-let f_to_c x = (x -. 32.0) *. 5.0/.9.0
-let c_to_f x = x *. 9.0/.5.0 +. 32.0
-
+let f_to_c x = (x -. 32.0) *. 5.0 /. 9.0
+let c_to_f x = (x *. 9.0 /. 5.0) +. 32.0
 let degrees = Lwd.var 0.0
-
 let farenheit = Lwd.var (nan, ("", 0))
 
 let farenheit_text =
-  Lwd.map2 (Lwd.get degrees) (Lwd.get farenheit)
-    ~f:(fun d (d', f) ->
-        if d = d' then f else (string_of_float (c_to_f d), 0))
+  Lwd.map2 (Lwd.get degrees) (Lwd.get farenheit) ~f:(fun d (d', f) ->
+    if d = d' then f else string_of_float (c_to_f d), 0)
+;;
 
 let farenheit_edit =
   W.edit_field
     farenheit_text
-    ~on_change:(fun (text, _ as state) ->
-        let d = match float_of_string_opt text with
-          | None -> Lwd.peek degrees
-          | Some d -> let d = f_to_c d in Lwd.set degrees d; d
-        in
-        Lwd.set farenheit (d, state)
-      )
+    ~on_change:(fun ((text, _) as state) ->
+      let d =
+        match float_of_string_opt text with
+        | None -> Lwd.peek degrees
+        | Some d ->
+          let d = f_to_c d in
+          Lwd.set degrees d;
+          d
+      in
+      Lwd.set farenheit (d, state))
     ~on_submit:ignore
+;;
 
 let celsius = Lwd.var (nan, ("", 0))
 
 let celsius_text =
-  Lwd.map2 (Lwd.get degrees) (Lwd.get celsius)
-    ~f:(fun d (d', f) -> if d = d' then f else (string_of_float d, 0))
+  Lwd.map2 (Lwd.get degrees) (Lwd.get celsius) ~f:(fun d (d', f) ->
+    if d = d' then f else string_of_float d, 0)
+;;
 
 let celsius_edit =
   W.edit_field
     celsius_text
-    ~on_change:(fun (text, _ as state) ->
-        let d = match float_of_string_opt text with
-          | None -> Lwd.peek degrees
-          | Some d -> Lwd.set degrees d; d
-        in
-        Lwd.set celsius (d, state)
-      )
+    ~on_change:(fun ((text, _) as state) ->
+      let d =
+        match float_of_string_opt text with
+        | None -> Lwd.peek degrees
+        | Some d ->
+          Lwd.set degrees d;
+          d
+      in
+      Lwd.set celsius (d, state))
     ~on_submit:ignore
+;;
 
 let root =
-  Lwd_utils.pack Ui.pack_y [
-    Lwd.pure (W.string "Celsius:");
-    celsius_edit;
-    Lwd.pure (W.string "Farenheight:");
-    farenheit_edit;
-  ]
+  Lwd_utils.pack
+    Ui.pack_y
+    [ Lwd.pure (W.string "Celsius:")
+    ; celsius_edit
+    ; Lwd.pure (W.string "Farenheight:")
+    ; farenheit_edit
+    ]
+;;
 
 let root =
-  Lwd_utils.pack Ui.pack_y [
-    root; root; root; root; root; root;
-    root; root; root; root; root; root;
-    root; root; root; root; root; root;
-  ]
+  Lwd_utils.pack
+    Ui.pack_y
+    [ root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ]
+;;
 
 let root =
-  Lwd_utils.pack Ui.pack_x [
-    root; root; root; root; root; root;
-    root; root; root; root; root; root;
-    root; root; root; root; root; root;
-  ]
+  Lwd_utils.pack
+    Ui.pack_x
+    [ root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ; root
+    ]
+;;
 
 let root = W.Old.scrollbox root
-
 let () = Ui_loop.run ~tick_period:0.2 root
