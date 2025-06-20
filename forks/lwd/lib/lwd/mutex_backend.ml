@@ -1,7 +1,12 @@
 (** Backend selection for mutex implementations. *)
 
 module type MUTEX = sig
-  include module type of Mutex
+  type t
+  val create : unit -> t
+  val lock : t -> unit
+  val unlock : t -> unit
+  val try_lock : t -> bool
+  val protect : t -> (unit -> 'a) -> 'a
   val lock_all : t list -> bool
 end
 

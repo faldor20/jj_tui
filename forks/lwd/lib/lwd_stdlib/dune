@@ -20,9 +20,10 @@
 ;; Optional Picos backend - only compiled if picos is available
 (library
  ; (package lwd)
- (name lwd_picos)
- (public_name lwd_picos)
- (libraries picos  picos_std.structured picos_std.sync)
+
+ (name lwd_stdlib)
+ (public_name lwd_stdlib)
+ (libraries lwd )
  
  (implements lwd)
  

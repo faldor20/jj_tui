@@ -160,3 +160,5 @@ end
 
 (* For debug purposes *)
 val dump_trace : 'a t -> unit
+
+(* val to_mermaid : ?max_nodes:int -> 'a t_ -> string *)

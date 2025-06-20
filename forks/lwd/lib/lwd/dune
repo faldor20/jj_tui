@@ -1,8 +1,10 @@
 (library
  (name lwd)
  (public_name lwd)
- (modules lwd lwd_seq lwd_table lwd_infix lwd_utils mutex_stdlib lwd_impl mutex_backend )
- (libraries seq)
+ (modules lwd lwd_impl lwd_seq lwd_table lwd_infix lwd_utils  mutex_backend )
+ (virtual_modules lwd)
+;  (default_implementation lwd_stdlib)
+ (libraries seq logs)
  (inline_tests
   (backend qtest.lib)
   (executable
