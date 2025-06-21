@@ -292,7 +292,7 @@ module Ui = struct
       ; v = make_uchar "|"
       }
     ;;
-
+   
     let unicode =
       { tl = make_uchar "┌"
       ; tr = make_uchar "┐"
@@ -309,17 +309,8 @@ module Ui = struct
       ; h = make_uchar "═"
       ; v = make_uchar "║"
       }
-    let unicode_rounded =
-      { tl = make_uchar "╭"
-      ; tr = make_uchar "╮"
-      ; bl = make_uchar "╰"
-      ; br = make_uchar "╯"
-      ; h = make_uchar "─"
-      ; v = make_uchar "│"
-      }
-    ;;
+      
 
-    (** Convenience focused styles *)
     let unicode_bold =
       { tl = make_uchar "┏"
       ; tr = make_uchar "┓"
@@ -328,6 +319,52 @@ module Ui = struct
       ; h = make_uchar "━"
       ; v = make_uchar "┃"
       }
+    let unicode_rounded =
+      { tl = make_uchar "╭"
+      ; tr = make_uchar "╮"
+      ; bl = make_uchar "╰"
+      ; br = make_uchar "╯"
+      ; h = make_uchar "─"
+      ; v = make_uchar "│"
+      }
+           
+    let dashed =
+      { tl = make_uchar "┌"
+      ; tr = make_uchar "┐"
+      ; bl = make_uchar "└"
+      ; br = make_uchar "┘"
+      ; h = make_uchar "╌"
+      ; v = make_uchar "╎"
+      }
+
+    let dashed_bold =
+      { tl = make_uchar "┏"
+      ; tr = make_uchar "┓"
+      ; bl = make_uchar "┗"
+      ; br = make_uchar "┛"
+      ; h = make_uchar "╍"
+      ; v = make_uchar "╏"
+      }
+
+
+    let quad_dashed =
+      { tl = make_uchar "┌"
+      ; tr = make_uchar "┐"
+      ; bl = make_uchar "└"
+      ; br = make_uchar "┘"
+      ; h = make_uchar "┈"
+      ; v = make_uchar "┊"
+      }
+      
+    let quad_dashed_bold =
+      { tl = make_uchar "┏"
+      ; tr = make_uchar "┓"
+      ; bl = make_uchar "┗"
+      ; br = make_uchar "┛"
+      ; h = make_uchar "┉"
+      ; v = make_uchar "┋"
+      }
+
     ;;
   end
 
