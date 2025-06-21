@@ -107,6 +107,15 @@ module Ui : sig
   (** Printing UI element *)
   val pp : Format.formatter -> t -> unit
 
+  module Border : sig
+    type style = { tl:Uchar.t;tr:Uchar.t;bl:Uchar.t;br:Uchar.t;h:Uchar.t;v:Uchar.t }
+    val ascii : style
+    val unicode : style
+    val unicode_double : style
+    val unicode_rounded : style
+    val unicode_bold : style
+  end
+
   (** {1 Layout specifications} *)
 
   (** The type of layout specifications.
@@ -268,6 +277,27 @@ module Ui : sig
   val permanent_sensor : frame_sensor -> t -> t
 
   (** {1 Composite images} *)
+
+  (** Add a border around a UI element.
+      - [thick]: thickness of the border (default 1).
+      - [attr]: attributes for the border characters (default empty).
+      - [style]: the characters to use for drawing the border (default [unicode]).
+      - [focus_attr]: attributes for the border when focused (default [attr]).
+      - [focus_style]: border style when focused (default [style]).
+        bounds, otherwise it is drawn outside, increasing the element's size. *)
+  val border
+    : ?thick:int
+    -> ?pad:int
+    -> ?pad_w:int
+    -> ?pad_h:int
+    -> ?label_top:string
+    -> ?label_bottom:string
+    -> ?attr:A.t
+    -> ?style:Border.style
+    -> ?focus_attr:A.t
+    -> ?focus_style:Border.style
+    -> t
+    -> t
 
   (** Override the layout specification of the ui with provided [w](width), [h](height),
       [sw](stretch width) or [sh](stretch height)

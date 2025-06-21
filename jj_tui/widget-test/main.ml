@@ -18,6 +18,13 @@ let test_input=
 let w_0 =
   W.hbox
     [
+      Ui.border ~thick:2 ~style:Ui.Border.unicode ~label_top:"top" (Ui.vcat [W.string "hi this is a ui element with  a\n border"; W.string "hi"])|>Lwd.pure;
+      Ui.border ~thick:0 ~pad_w:2 ~pad_h:1 ~style:Ui.Border.unicode_double ~label_bottom:"bottom" (Ui.vcat [W.string "hi this is a ui element with  a\n border"; W.string "hi"])|>Lwd.pure;
+      Ui.border ~thick:1 ~style:Ui.Border.unicode_rounded ~label_top:"top" ~label_bottom:"bottom" (Ui.vcat [W.string "hi this is a ui element with  a\n border"; W.string "hi"])|>Lwd.pure;
+
+      Ui.border ~focus_attr: (A.fg A.red) ~focus_style:Ui.Border.unicode_double ~thick: 2 ~pad_w:2 ~pad_h:1 ~style:Ui.Border.unicode (Ui.vcat [W.string "hi this is a ui element with  a\n border"; W.string "hi"])|>Lwd.pure;
+
+      W.Box.box ~pad_w:2 ~pad_h:1 (Ui.vcat [W.string "hi this is a ui element with  an\n old style border box"; W.string "hi"]|>Lwd.pure);
       (* pString " |" *)
     (* ; (let og = *)
          (* Ui.vcat *)
@@ -33,7 +40,7 @@ let w_0 =
        (* |>$ Ui.resize ~sh:1 ~mh:1000 *)
        (* |> W.size_logger) *)
     (* ; pString "| " *)
-    test_input
+    test_input|>$ Ui.border  ~focus_attr: (A.fg A.red) ~focus_style:Ui.Border.unicode_double  ~thick:1 ~pad:1 ~style:Ui.Border.unicode
     ]
 ;;
 

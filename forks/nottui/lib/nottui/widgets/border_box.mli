@@ -11,11 +11,7 @@ val with_border_attr
 
 (** Creates a bordered box around the given [input] widget. This box will change colour when focused
 
-    @param scaling
-      Controls how the input widget is sized within the border box. Can be:
-      - [`Static] - The input widget is not resized.
-      - [`Expand sw] - The input widget is allowed to expand to fill the available space, with a stretch width [sw].
-      - [`Shrinkable (min_width, sw)] - The input widget is allowed to shrink to a minimum width of [min_width], and expand with a stretch width [sw].
+  
     @param pad The padding around the input widget within the border box.
     @param pad_w The horizontal padding around the input widget.
     @param pad_h The vertical padding around the input widget.

@@ -1,5 +1,6 @@
 open Notty
 open Lwd_utils
+(* test comment *)
 module Log = (val Logs.src_log (Logs.Src.create "nottui"))
 
 module Focus : sig
@@ -264,6 +265,84 @@ end = struct
 end
 
 module Ui = struct
+  (** convinience method to take a str and turn it into a unicode char*)
+  let make_uchar str =
+    let a = String.get_utf_8_uchar str 0 in
+    if a |> Uchar.utf_decode_is_valid
+    then a |> Uchar.utf_decode_uchar
+    else failwith "not a unicode string"
+  ;;
+
+  module Border = struct
+    type style =
+      { tl : Uchar.t
+      ; tr : Uchar.t
+      ; bl : Uchar.t
+      ; br : Uchar.t
+      ; h : Uchar.t
+      ; v : Uchar.t
+      }
+
+    let ascii =
+      { tl = make_uchar "+"
+      ; tr = make_uchar "+"
+      ; bl = make_uchar "+"
+      ; br = make_uchar "+"
+      ; h = make_uchar "-"
+      ; v = make_uchar "|"
+      }
+    ;;
+
+    let unicode =
+      { tl = make_uchar "┌"
+      ; tr = make_uchar "┐"
+      ; bl = make_uchar "└"
+      ; br = make_uchar "┘"
+      ; h = make_uchar "─"
+      ; v = make_uchar "│"
+      }
+    let unicode_double =
+      { tl = make_uchar "╔"
+      ; tr = make_uchar "╗"
+      ; bl = make_uchar "╚"
+      ; br = make_uchar "╝"
+      ; h = make_uchar "═"
+      ; v = make_uchar "║"
+      }
+    let unicode_rounded =
+      { tl = make_uchar "╭"
+      ; tr = make_uchar "╮"
+      ; bl = make_uchar "╰"
+      ; br = make_uchar "╯"
+      ; h = make_uchar "─"
+      ; v = make_uchar "│"
+      }
+    ;;
+
+    (** Convenience focused styles *)
+    let unicode_bold =
+      { tl = make_uchar "┏"
+      ; tr = make_uchar "┓"
+      ; bl = make_uchar "┗"
+      ; br = make_uchar "┛"
+      ; h = make_uchar "━"
+      ; v = make_uchar "┃"
+      }
+    ;;
+  end
+
+  type border =
+    { attr : A.t
+    ; thick : int
+    ; pad_w : int (** left/right padding columns *)
+    ; pad_h : int (** top/bottom padding rows *)
+    ; style : Border.style
+    ; focus_attr : A.t option (** attribute when focused, None means use attr *)
+    ; focus_style : Border.style option (** style when focused, None means use style *)
+    ; label_top : string option (** Optional text shown in the top border *)
+    ; label_bottom : string option (** Optional text shown in the bottom border *)
+    }
+
   type mouse_handler =
     x:int
     -> y:int
@@ -407,6 +486,7 @@ module Ui = struct
     { vx : Interval.t
     ; vy : Interval.t
     ; image : image
+    ; focused : bool (** Whether the UI had focus when this cache was created. This is needed to adjust the bord style based on focus status *)
     }
 
   and desc =
@@ -422,6 +502,7 @@ module Ui = struct
     | X of t * t
     | Y of t * t
     | Z of t * t
+    | Border of t * border
 
   let layout_spec t : layout_spec =
     { w = t.w; h = t.h; sw = t.sw; sh = t.sh; mw = t.mw; mh = t.mh }
@@ -433,7 +514,7 @@ module Ui = struct
   let layout_stretch_height t = t.sh
   let layout_max_width t = t.mw
   let layout_max_height t = t.mh
-  let cache : cache = { vx = Interval.zero; vy = Interval.zero; image = I.empty }
+  let cache : cache = { vx = Interval.zero; vy = Interval.zero; image = I.empty; focused = false }
 
   let empty : t =
     { w = 0
@@ -595,6 +676,42 @@ module Ui = struct
   let zcat xs = Lwd_utils.reduce pack_z xs
   let has_focus t = Focus.has_focus t.focus
 
+  let border ?(thick = 1) ?pad ?pad_w ?pad_h
+      ?label_top ?label_bottom
+      ?(attr = A.empty) ?(style = Border.unicode)
+      ?focus_attr ?focus_style t =
+    (* Derive horizontal and vertical pad values *)
+    let pad_base = match pad with Some p -> p | None -> 0 in
+    let pad_w = match pad_w with Some pw -> pw | None -> pad_base in
+    let pad_h = match pad_h with Some ph -> ph | None -> pad_base in
+    let dw = 2 * (thick + pad_w) in
+    let dh = 2 * (thick + pad_h) in
+    { w = t.w + dw
+    ; h = t.h + dh
+    ; sw = t.sw
+    ; sh = t.sh
+    ; mw = t.mw + dw
+    ; mh = t.mh + dh
+    ; flags = t.flags
+    ; focus = t.focus
+    ; desc =
+        Border
+          ( t
+          , { attr
+            ; thick
+            ; pad_w
+            ; pad_h
+            ; style
+            ; focus_attr
+            ; focus_style
+            ; label_top
+            ; label_bottom
+            } )
+    ; sensor_cache = None
+    ; cache
+    }
+  ;;
+
   let rec pp ppf t =
     Format.fprintf
       ppf
@@ -627,6 +744,7 @@ module Ui = struct
     | Focus_area (n, _) -> Format.fprintf ppf "Focus_area (@[%a,@ _@])" pp n
     | Shift_area (n, _, _) -> Format.fprintf ppf "Shift_area (@[%a,@ _@])" pp n
     | Event_filter (n, _) -> Format.fprintf ppf "Event_filter (@[%a,@ _@])" pp n
+    | Border (n, _) -> Format.fprintf ppf "Border (@[%a,@ _@])" pp n
     | X (a, b) -> Format.fprintf ppf "X (@[%a,@ %a@])" pp a pp b
     | Y (a, b) -> Format.fprintf ppf "Y (@[%a,@ %a@])" pp a pp b
     | Z (a, b) -> Format.fprintf ppf "Z (@[%a,@ %a@])" pp a pp b
@@ -646,7 +764,7 @@ module Ui = struct
     | X (a, b) | Y (a, b) | Z (a, b) ->
       f a;
       f b
-  ;;
+    | Border (u, _) -> f u
 end
 
 type ui = Ui.t
@@ -763,6 +881,12 @@ module Renderer = struct
         let dx, rw = pack ~max:t.mw ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
         let dy, rh = pack ~max:t.mh ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
         update_sensors (ox + dx) (oy + dy) rw rh mw mh t
+      | Border (t, b) ->
+        let shift_x = b.thick + b.pad_w in
+        let shift_y = b.thick + b.pad_h in
+        let dw = 2 * shift_x in
+        let dh = 2 * shift_y in
+        update_sensors (ox + shift_x) (oy + shift_y) (sw - dw) (sh - dh) (mw - dw) (mh - dh) t
       | Shift_area (t, sx, sy) -> update_sensors (ox - sx) (oy - sy) sw sh mw mh t
       | X (a, b) ->
         let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mw ~mB:b.mw sw in
@@ -774,7 +898,8 @@ module Renderer = struct
         update_sensors ox (oy + ah) sw bh mw mh b
       | Z (a, b) ->
         update_sensors ox oy sw sh mw mh a;
-        update_sensors ox oy sw sh mw mh b)
+        update_sensors ox oy sw sh mw mh b
+)
   ;;
 
   (** goes through all focuses and attempts to resolve any that have changed*)
@@ -805,7 +930,7 @@ module Renderer = struct
       match t.desc with
       | Atom _ -> false
       | X (a, b) ->
-        let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mh ~mB:b.mh sw in
+        let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mw ~mB:b.mw sw in
         if x - ox < aw then aux ox oy aw sh a else aux (ox + aw) oy bw sh b
       | Y (a, b) ->
         let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh ~mA:a.mh ~mB:b.mh sh in
@@ -829,10 +954,16 @@ module Renderer = struct
         let dx, rw = pack ~max:t.mw ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
         let dy, rh = pack ~max:t.mh ~fixed:t.h ~stretch:t.sh sh (v (p1 g)) (v (p2 g)) in
         aux (ox + dx) (oy + dy) rw rh t
-      | Event_filter (n, f) ->
+      | Border (t, b) ->
+        let shift_x = b.thick + b.pad_w in
+        let shift_y = b.thick + b.pad_h in
+        let dw = 2 * shift_x in
+        let dh = 2 * shift_y in
+        aux (ox + shift_x) (oy + shift_y) (sw - dw) (sh - dh) t
+      | Event_filter (t, f) ->
         (match f (`Mouse (`Press btn, (x, y), [])) with
          | `Handled -> true
-         | `Unhandled -> aux ox oy sw sh n
+         | `Unhandled -> aux ox oy sw sh t
          | `Remap _ -> failwith "Cannot remap mouse events")
     in
     aux 0 0 w h t
@@ -881,6 +1012,7 @@ module Renderer = struct
   let same_size w h image = w = I.width image && h = I.height image
 
   let rec render_node vx1 vy1 vx2 vy2 sw sh t : cache =
+    let is_focused = has_focus t in
     if
       let cache = t.cache in
       vx1 >= Interval.fst cache.vx
@@ -888,12 +1020,13 @@ module Renderer = struct
       && vx2 <= Interval.snd cache.vx
       && vy2 <= Interval.snd cache.vy
       && same_size sw sh cache.image
+      && cache.focused = is_focused
     then t.cache
     else if vx2 < 0 || vy2 < 0 || sw < vx1 || sh < vy1
     then (
       let vx = Interval.make vx1 vx2
       and vy = Interval.make vy1 vy2 in
-      { vx; vy; image = I.void sw sh })
+      { vx; vy; image = I.void sw sh; focused = is_focused })
     else (
       let cache =
         match t.desc with
@@ -901,6 +1034,7 @@ module Renderer = struct
           { vx = Interval.make 0 sw
           ; vy = Interval.make 0 sh
           ; image = resize_canvas sw sh image
+          ; focused = is_focused
           }
         | Size_sensor (desc, handler) ->
           handler ~w:sw ~h:sh;
@@ -916,7 +1050,7 @@ module Renderer = struct
           let vx = Interval.make vx1 vx2
           and vy = Interval.make vy1 vy2 in
           let image = resize_canvas sw sh (I.crop ~l:sx ~t:sy cache.image) in
-          { vx; vy; image }
+          { vx; vy; image; focused = is_focused }
         | X (a, b) ->
           let aw, bw = split ~a:a.w ~sa:a.sw ~b:b.w ~sb:b.sw ~mA:a.mw ~mB:b.mw sw in
           let ca = render_node vx1 vy1 vx2 vy2 aw sh a in
@@ -930,7 +1064,7 @@ module Renderer = struct
               (maxi (Interval.fst ca.vy) (Interval.fst cb.vy))
               (mini (Interval.snd ca.vy) (Interval.snd cb.vy))
           and image = resize_canvas sw sh (I.( <|> ) ca.image cb.image) in
-          { vx; vy; image }
+          { vx; vy; image; focused = is_focused }
         | Y (a, b) ->
           let ah, bh = split ~a:a.h ~sa:a.sh ~b:b.h ~sb:b.sh ~mA:a.mh ~mB:b.mh sh in
           let ca = render_node vx1 vy1 vx2 vy2 sw ah a in
@@ -944,7 +1078,7 @@ module Renderer = struct
               (maxi (Interval.fst ca.vy) (Interval.fst cb.vy + ah))
               (mini (Interval.snd ca.vy) (Interval.snd cb.vy + ah))
           and image = resize_canvas sw sh (I.( <-> ) ca.image cb.image) in
-          { vx; vy; image }
+          { vx; vy; image; focused = is_focused }
         | Z (a, b) ->
           let ca = render_node vx1 vy1 vx2 vy2 sw sh a in
           let cb = render_node vx1 vy1 vx2 vy2 sw sh b in
@@ -957,7 +1091,127 @@ module Renderer = struct
               (maxi (Interval.fst ca.vy) (Interval.fst cb.vy))
               (mini (Interval.snd ca.vy) (Interval.snd cb.vy))
           and image = resize_canvas sw sh (I.( </> ) cb.image ca.image) in
-          { vx; vy; image }
+          { vx; vy; image; focused = is_focused }
+        | Border (t, b) ->
+          let open Border in
+          let open I in
+          (*if the border is 0 we just render the content and pad it*)
+          if b.thick = 0
+          then (
+            let shift_x = b.pad_w in
+            let shift_y = b.pad_h in
+            let rw = sw - (2 * shift_x) in
+            let rh = sh - (2 * shift_y) in
+            let c =
+              render_node
+                (vx1 - shift_x)
+                (vy1 - shift_y)
+                (vx2 - shift_x)
+                (vy2 - shift_y)
+                rw
+                rh
+                t
+            in
+            let padded_image =
+              if b.pad_w = 0 && b.pad_h = 0
+              then c.image
+              else I.pad ~l:b.pad_w ~t:b.pad_h ~r:b.pad_w ~b:b.pad_h c.image
+            in
+            { vx = Interval.shift c.vx shift_x
+            ; vy = Interval.shift c.vy shift_y
+            ; image = resize_canvas sw sh padded_image
+            ; focused = is_focused
+            })
+          else (
+            let truncate_string len str =
+              if String.length str > len then (
+                if len <= 3 then "" else String.sub str 0 (len - 3) ^ "..."
+              ) else str
+            in
+            let make_label max_w txt =
+              let txt = truncate_string (max_w - 2) txt in
+              I.strf " %s " txt
+            in
+            (* Determine shifts and inner area size *)
+            let shift_x = b.thick + b.pad_w in
+            let shift_y = b.thick + b.pad_h in
+
+            let rw = sw - 2 * shift_x in
+            let rh = sh - 2 * shift_y in
+
+            let c =
+              render_node
+                (vx1 - shift_x)
+                (vy1 - shift_y)
+                (vx2 - shift_x)
+                (vy2 - shift_y)
+                rw
+                rh
+                t
+            in
+
+            (* Select attributes and style based on focus state *)
+            let attr =
+              if is_focused then Option.value ~default:b.attr b.focus_attr else b.attr
+            in
+            let style =
+              if is_focused then Option.value ~default:b.style b.focus_style else b.style
+            in
+
+            (* Total interior dims inside border glyphs (content + padding) *)
+            let inner_w = rw + (2 * b.pad_w) in
+            let inner_h = rh + (2 * b.pad_h) in
+
+            (* border glyph primitives *)
+            let horiz = I.uchar attr style.h inner_w 1 in
+            let vert h = I.uchar attr style.v 1 h in
+
+            (* pad content *)
+            let padded_image =
+              if b.pad_w = 0 && b.pad_h = 0 then c.image
+              else I.pad ~l:b.pad_w ~t:b.pad_h ~r:b.pad_w ~b:b.pad_h c.image
+            in
+
+            (* Build top border, optionally with label. *)
+            let frame_top_base =
+              I.(uchar attr style.tl 1 1 <|> horiz <|> uchar attr style.tr 1 1)
+            in
+            let frame_top =
+              match b.label_top with
+              | None -> frame_top_base
+              | Some txt ->
+                let lbl = make_label inner_w txt in
+                let lbl =
+                  if I.width lbl > inner_w - 2 then I.empty else I.hpad 2 0 lbl
+                in
+                if I.width lbl = 0 then frame_top_base else I.zcat [ lbl; frame_top_base; lbl ]
+            in
+
+            (* Build bottom border, optionally with label. *)
+            let frame_bot_base =
+              I.(uchar attr style.bl 1 1 <|> horiz <|> uchar attr style.br 1 1)
+            in
+            let frame_bot =
+              match b.label_bottom with
+              | None -> frame_bot_base
+              | Some txt ->
+                let lbl = make_label inner_w txt in
+                let lbl_width = I.width lbl in
+                let lbl =
+                  if lbl_width > inner_w - 2 then I.empty
+                  else I.hpad (inner_w - lbl_width - 1) 0 lbl
+                in
+                if I.width lbl = 0 then frame_bot_base else I.zcat [ lbl; frame_bot_base; lbl ]
+            in
+
+            let frame_mid = I.(vert inner_h <|> padded_image <|> vert inner_h) in
+            let frame = I.(frame_top <-> frame_mid <-> frame_bot) in
+
+            { vx = Interval.shift c.vx shift_x
+            ; vy = Interval.shift c.vy shift_y
+            ; image = resize_canvas sw sh frame
+            ; focused = is_focused
+            })
         | Resize (t, g, bg) ->
           let open Gravity in
           let dx, rw = pack ~max:t.mw ~fixed:t.w ~stretch:t.sw sw (h (p1 g)) (h (p2 g)) in
@@ -967,7 +1221,7 @@ module Renderer = struct
           let image = if bg != A.empty then I.(image </> char bg ' ' sw sh) else image in
           let vx = Interval.shift c.vx dx in
           let vy = Interval.shift c.vy dy in
-          { vx; vy; image }
+          { vx; vy; image; focused = is_focused }
         | Event_filter (t, _f) -> render_node vx1 vy1 vx2 vy2 sw sh t
       in
       t.cache <- cache;
@@ -1014,6 +1268,7 @@ module Renderer = struct
          | Permanent_sensor (t, _)
          | Shift_area (t, _, _)
          | Resize (t, _, _) -> iter (t :: tl)
+         | Border (t, _) -> iter (t :: tl)
          | Event_filter (t, f) ->
            (match f (`Key key) with
             | `Unhandled -> iter (t :: tl)
@@ -1111,6 +1366,7 @@ module Renderer = struct
       if Focus.has_focus a.focus
       then dispatch_focus a dir
       else dispatch_focus b dir || dispatch_focus a dir
+    | Border (t, _) -> dispatch_focus t dir
   ;;
 
   let rec dispatch_key st key =
