@@ -24,6 +24,7 @@
  (depends
   dune
   seq
+  logs
   (ocaml
    (>= "5.2"))
   (qtest :with-test)
@@ -35,6 +36,7 @@
  (allow_empty)
  (depends
   lwd
+  logs
   (picos (>= "0.6.0"))
   (picos_std (>= "0.6.0"))))
 (package

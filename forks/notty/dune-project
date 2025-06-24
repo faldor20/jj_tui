@@ -1,13 +1,25 @@
 (lang dune 3.5 )
 (name notty)
-(version %%VERSION_NUM%%)
+(version 0.3.0 )
 (generate_opam_files true)
 
 (package
-(name notty)
+ (name notty)
+ (synopsis "Declaring terminals")
+ (description
+  "Notty is a declarative terminal library for OCaml structured around a notion of composable images. It tries to abstract away the basic terminal programming model, providing something simpler and more expressive.")
+ (authors "David Kaloper <dk505@cam.ac.uk>")
+ (maintainers "David Kaloper <dk505@cam.ac.uk>")
+ (license ISC)
+ (homepage "https://github.com/pqwy/notty")
+ (bug_reports "https://github.com/pqwy/notty/issues")
  (documentation "https://pqwy.github.io/notty/doc")
- (depends   
-  (cppo (>= 1.1.0))
-  (uutf (>= 1.0.0))
-	)) 
+ (source (github pqwy/notty))
+ (depends
+  (ocaml (>= "4.08.0"))
+  (dune (>= "1.7"))
+  (cppo (>= "1.1.0"))
+  (uutf (>= "1.0.0")))
+ (conflicts (lwt (< "2.5.2")))
+ (depopts lwt))
 
