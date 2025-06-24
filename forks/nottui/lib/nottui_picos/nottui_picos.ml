@@ -63,11 +63,7 @@ module Ui_loop = struct
       else (
         let rec stabilize () =
           (* Log.debug (fun m -> m "stabilize"); *)
-          let start_time = Unix.gettimeofday () in
           let tree = Lwd.quick_sample root in
-          let end_time = Unix.gettimeofday () in
-          let duration = end_time -. start_time in
-          Printf.eprintf "%f" duration;
           Renderer.update renderer size tree;
           It.start_tracking invalidation_tracker;
           let image = Renderer.image renderer in
