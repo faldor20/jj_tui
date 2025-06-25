@@ -1,5 +1,5 @@
 module Key_Map = struct
-  include Map.Make ( Key)
+  include Map.Make (Key)
 
   let pp inner_pp fmt this =
     Format.fprintf fmt "@[<v>";
@@ -24,7 +24,7 @@ and key_map_item =
   | Sub_menu of sub_menu
   | Command of command
 
-and key_map = key_map_item Key_Map.t[@@deriving show]
+and key_map = key_map_item Key_Map.t [@@deriving show]
 and key_map_update_t = key_map
 
 let ( let* ) = Base.Result.Let_syntax.( >>= )
@@ -118,10 +118,13 @@ let key_map_update_t_of_yaml (yaml : Yaml.value) = key_map_of_yaml yaml
 let key_map_apply_update override og =
   Key_Map.merge
     (fun k v1 v2 ->
-      match v1, v2 with
-      | Some og, Some override -> Some (override)
-      | Some v, None | None, Some v -> Some v
-      | None, None -> None)
+       match v1, v2 with
+       | Some og, Some override ->
+         Some override
+       | Some v, None | None, Some v ->
+         Some v
+       | None, None ->
+         None)
     og
     override
 ;;
@@ -171,7 +174,10 @@ let default : key_config =
             ]
         ; cmd "y" "duplicate"
         ; cmd "u" "undo"
-        ; sub "c" "Commit" [ cmd "c" "commit_base"; cmd "C" "commit_no_edit"; cmd "D" "describe_editor" ]
+        ; sub
+            "c"
+            "Commit"
+            [ cmd "c" "commit_base"; cmd "C" "commit_no_edit"; cmd "D" "describe_editor" ]
         ; cmd "S" "split"
         ; sub
             "s"
@@ -190,8 +196,20 @@ let default : key_config =
         ; sub
             "r"
             "Rebase"
-            [ cmd "r" "rebase_single"; cmd "s" "rebase_with_descendants"; cmd "b" "rebase_with_bookmark" ]
-        ; sub "g" "Git" [ cmd "p" "git_push"; cmd "f" "git_fetch"; cmd "F" "git_fetch_all" ]
+            [
+              cmd "r" "rebase_single"
+            ; cmd "s" "rebase_with_descendants"
+            ; cmd "b" "rebase_with_bookmark"
+            ]
+        ; sub
+            "g"
+            "Git"
+            [
+              cmd "p" "git_push"
+            ; cmd "f" "git_fetch"
+            ; cmd "F" "git_fetch_all"
+            ; cmd "r" "git_remote_menu"
+            ]
         ; cmd "z" "parallelize"
         ; cmd "a" "abandon"
         ; sub
@@ -218,13 +236,7 @@ let default : key_config =
         ; cmd "P" "move_to_parent"
         ; cmd "a" "abandon"
         ; cmd "c" "commit"
-        ; sub
-            "A"
-            "absorb"
-            [
-             cmd "a" "absorb"
-            ; cmd "t" "absorb-into"
-            ]
+        ; sub "A" "absorb" [ cmd "a" "absorb"; cmd "t" "absorb-into" ]
         ; cmd "u" "undo"
         ]
   }

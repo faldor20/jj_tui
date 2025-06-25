@@ -343,6 +343,43 @@ module Make (Vars : Global_vars.Vars) = struct
     SubCmd sub_cmd
   ;;
 
+(**A prompt that allows the user to confirm a command by running it with a dry run and then running the real command if the user confirms*)
+  let confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd =
+    Fun
+      (fun _ ->
+        let subcmds =
+          [ (let key = key_of_string_exn "y" in
+             ( key
+             , { key
+               ; sort_key = 0.
+               ; description = "proceed"
+               ; cmd = real_cmd
+               } ))
+          ; (let key = key_of_string_exn "n" in
+             ( key
+             , { key
+               ; sort_key = 1.
+               ; description = "exit"
+               ; cmd =
+                   Fun
+                     (fun _ ->
+                       ui_state.input $= `Normal;
+                       show_popup None)
+               } ))
+          ]
+          |> Key_map.Key_Map.of_list
+        in
+        (*get the output of the dry run command*)
+        let log =
+          jj_no_log ~get_stderr:true dry_run_cmd
+          |> AnsiReverse.colored_string
+          |> Ui.atom
+          |> Lwd.pure
+        in
+        show_popup @@ Some (W.vbox [ log; commands_list_ui subcmds ], title);
+        ui_state.input $= `Mode (command_input ~is_sub:true subcmds))
+  ;;
+
   (** Handles raw command mapping without regard for modes or the current intput state. Should be used when setting a new input mode*)
   let command_input = command_input
 

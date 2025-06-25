@@ -13,13 +13,20 @@ module Make (Vars : Global_vars.Vars) = struct
   module Process = Jj_process.Make (Vars)
   open Process
   open Jj_tui.Process_wrappers.Make (Process)
-
+  open Jj_tui.Key_map
   (* Helper functions from graph_view *)
   let bookmark_select_prompt get_bookmark_list name func =
     Selection_prompt
       ( name
       , (fun () -> get_bookmark_list () |> Lwd.pure)
       , (fun x bookmark_name -> bookmark_name |> Base.String.is_substring ~substring:x)
+      , func )
+  ;;
+  let remote_select_prompt name func =
+    Selection_prompt
+      ( name
+      , (fun () -> get_remotes_selectable () |> Lwd.pure)
+      , (fun x remote_name -> remote_name |> Base.String.is_substring ~substring:x)
       , func )
   ;;
 
@@ -29,6 +36,42 @@ module Make (Vars : Global_vars.Vars) = struct
     (jj @@ [ "new"; "--insert-after"; rev ] @ if edit then [] else [ "--no-edit" ])
     |> ignore
   ;;
+
+  (**
+  A submenu for git commands that are specific to a remote.
+  *)
+  let make_remote_git_submenu remote : _ Key_Map.t =
+    let push_cmd () =
+      Dynamic
+        (fun () ->
+          let revs = Vars.get_active_revs () in
+          let rev_args = List.concat_map (fun r -> [ "-r"; r ]) revs in
+          let title = Printf.sprintf "Git push (%s) will:" remote in
+          let dry_run_cmd =
+            [ "git"; "push"; "--allow-new"; "--dry-run"; "--remote"; remote ] @ rev_args
+          in
+          let real_cmd =
+            Cmd ([ "git"; "push"; "--allow-new"; "--remote"; remote ] @ rev_args)
+          in
+          confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
+    in
+    (* simple fetch – no confirmation needed *)
+    let fetch_cmd = Cmd [ "git"; "fetch"; "--remote"; remote ] in
+    Key_Map.of_seq
+    @@ List.to_seq
+         [ ( Key.key_of_string_exn "p"
+           , { key = Key.key_of_string_exn "p"
+             ; sort_key = 0.
+             ; description = Printf.sprintf "git push to %s" remote
+             ; cmd = push_cmd ()
+             } )
+         ; ( Key.key_of_string_exn "f"
+           , { key = Key.key_of_string_exn "f"
+             ; sort_key = 1.
+             ; description = Printf.sprintf "git fetch from %s" remote
+             ; cmd = fetch_cmd
+             } )
+         ]
 
   (* Define all graph commands *)
   let get_command_registry get_commands =
@@ -266,46 +309,16 @@ module Make (Vars : Global_vars.Vars) = struct
       ; description = "git push"
       ; make_cmd =
           (fun () ->
-            Fun
-              (fun _ ->
+            Dynamic
+              (fun () ->
                 let revs = Vars.get_active_revs () in
-                let subcmds =
-                  [
-                    {
-                      key = Key.key_of_string_exn "y"
-                    ; sort_key = 0.0
-                    ; description = "proceed"
-                    ; cmd =
-                        Cmd
-                          ([ "git"; "push"; "--allow-new" ]
-                           @ (revs |> List.concat_map (fun x -> [ "-r"; x ])))
-                    }
-                  ; {
-                      key = Key.key_of_string_exn "n"
-                    ; sort_key = 1.0
-                    ; description = "exit"
-                    ; cmd =
-                        Fun
-                          (fun _ ->
-                            ui_state.input $= `Normal;
-                            show_popup None)
-                    }
-                  ]
-                  |> List.map (fun x -> x.key, x)
-                  |> Key_map.Key_Map.of_list
+                let rev_args = revs |> List.concat_map (fun x -> [ "-r"; x ]) in
+                let title = "Git push will:" in
+                let dry_run_cmd =
+                  [ "git"; "push"; "--allow-new"; "--dry-run" ] @ rev_args
                 in
-                let log =
-                  jj_no_log
-                    ~get_stderr:true
-                    ([ "git"; "push"; "--allow-new"; "--dry-run" ]
-                     @ (revs |> List.concat_map (fun x -> [ "-r"; x ])))
-                  |> AnsiReverse.colored_string
-                  |> Ui.atom
-                  |> Lwd.pure
-                in
-                let ui = W.vbox [ log; commands_list_ui subcmds ] in
-                show_popup @@ Some (ui, "Git push will:");
-                ui_state.input $= `Mode (command_input ~is_sub:true subcmds)))
+                let real_cmd = Cmd ([ "git"; "push"; "--allow-new" ] @ rev_args) in
+                confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd))
       }
     ; {
         id = "git_fetch"
@@ -318,6 +331,15 @@ module Make (Vars : Global_vars.Vars) = struct
       ; sorting_key = 25.0
       ; description = "git fetch all remotes"
       ; make_cmd = (fun () -> Cmd [ "git"; "fetch"; "--all-remotes" ])
+      }
+      ; {
+        id = "git_remote_menu"
+      ; sorting_key = 25.5
+      ; description = "Select remote, then run git commands"
+      ; make_cmd = (fun () ->
+          remote_select_prompt
+            "Select remote"
+            (fun remote -> SubCmd (make_remote_git_submenu remote)))
       }
     ; {
         id = "parallelize"
@@ -462,6 +484,7 @@ module Make (Vars : Global_vars.Vars) = struct
            parent that modified that file"
       ; make_cmd = (fun () -> Dynamic_r (fun r -> Cmd [ "absorb"; "--from"; r ]))
       }
+    
     ]
     |> List.to_seq
     |> Seq.map (fun x -> x.id, x)

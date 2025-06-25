@@ -74,6 +74,35 @@ module Make (Vars : Global_vars.Vars) = struct
     ^ {|"++label("bookmark", name++" @"++remote)  ++ if(present, format_ref_targets(self), " (deleted)")++ "\n")|}
   ;;
 
+  let get_remotes () =
+    let log = jj_no_log ~snapshot:false [ "git"; "remote"; "list" ] in
+    let lines = String.split_on_char '\n' log in
+    lines
+    |> List.filter_map (fun line ->
+      if line |>String.trim|> String.length =0
+      then None
+      else (
+        match Base.String.lsplit2 ~on:' ' line with
+        | Some (name, _) -> Some (name, line)
+        | None -> Some (line, line)))
+  ;;
+
+  let get_remotes_selectable () =
+    get_remotes ()
+    |> List.map (fun (name, str) ->
+      W.Lists.
+        {
+          data = name
+        ; id = name |> String.hash
+        ; ui =
+            str ^ "\n"
+            |> Jj_tui.AnsiReverse.colored_string
+            |> Ui.atom
+            |> Ui.resize ~w:100 ~h:1 ~mw:100
+            |> W.Lists.selectable_item
+        })
+  ;;
+
   let selection_list ?(focus = Focus.make ()) items =
     Focus.request focus;
     let selected_var = Lwd.var 0 in
