@@ -51,12 +51,16 @@ module Make (Vars : Global_vars.Vars) = struct
             [ "git"; "push"; "--allow-new"; "--dry-run"; "--remote"; remote ] @ rev_args
           in
           let real_cmd =
-            Cmd ([ "git"; "push"; "--allow-new"; "--remote"; remote ] @ rev_args)
+            Cmd_async
+              ( "pushing to remote..."
+              , [ "git"; "push"; "--allow-new"; "--remote"; remote ] @ rev_args )
           in
           confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
     in
     (* simple fetch – no confirmation needed *)
-    let fetch_cmd = Cmd [ "git"; "fetch"; "--remote"; remote ] in
+    let fetch_cmd =
+      Cmd_async ("fetching from remote...", [ "git"; "fetch"; "--remote"; remote ])
+    in
     Key_Map.of_seq
     @@ List.to_seq
          [ ( Key.key_of_string_exn "p"
@@ -317,20 +321,27 @@ module Make (Vars : Global_vars.Vars) = struct
                 let dry_run_cmd =
                   [ "git"; "push"; "--allow-new"; "--dry-run" ] @ rev_args
                 in
-                let real_cmd = Cmd ([ "git"; "push"; "--allow-new" ] @ rev_args) in
+                let real_cmd =
+                  Cmd_async
+                    ( "pushing to remote..."
+                    , [ "git"; "push"; "--allow-new" ] @ rev_args )
+                in
                 confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd))
       }
     ; {
         id = "git_fetch"
       ; sorting_key = 24.0
       ; description = "git fetch"
-      ; make_cmd = (fun () -> Cmd [ "git"; "fetch" ])
+      ; make_cmd =
+          (fun () -> Cmd_async ("fetching from remote...", [ "git"; "fetch" ]))
       }
     ; {
         id = "git_fetch_all"
       ; sorting_key = 25.0
       ; description = "git fetch all remotes"
-      ; make_cmd = (fun () -> Cmd [ "git"; "fetch"; "--all-remotes" ])
+      ; make_cmd =
+          (fun () ->
+            Cmd_async ("fetching all remotes...", [ "git"; "fetch"; "--all-remotes" ]))
       }
       ; {
         id = "git_remote_menu"

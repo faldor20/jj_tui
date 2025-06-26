@@ -6,6 +6,7 @@ open Jj_tui.Logging
 open Jj_tui.Key_map
 open Jj_tui.Key
 open Jj_tui
+
 open Log
 
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
@@ -45,6 +46,7 @@ module Shared = struct
     (** Allows nesting of commands, shows a popup with command options and waits for the user to press the appropriate key*)
     | Fun of (unit -> unit)
     (** Execute an arbitrary function. Prefer other command types if possible *)
+    | Cmd_async of string * cmd_args
   [@@deriving show]
 
   (** A command that should be run when it's key is pressed*)
@@ -75,6 +77,7 @@ module Intern (Vars : Global_vars.Vars) = struct
   open Nottui
   open Log
   open! Jj_tui.Util
+  module Jj_widgets = Jj_widgets.Make (Vars)
 
   exception Handled
 
@@ -131,7 +134,8 @@ module Intern (Vars : Global_vars.Vars) = struct
            | Cmd_with_revs _
            | Cmd_r _
            | Prompt_r _
-           | Dynamic_r _ )
+           | Dynamic_r _
+           | Cmd_async _ )
        ; sort_key = _
        } ->
          [ render_command_line ~indent_level (key_to_string key) description ]
@@ -204,6 +208,19 @@ module Intern (Vars : Global_vars.Vars) = struct
     let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd_I args) in
     match cmd with
+    | Cmd_async (loading_msg,args) ->
+        jj_async
+          args
+          ~on_start:(fun () -> show_popup @@ Some (W.hbox [ Jj_widgets.throbber ;(W.string (" "^loading_msg)|>Lwd.pure)  ], loading_msg))
+          ~on_success:(fun _ ->
+              Global_funcs.update_status ~cause_snapshot:true ();
+              show_popup None)
+          ~on_error:(fun code str ->
+              handle_jj_error
+                ~cmd:("jj " ^ (args |> String.concat " "))
+                ~error:(Printf.sprintf "Exited with code %i; Message:\n%s" code str);
+              );
+      raise Handled
     | Cmd_I args ->
       show_popup None;
       send_cmd args;
@@ -343,8 +360,45 @@ module Make (Vars : Global_vars.Vars) = struct
     SubCmd sub_cmd
   ;;
 
-(**A prompt that allows the user to confirm a command by running it with a dry run and then running the real command if the user confirms*)
+  (**A prompt that allows the user to confirm a command by running it with a dry run and then running the real command if the user confirms*)
   let confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd =
+    Fun
+      (fun _ ->
+        let subcmds =
+          [ (let key = key_of_string_exn "y" in
+             ( key
+             , { key
+               ; sort_key = 0.
+               ; description = "proceed"
+               ; cmd = real_cmd
+               } ))
+          ; (let key = key_of_string_exn "n" in
+             ( key
+             , { key
+               ; sort_key = 1.
+               ; description = "exit"
+               ; cmd =
+                   Fun
+                     (fun _ ->
+                       ui_state.input $= `Normal;
+                       show_popup None)
+               } ))
+          ]
+          |> Key_map.Key_Map.of_list
+        in
+        (*get the output of the dry run command*)
+        let log =
+          jj_no_log ~get_stderr:true dry_run_cmd
+          |> AnsiReverse.colored_string
+          |> Ui.atom
+          |> Lwd.pure
+        in
+        show_popup @@ Some (W.vbox [ log; commands_list_ui subcmds ], title);
+        ui_state.input $= `Mode (command_input ~is_sub:true subcmds))
+  ;;
+
+  (**A prompt that allows the user to confirm a command by running it with a dry run and then running the real command if the user confirms*)
+  let confirm_dry_run_prompt_async ~title ~dry_run_cmd ~real_cmd =
     Fun
       (fun _ ->
         let subcmds =

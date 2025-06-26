@@ -37,6 +37,7 @@ type ui_state_t = {
   ; trigger_update : unit Lwd.var
   ; reset_selection : unit Signal.t
   ; config : Config.t Lwd.var
+  ; loading : string option Lwd.var
 }
 
 let get_unique_id maybe_unique_rev =
@@ -69,6 +70,7 @@ module type Vars = sig
   val get_active_revs_lwd : unit -> string list Lwd.t
   val config : Config.t Lwd.var
   val show_popup: ((ui Lwd.t * string) option ) ->unit
+  val set_loading : string option -> unit
 end
 
 module Vars : Vars = struct
@@ -94,6 +96,7 @@ module Vars : Vars = struct
     ; trigger_update = Lwd.var ()
     ; reset_selection = Signal.make ~equal:(fun _ _ -> false) ()
     ; config = Lwd.var (Config.default_config)
+    ; loading = Lwd.var None
     }
   ;;
 
@@ -150,4 +153,7 @@ module Vars : Vars = struct
     [%log debug "setting show popup"];
     Lwd.set ui_state.show_popup popup 
   let config = ui_state.config
+
+  let set_loading loading =
+    Lwd.set ui_state.loading loading
 end

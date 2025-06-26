@@ -196,6 +196,55 @@ module Make (Vars : Global_vars.Vars) = struct
     code, status, stdout, stderr,pid
   ;;
 
+  let jj_async ?(snapshot = true) ?(color = true) args ~on_start ~on_success ~on_error =
+    let run () =
+      let locked =
+        if snapshot
+        then (
+          Mutex.lock access_lock;
+          true)
+        else false
+      in
+      let res =
+        try
+          let _, status, out, err, _ =
+            picos_process
+              "jj"
+              (List.concat
+                 [
+                   args
+                 ; [ "--no-pager" ]
+                 ; (if snapshot then [] else [ "--ignore-working-copy" ])
+                 ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
+                 ])
+          in
+          let exit_code =
+            match status with
+            | Unix.WEXITED code ->
+              code
+            | Unix.WSIGNALED _ | Unix.WSTOPPED _ ->
+              -1
+          in
+          if exit_code = 0 then Ok (out, err) else Error (exit_code, out, err)
+        with
+        | exn ->
+          if locked then Mutex.unlock access_lock;
+          raise exn
+      in
+      if locked then Mutex.unlock access_lock;
+      match res with
+      | Ok (out, err) ->
+        on_success (out, err)
+      | Error (code, out, err) ->
+        on_error code (err ^ out)
+    in
+    on_start ();
+    Picos_std_structured.Flock.fork(fun _ ->
+      run();
+      
+    );
+  ;;
+
   (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
   let cmdArgs cmd args =
     let start_time = Unix.gettimeofday () in
