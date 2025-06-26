@@ -1,3 +1,10 @@
+module Mutex : Mutex_backend.MUTEX
+(**
+This is the mutex we use. it can be different depending on the backend we use.
+For example, if we use picos, we use the picos mutex.
+If we use the stdlib, we use the stdlib mutex.
+*)
+
 type +'a t
 (** A dynamic document of type ['a]. Documents can be produced in several
     different ways:

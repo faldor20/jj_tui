@@ -45,7 +45,7 @@ module Shared = struct
     | SubCmd of 'a command Key_Map.t
     (** Allows nesting of commands, shows a popup with command options and waits for the user to press the appropriate key*)
     | Fun of (unit -> unit)
-    (** Execute an arbitrary function. Prefer other command types if possible *)
+    (** Just like command, except that it runs async and shows a throbber while it's running. Useful for long running commands*)
     | Cmd_async of string * cmd_args
   [@@deriving show]
 
@@ -211,7 +211,7 @@ module Intern (Vars : Global_vars.Vars) = struct
     | Cmd_async (loading_msg,args) ->
         jj_async
           args
-          ~on_start:(fun () -> show_popup @@ Some (W.hbox [ Jj_widgets.throbber ;(W.string (" "^loading_msg)|>Lwd.pure)  ], loading_msg))
+          ~on_start:(fun () -> show_popup @@ Some (W.hbox [ Jj_widgets.throbber ;(W.string (" "^loading_msg)|>Lwd.pure)  ], "loading..."))
           ~on_success:(fun _ ->
               Global_funcs.update_status ~cause_snapshot:true ();
               show_popup None)

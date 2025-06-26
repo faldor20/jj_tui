@@ -196,54 +196,6 @@ module Make (Vars : Global_vars.Vars) = struct
     code, status, stdout, stderr,pid
   ;;
 
-  let jj_async ?(snapshot = true) ?(color = true) args ~on_start ~on_success ~on_error =
-    let run () =
-      let locked =
-        if snapshot
-        then (
-          Mutex.lock access_lock;
-          true)
-        else false
-      in
-      let res =
-        try
-          let _, status, out, err, _ =
-            picos_process
-              "jj"
-              (List.concat
-                 [
-                   args
-                 ; [ "--no-pager" ]
-                 ; (if snapshot then [] else [ "--ignore-working-copy" ])
-                 ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
-                 ])
-          in
-          let exit_code =
-            match status with
-            | Unix.WEXITED code ->
-              code
-            | Unix.WSIGNALED _ | Unix.WSTOPPED _ ->
-              -1
-          in
-          if exit_code = 0 then Ok (out, err) else Error (exit_code, out, err)
-        with
-        | exn ->
-          if locked then Mutex.unlock access_lock;
-          raise exn
-      in
-      if locked then Mutex.unlock access_lock;
-      match res with
-      | Ok (out, err) ->
-        on_success (out, err)
-      | Error (code, out, err) ->
-        on_error code (err ^ out)
-    in
-    on_start ();
-    Picos_std_structured.Flock.fork(fun _ ->
-      run();
-      
-    );
-  ;;
 
   (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
   let cmdArgs cmd args =
@@ -350,6 +302,28 @@ module Make (Vars : Global_vars.Vars) = struct
       Vars.ui_state.command_log
       (([ "jj" ] @ args |> String.concat " ") :: current_log);
     jj_no_log ~snapshot args
+  ;;
+
+  (**Run a jj command asynchronously with callbacks for success, error, and start*)
+  let jj_async ?(snapshot = true) ?(color = true) args ~on_start ~on_success ~on_error =
+    let run () =
+      let res = jj_no_log_errorable ~snapshot ~color args in
+      match res with
+      | Ok (out, err) ->
+        on_success (out, err)
+      | Error (`BadExit (code, msg)) ->
+        on_error code msg
+      | Error (`Exception msg) ->
+        on_error (-1) msg
+    in
+    on_start ();
+    Picos_std_structured.Flock.fork (fun () ->
+      try run ()
+      with
+      | exn ->
+        let msg = Printexc.to_string exn in
+        [%log warn "Exception in jj_async: %s" msg];
+        on_error (-1) msg)
   ;;
 
   (**gets the description of the current and previous change. Useful when squashing*)

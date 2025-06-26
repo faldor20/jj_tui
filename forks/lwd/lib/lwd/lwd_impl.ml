@@ -1,4 +1,5 @@
 module Make (Mutex : Mutex_backend.MUTEX) = struct
+  module Mutex=Mutex
   let log_src = Logs.Src.create "lwd.impl" ~doc:"Lwd implementation"
   module Log = (val Logs.src_log log_src : Logs.LOG)
 

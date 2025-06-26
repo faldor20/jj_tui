@@ -1,5 +1,7 @@
 open Notty
 open Lwd_utils
+(*Use the same mutex backend as lwd*)
+module Mutex=Lwd.Mutex
 (* test comment *)
 module Log = (val Logs.src_log (Logs.Src.create "nottui"))
 
