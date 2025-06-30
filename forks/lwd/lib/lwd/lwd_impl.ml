@@ -955,6 +955,7 @@ module Make (Mutex : Mutex_backend.MUTEX) = struct
               | Fix { doc; wrt } ->
                   let _ = aux self wrt in
                   let result = aux self doc in
+                  (*If the wrt is damaged, we need to re-evaluate, we will keep doing this until it is not damaged*)
                   if sub_is_damaged wrt then aux origin self
                   else (
                     if sub_is_damaged doc then do_invalidate Fragile self;
