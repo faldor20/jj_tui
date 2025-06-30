@@ -101,7 +101,7 @@ let v_pane top bot =
 
 let sub' str p l = if p = 0 && l = String.length str then str else String.sub str p l
 
-let edit_field ?(focus = Focus.make ()) state ~on_change ~on_submit =
+let edit_field ?(focus = Focus.make ()) ?(attr_focused = A.(empty)) state ~on_change ~on_submit  =
   let update focus_h focus (text, pos) =
     let pos = clampi pos ~min:0 ~max:(String.length text) in
     let content =
@@ -110,7 +110,8 @@ let edit_field ?(focus = Focus.make ()) state ~on_change ~on_submit =
       @@
       if Focus.has_focus focus
       then (
-        let attr = A.(st italic) in
+        (* sets the styling when focused *)
+        let attr = A.(attr_focused ++ st underline) in
         let len = String.length text in
         (if pos >= len
          then [ I.string attr text ]
