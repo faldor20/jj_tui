@@ -55,7 +55,7 @@ let prompt_internal ?pad_w ?pad_h ~focus ~show_prompt ui =
          let$* label_bottom = label_bottom in
          (*prefill the prompt if we want to *)
          prompt_content 
-         |> BB.box ?pad_w ?pad_h  ~label_top:label ?label_bottom
+         |> BB.focusable ~focus ?pad_w ?pad_h  ~label_top:label ?label_bottom
          |> clear_bg
          |> Lwd.map2 (Focus.status focus) ~f:(fun focus_status ui ->
            ui
