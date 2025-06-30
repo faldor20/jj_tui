@@ -103,6 +103,7 @@ val filterable_selection_list_custom
 val filterable_selection_list
   :  ?pad_w:int
   -> ?pad_h:int
+  -> ?list_outline_focus_attr:Notty.A.t
   -> ?focus:Nottui_main.Focus.handle
   -> filter_predicate:(string -> 'a -> bool)
   -> ?on_esc:('a -> unit)

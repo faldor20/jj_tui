@@ -67,6 +67,7 @@ This will display ontop of any ui it is passed when show_prompt_var is [Some].
 val selection_list_prompt_filterable
   :  ?pad_w:int
   -> ?pad_h:int
+  -> ?list_outline_focus_attr:Notty.A.t
   -> ?modify_body:(Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t)
   -> ?focus:Nottui_main.Focus.handle
   -> show_prompt_var:'a filterable_selection_list_prompt_data option Lwd.var

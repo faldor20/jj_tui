@@ -192,6 +192,7 @@ and$ focus = focus|>Focus.status in
     |> W.Overlay.text_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
     |> W.Overlay.popup ~show_popup_var:ui_state.show_popup
     |> W.Overlay.selection_list_prompt_filterable
+         ~list_outline_focus_attr:A.(empty) (*highlighting the outline inside the propt is a bit over the top*)
          ~show_prompt_var:ui_state.show_string_selection_prompt
     |> inputs ~custom:(fun x -> Jj_commands.handleInputs Jj_commands.default_list x)
   ;;

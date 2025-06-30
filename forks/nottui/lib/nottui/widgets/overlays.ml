@@ -43,7 +43,7 @@ let clear_bg ui = set_bg ~attr:A.empty ui
     [Focus.release_reversable focus]
     and set [show_prompt] to [None]
     on_exit *)
-let prompt_internal ?pad_w ?pad_h ~focus ~show_prompt ui =
+let prompt_internal ?pad_w ?pad_h  ~focus ~show_prompt ui =
   (*Build the ui so that it is either the prompt or nothing depending on whether show prompt is enabled*)
   let prompt_ui =
     let$* show_prompt_val = show_prompt in
@@ -182,6 +182,7 @@ type 'a filterable_selection_list_prompt_data =
 let selection_list_prompt_filterable
       ?pad_w
       ?pad_h
+      ?list_outline_focus_attr
       ?(modify_body = fun x -> x)
       ?(focus = Focus.make ())
       ~show_prompt_var
@@ -200,6 +201,7 @@ let selection_list_prompt_filterable
        (*prefill the prompt if we want to *)
        let prompt_field =
          Selection_list.filterable_selection_list
+           ?list_outline_focus_attr
            ~filter_predicate
            ~focus
            ~on_confirm:(fun item -> `Finished item |> on_exit)
