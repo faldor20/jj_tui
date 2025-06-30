@@ -3,6 +3,7 @@ open Lwd_utils
 (*Use the same mutex backend as lwd*)
 module Mutex=Lwd.Mutex
 (* test comment *)
+
 module Log = (val Logs.src_log (Logs.Src.create "nottui"))
 
 module Focus : sig
@@ -376,8 +377,8 @@ module Ui = struct
     ; pad_w : int (** left/right padding columns *)
     ; pad_h : int (** top/bottom padding rows *)
     ; style : Border.style
-    ; focus_attr : A.t option (** attribute when focused, None means use attr *)
-    ; focus_style : Border.style option (** style when focused, None means use style *)
+    ; focus_attr : A.t (** attribute when focused, None means use attr *)
+    ; focus_style : Border.style  (** style when focused, None means use style *)
     ; label_top : string option (** Optional text shown in the top border *)
     ; label_bottom : string option (** Optional text shown in the bottom border *)
     }
@@ -715,14 +716,32 @@ module Ui = struct
   let zcat xs = Lwd_utils.reduce pack_z xs
   let has_focus t = Focus.has_focus t.focus
 
-  let border ?(thick = 1) ?pad ?pad_w ?pad_h
-      ?label_top ?label_bottom
-      ?(attr = A.empty) ?(style = Border.unicode)
-      ?focus_attr ?focus_style t =
+  type global_config_t=
+  {
+    mutable border_style:Border.style;
+    mutable border_attr:A.t;
+
+    mutable border_style_focused:Border.style ;
+    mutable border_attr_focused:A.t ;
+  }
+;;
+  let global_config={
+    border_style=Border.unicode;
+    border_style_focused= Border.unicode_bold;
+    border_attr=A.empty;
+    border_attr_focused= A.fg A.blue
+    }
+  ;;
+
+  let border 
+    ?(thick = 1) ?(pad_w=2) ?(pad_h=1)
+    ?label_top ?label_bottom
+    ?(attr = global_config.border_attr) 
+    ?(style = global_config.border_style)
+    ?(focus_attr = global_config.border_attr_focused) 
+    ?(focus_style= global_config.border_style_focused) 
+    t =
     (* Derive horizontal and vertical pad values *)
-    let pad_base = match pad with Some p -> p | None -> 0 in
-    let pad_w = match pad_w with Some pw -> pw | None -> pad_base in
-    let pad_h = match pad_h with Some ph -> ph | None -> pad_base in
     let dw = 2 * (thick + pad_w) in
     let dh = 2 * (thick + pad_h) in
     { w = t.w + dw
@@ -1191,10 +1210,10 @@ module Renderer = struct
 
             (* Select attributes and style based on focus state *)
             let attr =
-              if is_focused then Option.value ~default:b.attr b.focus_attr else b.attr
+              if is_focused then b.focus_attr else b.attr
             in
             let style =
-              if is_focused then Option.value ~default:b.style b.focus_style else b.style
+              if is_focused then b.focus_style else b.style
             in
 
             (* Total interior dims inside border glyphs (content + padding) *)

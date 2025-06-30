@@ -209,27 +209,5 @@ module Make (Vars : Global_vars.Vars) = struct
           `Unhandled)
   ;;
 
-  let throbber =
-    let frames = [| "⠋"; "⠙"; "⠹"; "⠸"; "⠼"; "⠴"; "⠦"; "⠧"; "⠇"; "⠏" |] in
-    let len = Array.length frames in
-    let frame_var = Lwd.var 0 in
-    
-    (* let update_throb= Lwd.var 0 in *)
-    Lwd.bind (Lwd.get frame_var) ~f:(fun frame ->
-      (*each time we re-render, we start a new thread to update the frame the next time*)
-      Picos_std_structured.Flock.fork(fun _ ->
-          Unix.sleepf 0.1;
-          Lwd.set frame_var (Lwd.peek frame_var + 1);
-        );
-      W.string ~attr:A.(fg blue) (frames.(frame mod len) )|>Lwd.pure
-    )
-  ;;
 
-  let main_widget_list =
-    let open Lwd_infix in
-    let$* loading = Vars.ui_state.loading|>Lwd.get  in
-    if loading |> Option.is_some
-    then W.vbox [ throbber ]
-    else W.vbox [ W.string "not loading" |> Lwd.pure]
-  ;;
 end

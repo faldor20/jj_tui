@@ -22,8 +22,8 @@ module Make (Vars : Global_vars.Vars) = struct
           (fun () ->
             Fun
               (fun _ ->
-                ui_state.show_popup
-                $= Some (commands_list_ui ~include_arrows:true (get_commands ()), "Help");
+                show_popup
+                @@ Some (commands_list_ui ~include_arrows:true (get_commands ()), "Help");
                 ui_state.input $= `Mode (fun _ -> `Unhandled)))
       }
     ; {

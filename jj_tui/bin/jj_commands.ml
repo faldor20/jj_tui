@@ -205,13 +205,14 @@ module Intern (Vars : Global_vars.Vars) = struct
                      ())
              }
     in
+    
     let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd_I args) in
     match cmd with
     | Cmd_async (loading_msg,args) ->
         jj_async
           args
-          ~on_start:(fun () -> show_popup @@ Some (W.hbox [ Jj_widgets.throbber ;(W.string (" "^loading_msg)|>Lwd.pure)  ], "loading..."))
+          ~on_start:(fun () -> show_popup @@ Some (W.hbox [ Nottui_picos.Widgets.throbber ;(W.string (" "^loading_msg)|>Lwd.pure)  ], "loading..."))
           ~on_success:(fun _ ->
               Global_funcs.update_status ~cause_snapshot:true ();
               show_popup None)

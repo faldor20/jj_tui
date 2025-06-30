@@ -51,7 +51,7 @@ let w_0 =
            (* |>$ Ui.resize ~sh:1 ~mh:1000 *)
            (* |> W.size_logger) *)
         (* ; pString "| " *)
-        test_input|>$ Ui.border ~thick:1 ~pad:1 ~style:Ui.Border.unicode
+        test_input|>$ Ui.border ~thick:1 ~pad_w:1 ~pad_h:1 ~style:Ui.Border.unicode
         ]
     ; W.string " " |> Lwd.pure
     ; W.string "Test focused border (click to focus):" |> Lwd.pure  

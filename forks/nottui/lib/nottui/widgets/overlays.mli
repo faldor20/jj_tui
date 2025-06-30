@@ -77,6 +77,15 @@ val selection_list_prompt_filterable
 val popup
   :  ?focus:Nottui_main.Focus.handle
   -> ?on_key:(Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
-  -> show_popup_var:(Nottui_main.ui Lwd.t * string) option Lwd.var
+  -> show_popup_var:(Nottui_main.ui Lwd.t  * string) option Lwd.var
+  -> Nottui_main.ui Lwd.t
+  -> Nottui_main.ui Lwd.t
+(**This is a popup that can show ontop of other ui elements
+It passes the focus handler into the contained ui element. 
+useful for making a popup that contains an element that accepts keyboard input *)
+val popup_focusable
+  :  ?focus:Nottui_main.Focus.handle
+  -> ?on_key:(Nottui_main.Ui.key -> Nottui_main.Ui.may_handle)
+  -> show_popup_var:((focus:Nottui_main.Focus.handle -> Nottui_main.ui Lwd.t)  * string) option Lwd.var
   -> Nottui_main.ui Lwd.t
   -> Nottui_main.ui Lwd.t

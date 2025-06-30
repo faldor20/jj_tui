@@ -104,6 +104,7 @@ module Ui : sig
   type t
   (* Type of UI elements *)
 
+
   (** Printing UI element *)
   val pp : Format.formatter -> t -> unit
 
@@ -115,6 +116,19 @@ module Ui : sig
     val unicode_rounded : style
     val unicode_bold : style
   end
+
+  (** Global configuration for ui elements. Use to set default styles for the whole application.*)
+  type global_config_t=
+  {
+    mutable border_style:Border.style;
+    mutable border_attr:A.t;
+
+    mutable border_style_focused:Border.style ;
+    mutable border_attr_focused:A.t ;
+  }
+
+  (** Get the global configuration for ui elements. *)
+  val global_config : global_config_t
 
   (** {1 Layout specifications} *)
 
@@ -287,7 +301,6 @@ module Ui : sig
         bounds, otherwise it is drawn outside, increasing the element's size. *)
   val border
     : ?thick:int
-    -> ?pad:int
     -> ?pad_w:int
     -> ?pad_h:int
     -> ?label_top:string

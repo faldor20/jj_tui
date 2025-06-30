@@ -4,7 +4,12 @@ open Nottui
 module Jj_ui = Jj_ui.Make (Vars)
 open Picos_std_structured
 open Jj_tui.Logging
-
+let () =
+  Ui.global_config.border_style<-Nottui.Ui.Border.unicode_rounded;
+  Ui.global_config.border_style_focused<-Nottui.Ui.Border.unicode_rounded;
+  (* Ui.global_config.border_attr<-A.empty; *)
+  (* Ui.global_config.border_attr_focused<-; *)
+;;
 let await_read_unix fd timeout : [ `Ready | `NotReady ] =
   let rec select () =
     match Unix.select [ fd ] [] [ fd ] timeout with

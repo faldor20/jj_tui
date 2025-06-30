@@ -123,3 +123,5 @@ module Ui_loop = struct
 
   let run = Ui_loop.Internal.run ~run_with_term ~tick_period:0.01
 end
+
+module Widgets = Async_widgets

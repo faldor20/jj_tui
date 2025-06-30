@@ -69,9 +69,8 @@ let v_window_stack ~focus windows =
              `Handled
            | _ -> `Unhandled
          else fun _ -> `Unhandled))
-  |> Border_box.with_border_attr
-       (let$ focus = focus |> Focus.status |>$ Focus.has_focus in
-        if focus then A.fg A.blue else A.empty)
+  |> Border_box.box 
+       
 ;;
 
 let h_window_stack ~focus windows =
@@ -121,7 +120,5 @@ let h_window_stack ~focus windows =
              `Handled
            | _ -> `Unhandled
          else fun _ -> `Unhandled))
-  |> Border_box.with_border_attr
-       (let$ focus = focus |> Focus.status |>$ Focus.has_focus in
-        if focus then A.fg A.blue else A.empty)
+  |> Border_box.box 
 ;;

@@ -54,8 +54,8 @@ let prompt_internal ?pad_w ?pad_h ~focus ~show_prompt ui =
          Focus.request_reversable focus;
          let$* label_bottom = label_bottom in
          (*prefill the prompt if we want to *)
-         prompt_content
-         |> BB.focusable ?pad_w ?pad_h ~focus ~label_top:label ?label_bottom
+         prompt_content 
+         |> BB.box ?pad_w ?pad_h  ~label_top:label ?label_bottom
          |> clear_bg
          |> Lwd.map2 (Focus.status focus) ~f:(fun focus_status ui ->
            ui
@@ -104,11 +104,11 @@ let text_prompt
        (*prefill the prompt if we want to *)
        if prompt_input |> Lwd.peek |> fst == ""
        then prompt_input $= (pre_fill, pre_fill |> String.length);
-       let prompt_field =
+       let prompt_field  =
          W.zbox
            [ W.string ~attr:A.(st underline) "                                       "
-             |> Lwd.pure
-           ; W.edit_field
+             |> Lwd.pure 
+           ; W.edit_field ~focus
                prompt_val
                ~on_change:(fun state -> Lwd.set prompt_input state)
                ~on_submit:(fun (str, _) -> on_exit (`Finished str))
@@ -151,7 +151,7 @@ let selection_list_prompt
          on_exit result
        in
        (*prefill the prompt if we want to *)
-       let prompt_field =
+       let prompt_field  =
          Selection_list.selection_list_custom
            ~focus
            ~custom_handler:(fun item key ->
@@ -215,15 +215,37 @@ let selection_list_prompt_filterable
   prompt_internal ?pad_w ?pad_h ~focus ~show_prompt:prompt_args ui
 ;;
 
-let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
+let popup_focusable ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
   let popup_ui =
-    let$* show_popup = Lwd.get show_popup_var in
+    let$* show_popup = Lwd.get (show_popup_var ) in
     match show_popup with
     | Some (content, label) ->
       let ui =
         Focus.request_reversable focus;
-        let$ prompt_field = content in
-        prompt_field |> Ui.resize ~w:5 ~sw:1
+        let$ prompt_field = content ~focus in
+        prompt_field  |> Ui.resize ~w:5 ~sw:1
+      in
+      ui |> BB.focusable ~focus ~label_top:label ?on_key |> clear_bg
+      (*This is a little confusing, but by wrapping the content in 2 nested keyboard areas we make it the user cannot escape the popup.
+      becasue focus moves between keyboard areas within a current keyboard area by adding 2 we make escape impossible *)
+      (* |> Lwd.map  ~f:(fun ui -> *)
+      (* ui |> Ui.keyboard_area (fun x -> `Unhandled)) *)
+    | None ->
+      Focus.release_reversable focus;
+      Ui.empty |> Lwd.pure
+  in
+  W.zbox [ ui; popup_ui |>$ Ui.resize ~crop:neutral_grav ~pad:neutral_grav ]
+;;
+
+let popup ?(focus = Focus.make ()) ?on_key ~show_popup_var ui =
+  let popup_ui =
+    let$* show_popup = Lwd.get (show_popup_var ) in
+    match show_popup with
+    | Some (content, label) ->
+      let ui =
+        Focus.request_reversable focus;
+        let$ prompt_field = content  in
+        prompt_field  |> Ui.resize ~w:5 ~sw:1
       in
       ui |> BB.focusable ~focus ~label_top:label ?on_key |> clear_bg
       (*This is a little confusing, but by wrapping the content in 2 nested keyboard areas we make it the user cannot escape the popup.

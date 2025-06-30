@@ -356,8 +356,8 @@ module Make (Vars : Global_vars.Vars) = struct
   (**handle exception from jj by showing an error message*)
   let handle_jj_error ~cmd ~error =
     ui_state.show_prompt $= None;
-    ui_state.show_popup
-    $= Some
+    show_popup
+    @@ Some
          ( error
            |> Jj_tui.AnsiReverse.colored_string
            |> Ui.atom

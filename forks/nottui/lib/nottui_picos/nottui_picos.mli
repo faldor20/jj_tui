@@ -50,3 +50,15 @@ module Ui_loop : sig
     -> ui Lwd.t
     -> unit
 end
+
+module Widgets : sig
+  (**
+    Async widgets are widgets that use some kind of async mechanism to update themselves.
+    They are only available when using picos.
+*)
+
+  (** A throbber that spins forever. 
+
+Each render it forks a thread to update the throbber to the next frame in 100ms*)
+  val throbber : Nottui.ui Lwd.t
+end
