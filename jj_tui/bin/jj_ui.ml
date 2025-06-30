@@ -219,6 +219,7 @@ and$ focus = focus|>Focus.status in
     match startup_result with
     | `Good ->
       Flock.fork (fun () ->
+        update_if_changed ();
         while true do
           Picos.Fiber.sleep ~seconds:5.0;
           update_if_changed ()
