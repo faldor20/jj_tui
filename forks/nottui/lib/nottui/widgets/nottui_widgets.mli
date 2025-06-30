@@ -14,6 +14,7 @@ val h_pane : ?splitter_color:Notty.A.color -> ui Lwd.t -> ui Lwd.t -> ui Lwd.t
  Supports navigating with arrow keys  *)
 val edit_field
   :  ?focus:Focus.handle
+  -> ?attr_cursor:attr
   -> ?attr_focused:attr
   -> (string * int) Lwd.t
   -> on_change:(string * int -> unit)
