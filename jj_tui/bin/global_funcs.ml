@@ -83,6 +83,8 @@ let last_op_id = ref ""
 let update_if_changed () =
   (* If the last op_id has changed then there has been a change somewhere and we should re-render. otherwise don't bother*)
   [%log info "Checking if there has been a change to the repo"];
+  (* Wrap this just incase something fails so it shows an error *)
+  safe_jj @@ fun () ->
   let this_op =
     jj_no_log
       ~color:false
