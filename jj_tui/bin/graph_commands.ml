@@ -362,7 +362,7 @@ module Make (Vars : Global_vars.Vars) = struct
           (fun () ->
             PromptThen
               ( "list commits to parallelize"
-              , fun x -> Cmd ([ "paralellize" ] @ (x |> String.split_on_char ' ')) ))
+              , fun x -> Cmd ([ "parallelize" ] @ (x |> String.split_on_char ' ')) ))
       }
     ; {
         id = "abandon"
