@@ -30,9 +30,14 @@ You can make a `config.yaml` config file in the following directories to customi
 `linux`: $XDG_CONFIG_HOME/jj_tui/
 `macos`: ~/Library/preferences/jj_tui/
 see `./jj_tui/lib/key_map.ml` for a spec for the keymap and `./jj_tui/lib/config.ml` for the config
-The keymap config lets you fully customize all the commands and their sub mmenus.
+The keymap config lets you fully customize all the commands and their sub menus as well as remap the arrow keys.
 ``` yaml
 key_map:
+  remap:
+   h: "left"
+   j: "down"
+   k: "up"
+   l: "right"
   graph:
     #Simple mapping from key to command_id
     p: prev
