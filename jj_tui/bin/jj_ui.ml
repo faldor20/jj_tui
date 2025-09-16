@@ -38,6 +38,7 @@ module Make (Vars : Global_vars.Vars) = struct
     W.button (Printf.sprintf "quit ") (fun () -> Vars.quit $= true) |> Lwd.pure
   ;;
 
+  (** Forward an event to a list of handlers until one of them returns `Handled *)
   let rec forward_events handlers event =
     match handlers with
     | h :: rest ->
@@ -46,13 +47,31 @@ module Make (Vars : Global_vars.Vars) = struct
       `Unhandled
   ;;
 
+  (** Handle inputs for the UI.
+      @param custom A custom handler that can be used to handle inputs that are not part of the default key bindings.
+      @param ui The UI to handle inputs for.
+  *)
   let inputs ?(custom = fun _ -> `Unhandled) ui =
     ui
     |>$ Ui.keyboard_area @@ fun event ->
         event
         |> forward_events
              [
-               custom
+               custom;
+                (fun x->
+                  (*Try to remap the key if needed *)
+                  match x with
+                  | `ASCII k, modifiers ->
+                    let key = Key.{ key = k; modifiers } in
+                    let key=Key_map.Key_Map.find_opt key (Lwd.peek ui_state.config).key_map.remap in
+                   ( match key with
+                    | Some remap ->
+                      (** This needs to be type converted so our limited variants get upcast into a full nottui event*)
+                      (`Remap (remap.remap, modifiers):>  Nottui.Ui.may_handle)
+                    | None ->
+                      `Unhandled)
+                  | _ ->
+                    `Unhandled)
              ; (function
                  | `ASCII 'q', _ ->
                    Vars.quit $= true;
@@ -93,7 +112,7 @@ module Make (Vars : Global_vars.Vars) = struct
              ]
   ;;
 
-  (* shows a pretty box in the middle of the screen with our error in it*)
+  (** Shows a pretty box in the middle of the screen with our error in it*)
   let render_startup_error error =
     let message =
       match error with

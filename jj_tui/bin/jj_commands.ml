@@ -285,6 +285,7 @@ module Intern (Vars : Global_vars.Vars) = struct
       match key with
       | `ASCII k, modifiers ->
         let key = { key = k; modifiers } in
+        (*remember that the key map here has been processed so it directly maps the keys to commands not to command ids*)
         let cmd = keymap |> Key_Map.find_opt key in
         (match cmd with
          | Some cmd ->
@@ -447,8 +448,8 @@ module Make (Vars : Global_vars.Vars) = struct
       command_input ~is_sub:false command_mapping
   ;;
 
-  (* Function to build command list from key_map and a command registry *)
-  let build_command_list key_map command_registry =
+  (* Function to build key=>command keymap from a key=>command_id map and a command registry *)
+  let build_command_keymap key_map command_registry =
     (* Process a key_map item *)
     let rec process_key_map_item key item =
       match item with

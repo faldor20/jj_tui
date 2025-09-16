@@ -13,19 +13,117 @@ module Key_Map = struct
   ;;
 end
 
+module Nottui_remap = struct
+  (** Currently this only supports arrow remapping, but we could support any other keys/events *)
+
+  (** Extraction of the nottui arrow keys event type for remapping*)
+  type t = [ `Arrow of [ `Down | `Left | `Right | `Up ] ] [@@deriving show]
+
+  let of_string remap =
+    match remap with
+    | "up" ->
+      Ok (`Arrow `Up)
+    | "down" ->
+      Ok (`Arrow `Down)
+    | "left" ->
+      Ok (`Arrow `Left)
+    | "right" ->
+      Ok (`Arrow `Right)
+    | _ ->
+      Error (`Msg ("Invalid remap: " ^ remap))
+  ;;
+
+  let of_string_exn remap =
+    match of_string remap with
+    | Ok remap ->
+      remap
+    | Error (`Msg msg) ->
+      failwith ("Invalid remap: " ^ msg)
+  ;;
+
+  let to_string = function
+    | `Arrow `Up ->
+      "up"
+    | `Arrow `Down ->
+      "down"
+    | `Arrow `Left ->
+      "left"
+    | `Arrow `Right ->
+      "right"
+  ;;
+end
+
+(**A functor to make a usable keymap module from a given item type*)
+module MakeKeyMap (Item : sig
+    type t [@@deriving show]
+
+    val of_yaml : string * Yaml.value -> (Key.t * t, [ `Msg of string ]) result
+    val to_yaml : (t Key_Map.t -> Yaml.value) -> Key.t * t -> string * Yaml.value
+  end) =
+struct
+  type t = Item.t Key_Map.t [@@deriving show]
+  type t_update_t = t 
+
+  let of_yaml (yaml : Yaml.value) =
+    match yaml with
+    | `O top_level ->
+      List.map Item.of_yaml top_level
+      |> Base.Result.all
+      |> Result.map (fun x -> Key_Map.of_seq (List.to_seq x))
+    | _ ->
+      Error (`Msg "Invalid YAML structure")
+  ;;
+
+  let of_yaml_exn yaml =
+    match of_yaml yaml with
+    | Ok key_map ->
+      key_map
+    | Error (`Msg msg) ->
+      failwith ("Invalid YAML structure: " ^ msg)
+  ;;
+
+  open Yaml.Util
+
+  let rec to_yaml (key_map : Item.t Key_Map.t) : Yaml.value =
+    obj (key_map |> Key_Map.to_seq |> Seq.map (Item.to_yaml to_yaml) |> List.of_seq)
+  ;;
+  let t_update_t_to_yaml (key_map : t) : Yaml.value =
+    to_yaml key_map
+  ;;
+  
+  let t_update_t_of_yaml (yaml : Yaml.value) = of_yaml yaml
+
+  (**Merge two key maps, checking for duplicate keys*)
+let t_apply_update override og =
+  Key_Map.merge
+    (fun k v1 v2 ->
+       match v1, v2 with
+       | Some og, Some override ->
+         Some override
+       | Some v, None | None, Some v ->
+         Some v
+       | None, None ->
+         None)
+    og
+    override
+;;
+end
+
 type command = { command : string } [@@deriving show]
+type remap = { remap : Nottui_remap.t } [@@deriving show]
 
 type sub_menu = {
     title : string
   ; subcommands : key_map
 }
+[@@deriving show]
 
 and key_map_item =
   | Sub_menu of sub_menu
   | Command of command
 
 and key_map = key_map_item Key_Map.t [@@deriving show]
-and key_map_update_t = key_map
+and remap_key_map = remap Key_Map.t [@@deriving show]
 
 let ( let* ) = Base.Result.Let_syntax.( >>= )
 let ( let+ ) = Base.Result.Let_syntax.( >>| )
@@ -53,27 +151,22 @@ let rec key_map_item_of_yaml (value : string * Yaml.value) =
     Error (`Msg "Invalid YAML structure")
 ;;
 
-let key_map_of_yaml (yaml : Yaml.value) =
-  match yaml with
-  | `O top_level ->
-    List.map key_map_item_of_yaml top_level
-    |> Base.Result.all
-    |> Result.map (fun x -> Key_Map.of_seq (List.to_seq x))
+let remap_key_map_item_of_yaml (value : string * Yaml.value) =
+  match value with
+  | key, `O [ ("remap", `String remap) ] ->
+    let* key =
+      Key.key_of_string key |> Result.map_error (fun msg -> `Msg ("Invalid key: " ^ msg))
+    in
+    let+ remap = Nottui_remap.of_string remap in
+    key, { remap }
   | _ ->
     Error (`Msg "Invalid YAML structure")
 ;;
 
-let key_map_of_yaml_exn yaml =
-  match key_map_of_yaml yaml with
-  | Ok key_map ->
-    key_map
-  | Error (`Msg msg) ->
-    failwith ("Invalid YAML structure: " ^ msg)
-;;
-
 open Yaml.Util
 
-let rec key_map_item_to_yaml = function
+let key_map_item_to_yaml key_map_to_yaml key_map_item =
+  match key_map_item with
   | key, Sub_menu { title; subcommands } ->
     let sub_yaml = key_map_to_yaml subcommands in
     let key = Key.key_to_string key in
@@ -81,16 +174,30 @@ let rec key_map_item_to_yaml = function
   | key, Command { command } ->
     let key = Key.key_to_string key in
     key, string command
-
-and key_map_to_yaml (key_map : key_map) : Yaml.value =
-  obj (key_map |> Key_Map.to_seq |> Seq.map key_map_item_to_yaml |> List.of_seq)
 ;;
 
-let key_map_update_t_to_yaml (key_map : key_map_update_t) : Yaml.value =
-  key_map_to_yaml key_map
+let remap_key_map_item_to_yaml _key_map_to_yaml key_map_item =
+  match key_map_item with
+  | key, { remap } ->
+    let key = Key.key_to_string key in
+    key, obj [ "remap", string (Nottui_remap.to_string remap) ]
 ;;
 
-let key_map_update_t_of_yaml (yaml : Yaml.value) = key_map_of_yaml yaml
+module Main_Key_Map = MakeKeyMap (struct
+    type t = key_map_item [@@deriving show]
+
+    let of_yaml = key_map_item_of_yaml
+    let to_yaml = key_map_item_to_yaml
+  end)
+
+module Remap_Key_Map = MakeKeyMap (struct
+    type t = remap [@@deriving show]
+
+    let of_yaml = remap_key_map_item_of_yaml
+    let to_yaml = remap_key_map_item_to_yaml
+  end)
+
+
 
 (* let rec key_map_merge (key_map1 : key_map) (key_map2 : key_map) : key_map =
   let merged = Key_Map.create (Key_Map.length key_map1 + Key_Map.length key_map2) in
@@ -114,20 +221,7 @@ let key_map_update_t_of_yaml (yaml : Yaml.value) = key_map_of_yaml yaml
   merged
 ;; *)
 
-(**Merge two key maps, checking for duplicate keys*)
-let key_map_apply_update override og =
-  Key_Map.merge
-    (fun k v1 v2 ->
-       match v1, v2 with
-       | Some og, Some override ->
-         Some override
-       | Some v, None | None, Some v ->
-         Some v
-       | None, None ->
-         None)
-    og
-    override
-;;
+
 
 let cmd key id =
   let key = Key.key_of_string_exn key in
@@ -139,12 +233,18 @@ let sub key title sub =
   key, Sub_menu { title; subcommands = sub |> List.to_seq |> Key_Map.of_seq }
 ;;
 
+let remap key remap =
+  let key = Key.key_of_string_exn key in
+  key, { remap = Nottui_remap.of_string_exn remap }
+;;
+
 let k_map list = list |> List.to_seq |> Key_Map.of_seq
 
 type key_config = {
-    global : key_map [@updater]
-  ; graph : key_map [@updater]
-  ; file : key_map [@updater]
+    global : Main_Key_Map.t [@updater]
+  ; graph : Main_Key_Map.t [@updater]
+  ; file : Main_Key_Map.t [@updater]
+  ; remap : Remap_Key_Map.t [@updater]
 }
 [@@deriving yaml, record_updater ~derive:yaml]
 
@@ -152,9 +252,9 @@ type key_config = {
 let default : key_config =
   let open Key in
   {
-    global =
-      k_map
-        [ cmd "y" "confirm"; cmd "n" "decline"; cmd "h" "left_alt"; cmd "l" "right_alt" ]
+    remap =
+      k_map [ remap "h" "left"; remap "j" "down"; remap "k" "up"; remap "l" "right" ]
+  ; global = k_map [ cmd "y" "confirm"; cmd "n" "decline" ]
   ; graph =
       k_map
         [
@@ -270,8 +370,8 @@ let sample =
 
 let%expect_test "parse yaml" =
   let yaml = Yaml.of_string_exn sample in
-  let key_map = key_map_of_yaml_exn yaml in
-  print_endline (Yaml.to_string_exn (key_map_to_yaml key_map));
+  let key_map = Main_Key_Map.of_yaml_exn yaml in
+  print_endline (Yaml.to_string_exn (Main_Key_Map.to_yaml key_map));
   [%expect
     {|
     c:
@@ -292,12 +392,12 @@ let%expect_test "parse yaml" =
 
 let%expect_test "merge" =
   let yaml = Yaml.of_string_exn sample in
-  let key_map = key_map_of_yaml_exn yaml in
+  let key_map = Main_Key_Map.of_yaml_exn yaml in
   let overrides =
     k_map [ cmd "c" "override"; sub "s" "Squash" [ cmd "c" "override2" ] ]
   in
-  let merged = key_map_apply_update overrides key_map in
-  print_endline (Yaml.to_string_exn (key_map_to_yaml merged));
+  let merged = Main_Key_Map.t_apply_update overrides key_map in
+  print_endline (Yaml.to_string_exn (Main_Key_Map.to_yaml merged));
   [%expect
     {|
     c: override

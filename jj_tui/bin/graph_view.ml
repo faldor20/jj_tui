@@ -40,7 +40,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | None ->
       let key_map = (Lwd.peek ui_state.config).key_map.graph in
       let registry = GraphCommands.get_command_registry get_command_mapping in
-      let mapping = build_command_list key_map registry in
+      let mapping = build_command_keymap key_map registry in
       command_mapping := Some mapping;
       mapping
   ;;

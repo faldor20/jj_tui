@@ -34,7 +34,7 @@ let key_of_string str =
   in
   process_parts [] parts
 
-let key_of_string_exn str= key_of_string str|>Result.get_ok
+let key_of_string_exn str= match key_of_string str with Ok k -> k | Error msg -> failwith ("Invalid key: " ^ msg)
 
 let key_to_string { key; modifiers } =
   let modifier_str =
