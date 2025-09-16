@@ -162,6 +162,12 @@ module Make (Vars : Global_vars.Vars) = struct
       ; make_cmd = (fun () -> Cmd [ "undo" ])
       }
     ; {
+        id = "redo"
+      ; sorting_key = 7.1
+      ; description = "Redo the last operation"
+      ; make_cmd = (fun () -> Cmd [ "redo" ])
+      }
+    ; {
         id = "commit_base"
       ; sorting_key = 8.0
       ; description =

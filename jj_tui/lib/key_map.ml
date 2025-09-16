@@ -338,6 +338,7 @@ let default : key_config =
         ; cmd "c" "commit"
         ; sub "A" "absorb" [ cmd "a" "absorb"; cmd "t" "absorb-into" ]
         ; cmd "u" "undo"
+        ; cmd "U" "redo"
         ]
   }
 ;;
