@@ -159,7 +159,10 @@ module Intern (Vars : Global_vars.Vars) = struct
     let space_command =
       render_command_line ~indent_level:0 "<space>" "toggle selection (multi-select)"
     in
-    ((commands |> render_commands) @ if include_arrows then [ move_command; space_command ] else [])
+    let enter_command=
+      render_command_line ~indent_level:0 "<Enter>" "Focus status view to enlarge and scroll diff"
+    in
+    ((commands |> render_commands) @ if include_arrows then [ move_command; space_command;enter_command ] else [])
     |> I.vcat
     |> Ui.atom
     |> Lwd.pure

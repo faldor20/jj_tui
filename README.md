@@ -7,8 +7,10 @@ A TUI for the new version control system Jujutsu
 
 
 Press `?` to show the help. (commands are different between graph and files view).
-Press `Arrows` to navigate windows, `Enter` to focus status view
-Press `Space` to select/deselect revisions (multi-select in graph view)
+`Arrows` or `hjkl` to navigate windows/items
+`Space` to select/deselect revisions (multi-select in graph view)
+`Enter` to widen the diff and scroll through it
+
 List of graph commands:
 
 ![jj_tui commands](https://github.com/user-attachments/assets/1e446a3d-1736-4207-b311-29d8e4bdc333)
