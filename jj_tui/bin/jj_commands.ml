@@ -138,9 +138,17 @@ module Intern (Vars : Global_vars.Vars) = struct
            | Cmd_async _ )
        ; sort_key = _
        } ->
-         [ render_command_line ~indent_level (key_to_string key) description ]
+         let key_str =
+           let s = key_to_string key in
+           if s = " " then "<space>" else s
+         in
+         [ render_command_line ~indent_level key_str description ]
        | { key; description; cmd = SubCmd subs; sort_key = _ } ->
-         render_command_line ~indent_level (key_to_string key) description
+         let key_str =
+           let s = key_to_string key in
+           if s = " " then "<space>" else s
+         in
+         render_command_line ~indent_level key_str description
          :: render_commands ~indent_level:(indent_level + 1) subs
   ;;
 
@@ -148,7 +156,10 @@ module Intern (Vars : Global_vars.Vars) = struct
     let move_command =
       render_command_line ~indent_level:0 "Arrows" "navigation between windows"
     in
-    ((commands |> render_commands) @ if include_arrows then [ move_command ] else [])
+    let space_command =
+      render_command_line ~indent_level:0 "<space>" "toggle selection (multi-select)"
+    in
+    ((commands |> render_commands) @ if include_arrows then [ move_command; space_command ] else [])
     |> I.vcat
     |> Ui.atom
     |> Lwd.pure
