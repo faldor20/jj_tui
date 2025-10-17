@@ -1,6 +1,6 @@
 # Jujutsu TUI
 [![nix](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml/badge.svg)](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml)
-A TUI for the new version control system Jujutsu
+A TUI for the Jujutsu version control system
 
 
 ![jj_tui-ezgif com-optimize](https://github.com/faldor20/jj_tui/assets/26968035/fb053320-484a-4d6f-9b66-e5b9d0d49e5d)
@@ -11,11 +11,27 @@ Press `?` to show the help. (commands are different between graph and files view
 `Space` to select/deselect revisions (multi-select in graph view)
 `Enter` to widen the diff and scroll through it
 
+## Key features
+
+### Normal jj operations
+- `c`ommiting
+- `r`ebasing
+- `g`it pushing and pulling
+- Adding, moving and deleting `b`ookmarks
+- `s`quashing and `s`plitting commits
+- `space` can be used to select multiple commits for copying, rebasing etc, starting a `n`ew commit on top of etc 
+
+### Creating commits from the file view:
+- `space` can be used to select files to `c`ommit seperately or `m`ove to different commit 
+- Files and be sent to `N`ext or `P`revious commits
+
+### filtering by revsets 
+- `f`ilter by any revest you like
+
 List of graph commands:
 
 ![jj_tui commands](https://github.com/user-attachments/assets/1e446a3d-1736-4207-b311-29d8e4bdc333)
 
-Please provide any suggestions. I'm new to jujutsu so I'm sure people have workflows I couldn't even dream of.
 ## Installing
 `linux`: Grab the latest release. It's statically linked and should work on any linux machine.
 `mac`: Grab a prebuild. Let me know if you have any issues as I can't test on a mac.
@@ -32,8 +48,10 @@ I believe it won't work outside Unix so Windows users will currently have to use
 You can make a `config.yaml` config file in the following directories to customize key inputs
 `linux`: $XDG_CONFIG_HOME/jj_tui/
 `macos`: ~/Library/preferences/jj_tui/
-see `./jj_tui/lib/key_map.ml` for a spec for the keymap and `./jj_tui/lib/config.ml` for the config
+See `./jj_tui/lib/key_map.ml` for a spec for the keymap and `./jj_tui/lib/config.ml` for the config
 The keymap config lets you fully customize all the commands and their sub menus as well as remap the arrow keys.
+
+Eg:
 ``` yaml
 key_map:
   remap:
@@ -52,13 +70,14 @@ key_map:
         s: "squash_into_parent"
 # If the terminal is smaller than this width, the UI will change to a single pane view
 single_pane_width_threshold: 110
+# Sets the limit to how many commits are ever rendered in jj_tui. Usefull for not slowing down too much when viewing 'all()' revest.
+max_commits: 100
 ```
 For a full list of commands ids see [`jj_tui/bin/graph_commands.ml`](jj_tui/bin/graph_commands.ml) and [`jj_tui/bin/file_commands.ml`](jj_tui/bin/file_commands.ml)
 
 # logs:
 `linux`: $XDG_STATE_HOME/jj_tui/
 `macos`: ~/Library/logs/jj_tui/
-
 
 # Dev
 Can be built with nix `nix build` or open a nix shell with `nix develop`
