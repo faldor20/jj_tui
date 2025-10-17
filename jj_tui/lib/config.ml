@@ -1,16 +1,14 @@
 open Util
 open Logging
 
+type t = {
+    key_map : Key_map.key_config [@updater]
+  ; single_pane_width_threshold : int
+  ; max_commits: int
+}
+[@@deriving yaml, record_updater ~derive:yaml]
 
-type t = { key_map : Key_map.key_config[@updater]; single_pane_width_threshold:int } [@@deriving yaml, record_updater ~derive: yaml]
-
-
-let default_config:t =
-  {
-    key_map= Key_map.default;
-    single_pane_width_threshold=100;
-  }
-;;
+let default_config : t = { key_map = Key_map.default; single_pane_width_threshold = 100; max_commits= 100}
 
 let get_config_dir () =
   let os = Os.poll_os () in
@@ -29,7 +27,6 @@ let get_config_dir () =
   Filename.concat config_home "jj_tui"
 ;;
 
-
 let load_config () =
   [%log info "Loading config..."];
   let config_file = Filename.concat (get_config_dir ()) "config.yaml" in
@@ -39,9 +36,9 @@ let load_config () =
     close_in ic;
     let json = Yaml.of_string_exn content in
     match t_update_t_of_yaml json with
-    | Ok (config_update) ->
+    | Ok config_update ->
       [%log info "Config loaded!"];
-      default_config |> t_apply_update config_update 
+      default_config |> t_apply_update config_update
     | Error (`Msg msg) ->
       [%log warn "Error parsing config: %s" msg];
       default_config

@@ -36,7 +36,7 @@ let remove_ansi str = str |> Re.replace_string ~by:"" ansi_regex
 
 let count_ansi str = str |> Re.all ansi_regex |> List.length
 
-let find_selectable_from_graph str =
+let find_selectable_from_graph limit str =
   (* Matches  a single revision in the format specificied by the graph template  *)
   let matches =
     str
@@ -45,7 +45,8 @@ let find_selectable_from_graph str =
             ~flags:[ Re.Pcre.(`MULTILINE) ]
             {|(^.*?)\$\$--START--\$\$\|(.+?)\|(.+?)\|(.+?)\|(.+?)\|([\s\S]*?)\$\$--END--\$\$\n?|})
   in
-  let graph, ids =
+  let selectable_count = ref 0 in
+  let graph_rev, ids_rev =
     matches
     |> List.fold_left
          (fun (graph_acc, ids_acc) chunk ->
@@ -63,7 +64,7 @@ let find_selectable_from_graph str =
                   false
                 | content ->
                   failwith @@ "Couldn't parse jj divergent value:" ^ content
-                  in
+              in
               let hidden =
                 match Re.Group.get selectable 5 |> remove_ansi with
                 | "true" ->
@@ -80,8 +81,11 @@ let find_selectable_from_graph str =
                   commit_id
                   (Re.Group.get selectable 6 |> remove_ansi)];
               let rev = { commit_id; change_id; divergent } in
-              let id = if divergent || hidden then Duplicate commit_id else Unique change_id in
+              let id =
+                if divergent || hidden then Duplicate commit_id else Unique change_id
+              in
               let content = Re.Group.get selectable 6 in
+              incr selectable_count;
               `Selectable (graph_bit ^ content) :: graph_acc, id :: ids_acc
             | `Text filler ->
               (*Anything between our match is non-selectable filler*)
@@ -89,10 +93,23 @@ let find_selectable_from_graph str =
               then graph_acc, ids_acc
               else `Filler filler :: graph_acc, ids_acc)
          ([], [])
-    |> fun (graph, ids) -> List.rev graph |> Array.of_list, List.rev ids
   in
-  let revs = ids in
-  graph, revs
+  let graph =
+    (if !selectable_count >= (limit)
+     then (
+  [%log debug "limit: %d selectable: %d" limit !selectable_count];
+       let txt =
+         Printf.sprintf
+           "\nHit limit of %d items.\nIncrease limit in config or make your revset more \
+            precise\n"
+           limit
+       in
+       `Filler txt :: graph_rev)
+     else graph_rev)
+    |> List.rev
+    |> Array.of_list
+  in
+  graph, ids_rev |> List.rev
 ;;
 
 module Make (Process : sig
@@ -131,21 +148,21 @@ struct
     ^ {|++"$$--END--$$"++""|}
   ;;
 
-  let get_graph_info node_template revset_arg =
+  let get_graph_info node_template revset_arg limit =
     let output =
-      jj_no_log ([ "log"; "-T"; graph_info_template node_template ] @ revset_arg)
+      jj_no_log ([ "log"; "-T"; graph_info_template node_template;"--limit"; limit |>string_of_int] @ revset_arg)
     in
-    output |> find_selectable_from_graph
+    output |> find_selectable_from_graph limit
   ;;
 
   (** returns the graph and a list of revs within that graph*)
-  let graph_and_revs ?revset () =
+  let graph_and_revs ?revset limit () =
     (*We join_after here to ensure any errors in sub-fibers only propegate to here, otherwise fibers everywhere would get cancelled when an error here occurs*)
     Flock.join_after @@ fun _ ->
     let graph =
       Flock.fork_as_promise @@ fun () ->
       let revset_arg = match revset with Some revset -> [ "-r"; revset ] | None -> [] in
-      get_graph_info base_graph_template revset_arg
+      get_graph_info base_graph_template revset_arg limit
     in
     let graph, revs = Promise.await graph in
     graph, revs |> Array.of_list
@@ -199,7 +216,7 @@ let test_data_3 =
 ;;
 
 let%expect_test "revs_graph_parsing" =
-  let graph, ids = find_selectable_from_graph test_data_3 in
+  let graph, ids = find_selectable_from_graph 2000 test_data_3  in
   let ids = ids |> Array.of_list in
   let ids_idx = ref 0 in
   graph
@@ -215,12 +232,11 @@ let%expect_test "revs_graph_parsing" =
        | Unique id ->
          (* id.change_id |> print_endline; *)
          (* id.commit_id |> print_endline *)
-         id|>print_endline
+         id |> print_endline
        | Duplicate id ->
          (* id.change_id |> print_endline; *)
          (* id.commit_id |> print_endline); *)
-         id|>print_endline
-         );
+         id |> print_endline);
       incr ids_idx;
       x |> print_endline);
   [%expect

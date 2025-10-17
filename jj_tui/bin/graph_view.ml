@@ -12,10 +12,10 @@ module Make (Vars : Global_vars.Vars) = struct
   module Process = Jj_process.Make (Vars)
   open Process
   open Jj_tui.Process_wrappers.Make (Process)
-  
+
   (* Import graph commands *)
   module GraphCommands = Graph_commands.Make (Vars)
-  
+
   let bookmark_select_prompt get_bookmark_list name func =
     Selection_prompt
       ( name
@@ -33,10 +33,11 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* Remove the hardcoded make_command_mapping function and use the dynamic one *)
   let command_mapping = ref None
-  
+
   let rec get_command_mapping () =
     match !command_mapping with
-    | Some mapping -> mapping
+    | Some mapping ->
+      mapping
     | None ->
       let key_map = (Lwd.peek ui_state.config).key_map.graph in
       let registry = GraphCommands.get_command_registry get_command_mapping in
@@ -64,7 +65,8 @@ module Make (Vars : Global_vars.Vars) = struct
         |> Lwd.get
         |> Lwd.map2 (Lwd.get Vars.ui_state.revset) ~f:(fun revset _ ->
           try
-            let res = graph_and_revs ?revset () in
+            let max_commits = (Vars.config |> Lwd.peek).max_commits in
+            let res = graph_and_revs ?revset max_commits () in
             error_var $= None;
             res
           with
