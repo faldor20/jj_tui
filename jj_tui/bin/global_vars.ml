@@ -25,14 +25,14 @@ type ui_state_t = {
     (* rev_id maybe_unique W.Overlay.filterable_selection_list_prompt_data option Lwd.var *)
   ; show_string_selection_prompt :
       string W.Overlay.filterable_selection_list_prompt_data option Lwd.var
-  ; graph_revs : rev_id maybe_unique W.Lists.multi_selectable_item array Lwd.var
+  ; graph_revs : string maybe_unique W.Lists.multi_selectable_item array Lwd.var
   ; command_log : string list Lwd.var
   ; jj_show : I.t Lwd.var
   ; jj_show_promise : unit Promise.t ref
   ; jj_branches : I.t Lwd.var
   ; jj_change_files : (string * string) list Lwd.var
-  ; hovered_revision : rev_id maybe_unique Lwd.var
-  ; selected_revisions : rev_id maybe_unique list Lwd.var
+  ; hovered_revision : string maybe_unique Lwd.var
+  ; selected_revisions : string maybe_unique list Lwd.var
   ; revset : string option Lwd.var
   ; trigger_update : unit Lwd.var
   ; reset_selection : unit Signal.t
@@ -42,10 +42,10 @@ type ui_state_t = {
 
 let get_unique_id maybe_unique_rev =
   match maybe_unique_rev with
-  | Unique { change_id; _ } ->
-    change_id
-  | Duplicate { commit_id; _ } ->
-    commit_id
+  | Unique s ->
+    s
+  | Duplicate s ->
+    s
 ;;
 
 (** Global variables for the ui. Here we keep anything that's just a pain to pipe around*)
@@ -69,9 +69,6 @@ module type Vars = sig
   val get_active_revs_lwd : unit -> string list Lwd.t
   val config : Config.t Lwd.var
   val show_popup : (Nottui.ui Lwd.t * string) option -> unit
-
-
-
   val set_loading : string option -> unit
 end
 
@@ -85,8 +82,10 @@ module Vars : Vars = struct
     ; jj_show_promise = ref @@ Promise.of_value ()
     ; jj_branches = Lwd.var I.empty
     ; jj_change_files = Lwd.var []
-    ; hovered_revision = Lwd.var (Unique { change_id = "@"; commit_id = "@" })
-    ; selected_revisions = Lwd.var [ Unique { change_id = "@"; commit_id = "@" } ]
+    ; hovered_revision =
+        Lwd.var (Unique "@")
+    ; selected_revisions =
+        Lwd.var [ Unique  "@"; ]
     ; revset = Lwd.var None
     ; graph_revs = Lwd.var [||]
     ; input = Lwd.var `Normal
@@ -146,7 +145,6 @@ module Vars : Vars = struct
     then [ hovered |> get_unique_id ]
     else selected |> List.map get_unique_id
   ;;
-
 
   let show_popup popup =
     [%log debug "setting show popup"];

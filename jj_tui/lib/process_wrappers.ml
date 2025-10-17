@@ -11,24 +11,6 @@ open Picos_std_structured
 exception FoundStart
 exception FoundFiller
 
-(** Function to tag duplicated items in a list *)
-let tag_duplicates lst =
-  (* Create a frequency map to count occurrences of each element *)
-  let freq_map =
-    List.fold_left
-      (fun acc { change_id; _ } ->
-        let count = try List.assoc change_id acc with Not_found -> 0 in
-        (change_id, count + 1) :: List.remove_assoc change_id acc)
-      []
-      lst
-  in
-  (* Tag each item in the list based on the frequency map *)
-  List.map
-    (fun ({ change_id; _ } as x) ->
-      if List.assoc change_id freq_map > 1 then Duplicate x else Unique x)
-    lst
-;;
-
 (** Matches any basic ansi escape codes*)
 let ansi_regex =
   let open Re in
@@ -48,42 +30,68 @@ let ansi_regex =
   in
   Re.compile pattern
 ;;
+
 (** Removes any found ansi escape codes*)
 let remove_ansi str = str |> Re.replace_string ~by:"" ansi_regex
+
 let count_ansi str = str |> Re.all ansi_regex |> List.length
 
 let find_selectable_from_graph str =
-
-(** Matches  a single revision in the format specificied by the graph template  *)
+  (* Matches  a single revision in the format specificied by the graph template  *)
   let matches =
     str
     |> Re.split_full
          (Re.Pcre.regexp
             ~flags:[ Re.Pcre.(`MULTILINE) ]
-            {|(^.*?)\$\$--START--\$\$\|(.+?)\|(.+?)\|([\s\S]*?)\$\$--END--\$\$\n?|})
+            {|(^.*?)\$\$--START--\$\$\|(.+?)\|(.+?)\|(.+?)\|(.+?)\|([\s\S]*?)\$\$--END--\$\$\n?|})
   in
   let graph, ids =
     matches
     |> List.fold_left
          (fun (graph_acc, ids_acc) chunk ->
-           match chunk with
-           | `Delim selectable ->
-             let graph_bit = Re.Group.get selectable 1 in
-             (* In future we should be able to use the strifify function in ocaml*)
-             let change_id = Re.Group.get selectable 2 |> remove_ansi in
-             let commit_id = Re.Group.get selectable 3 |> remove_ansi in
-             let content = Re.Group.get selectable 4 in
-             ( `Selectable (graph_bit ^ content) :: graph_acc
-             , { change_id; commit_id } :: ids_acc )
-           | `Text filler -> (*Anything between our match is non-selectable filler*)
-             if filler = ""
-             then
-               graph_acc, ids_acc
-             else `Filler filler :: graph_acc, ids_acc)
+            match chunk with
+            | `Delim selectable ->
+              let graph_bit = Re.Group.get selectable 1 in
+              (* In future we should be able to use the strifify function in ocaml*)
+              let change_id = Re.Group.get selectable 2 |> remove_ansi in
+              let commit_id = Re.Group.get selectable 3 |> remove_ansi in
+              let divergent =
+                match Re.Group.get selectable 4 |> remove_ansi with
+                | "true" ->
+                  true
+                | "false" ->
+                  false
+                | content ->
+                  failwith @@ "Couldn't parse jj divergent value:" ^ content
+                  in
+              let hidden =
+                match Re.Group.get selectable 5 |> remove_ansi with
+                | "true" ->
+                  true
+                | "false" ->
+                  false
+                | content ->
+                  failwith @@ "Couldn't parse jj divergent value:" ^ content
+              in
+              [%log
+                debug
+                  "parsed rev: change_id: %s commit_id: %s divergent: %s"
+                  change_id
+                  commit_id
+                  (Re.Group.get selectable 6 |> remove_ansi)];
+              let rev = { commit_id; change_id; divergent } in
+              let id = if divergent || hidden then Duplicate commit_id else Unique change_id in
+              let content = Re.Group.get selectable 6 in
+              `Selectable (graph_bit ^ content) :: graph_acc, id :: ids_acc
+            | `Text filler ->
+              (*Anything between our match is non-selectable filler*)
+              if filler = ""
+              then graph_acc, ids_acc
+              else `Filler filler :: graph_acc, ids_acc)
          ([], [])
     |> fun (graph, ids) -> List.rev graph |> Array.of_list, List.rev ids
   in
-  let revs = ids |> tag_duplicates in
+  let revs = ids in
   graph, revs
 ;;
 
@@ -97,7 +105,8 @@ module Make (Process : sig
   end) =
 struct
   open Process
-(* Currently hard-coded. Soon it'l be settable in config *)
+
+  (* Currently hard-coded. Soon it'l be settable in config *)
   let base_graph_template =
     {|if(root,
   format_root_commit(self),
@@ -115,15 +124,17 @@ struct
   )
 )|}
   ;;
-  
-  let graph_info_template node_template=
-    {|"$$--START--$$"++"|"++change_id++"|"++commit_id++"|"++|}
+
+  let graph_info_template node_template =
+    {|"$$--START--$$"++"|"++change_id++"|"++commit_id++"|"++divergent++"|"++hidden++"|"++|}
     ^ node_template
     ^ {|++"$$--END--$$"++""|}
   ;;
 
   let get_graph_info node_template revset_arg =
-    let output = jj_no_log ([ "log"; "-T"; graph_info_template node_template] @ revset_arg) in
+    let output =
+      jj_no_log ([ "log"; "-T"; graph_info_template node_template ] @ revset_arg)
+    in
     output |> find_selectable_from_graph
   ;;
 
@@ -142,7 +153,6 @@ struct
 end
 
 (*========Tests======*)
-
 
 let test_data_3 =
   {|@  $$--START--$$|zqtxnkuuryqzzolyksrylpzotmplmvus|8ee443e4a374f7dfdd00494d8bf71af6162a1300|zqtxnkuu eli.jambu@gmail.com 2025-02-15 21:22:48 8ee443e4
@@ -203,11 +213,14 @@ let%expect_test "revs_graph_parsing" =
       let id = ids.(!ids_idx) in
       (match id with
        | Unique id ->
-         id.change_id |> print_endline;
-         id.commit_id |> print_endline
+         (* id.change_id |> print_endline; *)
+         (* id.commit_id |> print_endline *)
+         id|>print_endline
        | Duplicate id ->
-         id.change_id |> print_endline;
-         id.commit_id |> print_endline);
+         (* id.change_id |> print_endline; *)
+         (* id.commit_id |> print_endline); *)
+         id|>print_endline
+         );
       incr ids_idx;
       x |> print_endline);
   [%expect
