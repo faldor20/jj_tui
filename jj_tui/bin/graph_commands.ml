@@ -14,6 +14,7 @@ module Make (Vars : Global_vars.Vars) = struct
   open Process
   open Jj_tui.Process_wrappers.Make (Process)
   open Jj_tui.Key_map
+
   (* Helper functions from graph_view *)
   let bookmark_select_prompt get_bookmark_list name func =
     Selection_prompt
@@ -22,6 +23,7 @@ module Make (Vars : Global_vars.Vars) = struct
       , (fun x bookmark_name -> bookmark_name |> Base.String.is_substring ~substring:x)
       , func )
   ;;
+
   let remote_select_prompt name func =
     Selection_prompt
       ( name
@@ -48,12 +50,30 @@ module Make (Vars : Global_vars.Vars) = struct
           let rev_args = List.concat_map (fun r -> [ "-r"; r ]) revs in
           let title = Printf.sprintf "Git push (%s) will:" remote in
           let dry_run_cmd =
-            [ "git"; "push"; "--allow-new"; "--dry-run"; "--remote"; remote ] @ rev_args
+            [ "git"; "push"; "--allow-new";  "--dry-run"; "--remote"; remote ]
+            @ rev_args
           in
           let real_cmd =
             Cmd_async
               ( "pushing to remote..."
-              , [ "git"; "push"; "--allow-new"; "--remote"; remote ] @ rev_args )
+              , [ "git"; "push"; "--allow-new";  "--remote"; remote ]
+                @ rev_args )
+          in
+          confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
+    in
+    let push_all_cmd () =
+      Dynamic
+        (fun () ->
+          let title = Printf.sprintf "Git push (%s) will:" remote in
+          let dry_run_cmd =
+            [ "git"; "push";"--deleted"; "--allow-new"; "--dry-run"; "--remote"; remote ]
+            
+          in
+          let real_cmd =
+            Cmd_async
+              ( "pushing to remote..."
+              , [ "git"; "push"; "--allow-new"; "--deleted";  "--remote"; remote ]
+                )
           in
           confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
     in
@@ -63,19 +83,30 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     Key_Map.of_seq
     @@ List.to_seq
-         [ ( Key.key_of_string_exn "p"
-           , { key = Key.key_of_string_exn "p"
+         [
+           ( Key.key_of_string_exn "p"
+           , {
+               key = Key.key_of_string_exn "p"
              ; sort_key = 0.
-             ; description = Printf.sprintf "git push to %s" remote
+             ; description = Printf.sprintf "git push hovered to %s" remote
              ; cmd = push_cmd ()
+             } );
+           ( Key.key_of_string_exn "P"
+           , {
+               key = Key.key_of_string_exn "P"
+             ; sort_key = 0.1
+             ; description = Printf.sprintf "git push all to %s" remote
+             ; cmd = push_all_cmd()
              } )
          ; ( Key.key_of_string_exn "f"
-           , { key = Key.key_of_string_exn "f"
+           , {
+               key = Key.key_of_string_exn "f"
              ; sort_key = 1.
              ; description = Printf.sprintf "git fetch from %s" remote
              ; cmd = fetch_cmd
              } )
          ]
+  ;;
 
   (* Define all graph commands *)
   let get_command_registry get_commands =
@@ -314,9 +345,9 @@ module Make (Vars : Global_vars.Vars) = struct
                   ("Dest rev for bookmark including " ^ rev, [ "rebase"; "-b"; rev; "-d" ])))
       }
     ; {
-        id = "git_push"
+        id = "git_push_hovered"
       ; sorting_key = 23.0
-      ; description = "git push"
+      ; description = "git push hovered branch (use push all to delete)"
       ; make_cmd =
           (fun () ->
             Dynamic
@@ -325,12 +356,31 @@ module Make (Vars : Global_vars.Vars) = struct
                 let rev_args = revs |> List.concat_map (fun x -> [ "-r"; x ]) in
                 let title = "Git push will:" in
                 let dry_run_cmd =
-                  [ "git"; "push"; "--allow-new"; "--dry-run" ] @ rev_args
+                  [ "git"; "push";  "--allow-new"; "--dry-run" ] @ rev_args
                 in
                 let real_cmd =
                   Cmd_async
                     ( "pushing to remote..."
-                    , [ "git"; "push"; "--allow-new" ] @ rev_args )
+                    , [ "git"; "push";  "--allow-new" ] @ rev_args )
+                in
+                confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd))
+      }
+    ; {
+        id = "git_push_all"
+      ; sorting_key = 23.0
+      ; description = "git push all branches"
+      ; make_cmd =
+          (fun () ->
+            Dynamic
+              (fun () ->
+                let title = "Git push will:" in
+                let dry_run_cmd =
+                  [ "git"; "push"; "--deleted"; "--allow-new"; "--dry-run" ] 
+                in
+                let real_cmd =
+                  Cmd_async
+                    ( "pushing to remote..."
+                    , [ "git"; "push"; "--deleted"; "--allow-new" ] )
                 in
                 confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd))
       }
@@ -338,8 +388,7 @@ module Make (Vars : Global_vars.Vars) = struct
         id = "git_fetch"
       ; sorting_key = 24.0
       ; description = "git fetch"
-      ; make_cmd =
-          (fun () -> Cmd_async ("fetching from remote...", [ "git"; "fetch" ]))
+      ; make_cmd = (fun () -> Cmd_async ("fetching from remote...", [ "git"; "fetch" ]))
       }
     ; {
         id = "git_fetch_all"
@@ -349,14 +398,14 @@ module Make (Vars : Global_vars.Vars) = struct
           (fun () ->
             Cmd_async ("fetching all remotes...", [ "git"; "fetch"; "--all-remotes" ]))
       }
-      ; {
+    ; {
         id = "git_remote_menu"
       ; sorting_key = 25.5
       ; description = "Select remote, then run git commands"
-      ; make_cmd = (fun () ->
-          remote_select_prompt
-            "Select remote"
-            (fun remote -> SubCmd (make_remote_git_submenu remote)))
+      ; make_cmd =
+          (fun () ->
+            remote_select_prompt "Select remote" (fun remote ->
+              SubCmd (make_remote_git_submenu remote)))
       }
     ; {
         id = "parallelize"
@@ -501,7 +550,6 @@ module Make (Vars : Global_vars.Vars) = struct
            parent that modified that file"
       ; make_cmd = (fun () -> Dynamic_r (fun r -> Cmd [ "absorb"; "--from"; r ]))
       }
-    
     ]
     |> List.to_seq
     |> Seq.map (fun x -> x.id, x)

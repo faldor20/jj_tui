@@ -62,7 +62,7 @@ module MakeKeyMap (Item : sig
   end) =
 struct
   type t = Item.t Key_Map.t [@@deriving show]
-  type t_update_t = t 
+  type t_update_t = t
 
   let of_yaml (yaml : Yaml.value) =
     match yaml with
@@ -87,26 +87,24 @@ struct
   let rec to_yaml (key_map : Item.t Key_Map.t) : Yaml.value =
     obj (key_map |> Key_Map.to_seq |> Seq.map (Item.to_yaml to_yaml) |> List.of_seq)
   ;;
-  let t_update_t_to_yaml (key_map : t) : Yaml.value =
-    to_yaml key_map
-  ;;
-  
+
+  let t_update_t_to_yaml (key_map : t) : Yaml.value = to_yaml key_map
   let t_update_t_of_yaml (yaml : Yaml.value) = of_yaml yaml
 
   (**Merge two key maps, checking for duplicate keys*)
-let t_apply_update override og =
-  Key_Map.merge
-    (fun k v1 v2 ->
-       match v1, v2 with
-       | Some og, Some override ->
-         Some override
-       | Some v, None | None, Some v ->
-         Some v
-       | None, None ->
-         None)
-    og
-    override
-;;
+  let t_apply_update override og =
+    Key_Map.merge
+      (fun k v1 v2 ->
+         match v1, v2 with
+         | Some og, Some override ->
+           Some override
+         | Some v, None | None, Some v ->
+           Some v
+         | None, None ->
+           None)
+      og
+      override
+  ;;
 end
 
 type command = { command : string } [@@deriving show]
@@ -197,8 +195,6 @@ module Remap_Key_Map = MakeKeyMap (struct
     let to_yaml = remap_key_map_item_to_yaml
   end)
 
-
-
 (* let rec key_map_merge (key_map1 : key_map) (key_map2 : key_map) : key_map =
   let merged = Key_Map.create (Key_Map.length key_map1 + Key_Map.length key_map2) in
   Key_Map.iter (fun k v -> Key_Map.add merged k v) key_map1;
@@ -220,8 +216,6 @@ module Remap_Key_Map = MakeKeyMap (struct
     key_map2;
   merged
 ;; *)
-
-
 
 let cmd key id =
   let key = Key.key_of_string_exn key in
@@ -305,7 +299,8 @@ let default : key_config =
             "g"
             "Git"
             [
-              cmd "p" "git_push"
+              cmd "p" "git_push_hovered"
+            ; cmd "P" "git_push_all"
             ; cmd "f" "git_fetch"
             ; cmd "F" "git_fetch_all"
             ; cmd "r" "git_remote_menu"
