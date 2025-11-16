@@ -24,6 +24,9 @@ jobs:
           fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-flakehub: false
+      
       - run: nix build .#static
       - name: Create tar.gz
         run: tar -czvf jj_tui_linux-x86_64.tar.gz -C result/bin jj_tui
