@@ -33,6 +33,25 @@ jobs:
           name: jj_tui_linux
           path: jj_tui_linux-x86_64.tar.gz
 
+  linux-aarch64:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
+        with:
+          fetch-depth: 0
+      - uses: DeterminateSystems/nix-installer-action@786fff0690178f1234e4e1fe9b536e94f5433196
+      - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39
+      - run: nix build .#static
+      - name: Create tar.gz
+        run: tar -czvf jj_tui_linux-aarch64.tar.gz -C result/bin jj_tui
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jj_tui_linux
+          path: jj_tui_linux-aarch64.tar.gz
   macos:
     strategy:
       fail-fast: false
@@ -53,7 +72,7 @@ jobs:
         with:
           name: jj_tui_macos
           path: jj_tui_macos-aarch64.tar.gz
-          
+
   macos-x86:
     strategy:
       fail-fast: false
@@ -80,7 +99,7 @@ jobs:
       contents: write
       discussions: write
     runs-on: ubuntu-latest
-    needs: [macos, linux, macos-x86]
+    needs: [macos, linux, macos-x86,linux-aarch64]
     name: release if tag
     steps:
     - name: Download artifacts
@@ -90,6 +109,7 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          jj_tui_macos/jj_tui_macos-aarch64.tar.gz
           jj_tui_linux/jj_tui_linux-x86_64.tar.gz
+          jj_tui_linux/jj_tui_linux-aarch64.tar.gz
+          jj_tui_macos/jj_tui_macos-aarch64.tar.gz
           jj_tui_macos-x86/jj_tui_macos-x86_64.tar.gz
