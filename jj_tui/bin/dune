@@ -23,3 +23,19 @@
  (static
   (flags
    (:standard -cclib -static -cclib -no-pie))))
+
+;; Generate a small OCaml module `version.ml` at build time containing:
+;;   let version = "<git-describe-or-fallback>"
+;; The command prefers an explicitly-provided GIT_DESCRIBE environment variable
+;; (useful in CI), otherwise falls back to `git describe`. If neither is
+;; available, it writes "unknown". This uses only shell builtins and common
+;; utilities (no python required).
+(rule
+ (targets version.ml)
+ (action
+  (with-stdout-to version.ml
+   (run sh -c
+   "v=${GIT_DESCRIBE:-$(git describe --tags --always --dirty 2>/dev/null || echo unknown)};
+   esc=$(printf '%s' \"$v\" | sed 's/\\\\/\\\\\\\\/g; s/\"/\\\\\\\"/g');
+   printf 'let version = \"%s\"\\n' \"$esc\""
+   ))))
