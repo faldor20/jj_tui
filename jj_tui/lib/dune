@@ -6,7 +6,7 @@
  (libraries
   stdio
   notty
-  nottui
+  nottui_picos
   angstrom
   bigstringaf
   picos_std.sync
@@ -25,5 +25,3 @@
    ppx_deriving_yojson
    ppx_deriving_yaml
    ppx_record_updater)))
-
-
