@@ -16,16 +16,16 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
         with:
           fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-        with:
-          use-flakehub: false
+      # - uses: DeterminateSystems/magic-nix-cache-action@main
+      #   with:
+      #     use-flakehub: false
       
       - run: nix build .#static
       - name: Create tar.gz
@@ -40,13 +40,13 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
         with:
           fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      # - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix build .#static
       - name: Create tar.gz
         run: tar -czvf jj_tui_linux-aarch64.tar.gz -C result/bin jj_tui
@@ -59,14 +59,14 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: macos-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
         with:
           fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      # - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix build
       - name: Create tar.gz
         run: tar -czvf jj_tui_macos-aarch64.tar.gz -C result/bin jj_tui
@@ -80,14 +80,14 @@ jobs:
     strategy:
       fail-fast: false
     runs-on: macos-15-intel
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
         with:
           fetch-depth: 0
       - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      # - uses: DeterminateSystems/magic-nix-cache-action@main
       - run: nix build
       - name: Create tar.gz
         run: tar -czvf jj_tui_macos-x86_64.tar.gz -C result/bin jj_tui
