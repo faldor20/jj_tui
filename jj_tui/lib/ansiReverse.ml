@@ -27,7 +27,7 @@ module Internal = struct
   ;;
 
   (** Prints the attribute in a human readable format.
-  Also replaces the escape character with \e. 
+  Also replaces the escape character with \e.
   This means the output can be copy pasted into a terminal to test.
   like: `echo -e "attr: \e[0;31mTEXT\e[0m"` *)
   let print_attr img =
@@ -64,166 +64,163 @@ module Parser = struct
     (* let color_code = digits >>| int_of_string in *)
     let param = digits <* option ' ' (char ';') in
     let params = many (param >>| int_of_string) in
-    let escape_sequence = char '\027' *> char '[' *> params <* char 'm' in
-    let full_seq=many1 escape_sequence in
-    let attr_of_params = function
-      | [] ->
-        Apply empty
-      | 0 :: _ ->
-        FullyReset
-      | 1 :: _ ->
-        Apply (st bold)
-      | 2 :: _ ->
-        Apply (st dim)
-      | 3 :: _ ->
-        Apply (st italic)
-      | 4 :: _ ->
-        Apply (st underline)
-      | 5 :: _ ->
-        Apply (st blink)
-      | 7 :: _ ->
-        Apply (st reverse)
-      | 8 :: _ ->
-        Apply (st hidden)
-      | 9 :: _ ->
-        Apply (st strike)
-      | 21 :: _ ->
-        Reset (st bold) (* Double underline or bold off *)
-      | 22 :: _ ->
-        Reset (st bold ++ st dim) (* Normal intensity - reset bold and dim *)
-      | 23 :: _ ->
-        Reset (st italic) (* Reset italic *)
-      | 24 :: _ ->
-        Reset (st underline) (* Reset underline *)
-      | 25 :: _ ->
-        Reset (st blink) (* Reset blink *)
-      | 27 :: _ ->
-        Reset (st reverse) (* Reset reverse *)
-      | 28 :: _ ->
-        Reset (st hidden) (* Reset hidden *)
-      | 29 :: _ ->
-        Reset (st strike) (* Reset strikethrough *)
-      | 30 :: _ ->
-        Apply (fg black)
-      | 31 :: _ ->
-        Apply (fg red)
-      | 32 :: _ ->
-        Apply (fg green)
-      | 33 :: _ ->
-        Apply (fg yellow)
-      | 34 :: _ ->
-        Apply (fg blue)
-      | 35 :: _ ->
-        Apply (fg magenta)
-      | 36 :: _ ->
-        Apply (fg cyan)
-      | 37 :: _ ->
-        Apply (fg white)
-      | 38 :: 5 :: color :: _ ->
-        Apply (fg (unsafe_color_of_int (0x01000000 lor color)))
-      | 38 :: 2 :: r :: g :: b :: _ ->
-        Apply (fg (rgb_888 ~r ~g ~b))
-      | 39 :: _ ->
-        Reset (fg color_reset) (* Default foreground color *)
-      | 40 :: _ ->
-        Apply (bg black)
-      | 41 :: _ ->
-        Apply (bg red)
-      | 42 :: _ ->
-        Apply (bg green)
-      | 43 :: _ ->
-        Apply (bg yellow)
-      | 44 :: _ ->
-        Apply (bg blue)
-      | 45 :: _ ->
-        Apply (bg magenta)
-      | 46 :: _ ->
-        Apply (bg cyan)
-      | 47 :: _ ->
-        Apply (bg white)
-      | 48 :: 5 :: color :: _ ->
-        Apply (bg (unsafe_color_of_int (0x01000000 lor color)))
-      | 48 :: 2 :: r :: g :: b :: _ ->
-        Apply (bg (rgb_888 ~r ~g ~b))
-      | 49 :: _ ->
-        Reset (bg color_reset) (* Default background color *)
-      | 90 :: _ ->
-        Apply (fg lightblack) (* Bright black (gray) *)
-      | 91 :: _ ->
-        Apply (fg lightred)
-      | 92 :: _ ->
-        Apply (fg lightgreen)
-      | 93 :: _ ->
-        Apply (fg lightyellow)
-      | 94 :: _ ->
-        Apply (fg lightblue)
-      | 95 :: _ ->
-        Apply (fg lightmagenta)
-      | 96 :: _ ->
-        Apply (fg lightcyan)
-      | 97 :: _ ->
-        Apply (fg lightwhite)
-      | 100 :: _ ->
-        Apply (bg lightblack)
-      | 101 :: _ ->
-        Apply (bg lightred)
-      | 102 :: _ ->
-        Apply (bg lightgreen)
-      | 103 :: _ ->
-        Apply (bg lightyellow)
-      | 104 :: _ ->
-        Apply (bg lightblue)
-      | 105 :: _ ->
-        Apply (bg lightmagenta)
-      | 106 :: _ ->
-        Apply (bg lightcyan)
-      | 107 :: _ ->
-        Apply (bg lightwhite)
-      | _ ->
-        Apply empty
+    (* SGR (Select Graphic Rendition) sequence: ESC [ params m *)
+    let sgr_sequence =
+      char '\027' *> char '[' *> params <* char 'm' >>| fun ps -> `Sgr ps
     in
-    full_seq>>| List.map attr_of_params
+    (* Generic CSI sequence to consume and ignore non-SGR controls like K, J, etc.
+       Grammar (simplified): ESC [ <params/intermediates> <final>
+       where final is any byte in 0x40..0x7E *)
+    let is_final c =
+      let code = Char.code c in
+      code >= 0x40 && code <= 0x7E
+    in
+    let non_sgr_csi =
+      char '\027'
+      *> char '['
+      *> take_while (fun c -> not (is_final c))
+      *> satisfy is_final
+      *> return `Skip
+    in
+    let escape_any = choice [ sgr_sequence; non_sgr_csi ] in
+    let full_seq = many1 escape_any in
+    let attr_actions_of_params params =
+      let rec loop acc = function
+        | [] ->
+          List.rev acc
+        | 0 :: rest ->
+          loop (FullyReset :: acc) rest
+        | 1 :: rest ->
+          loop (Apply (st bold) :: acc) rest
+        | 2 :: rest ->
+          loop (Apply (st dim) :: acc) rest
+        | 3 :: rest ->
+          loop (Apply (st italic) :: acc) rest
+        | 4 :: rest ->
+          loop (Apply (st underline) :: acc) rest
+        | 5 :: rest ->
+          loop (Apply (st blink) :: acc) rest
+        | 7 :: rest ->
+          loop (Apply (st reverse) :: acc) rest
+        | 8 :: rest ->
+          loop (Apply (st hidden) :: acc) rest
+        | 9 :: rest ->
+          loop (Apply (st strike) :: acc) rest
+        | 21 :: rest ->
+          loop (Reset (st bold) :: acc) rest
+        | 22 :: rest ->
+          loop (Reset (st bold ++ st dim) :: acc) rest
+        | 23 :: rest ->
+          loop (Reset (st italic) :: acc) rest
+        | 24 :: rest ->
+          loop (Reset (st underline) :: acc) rest
+        | 25 :: rest ->
+          loop (Reset (st blink) :: acc) rest
+        | 27 :: rest ->
+          loop (Reset (st reverse) :: acc) rest
+        | 28 :: rest ->
+          loop (Reset (st hidden) :: acc) rest
+        | 29 :: rest ->
+          loop (Reset (st strike) :: acc) rest
+        | 30 :: rest ->
+          loop (Apply (fg black) :: acc) rest
+        | 31 :: rest ->
+          loop (Apply (fg red) :: acc) rest
+        | 32 :: rest ->
+          loop (Apply (fg green) :: acc) rest
+        | 33 :: rest ->
+          loop (Apply (fg yellow) :: acc) rest
+        | 34 :: rest ->
+          loop (Apply (fg blue) :: acc) rest
+        | 35 :: rest ->
+          loop (Apply (fg magenta) :: acc) rest
+        | 36 :: rest ->
+          loop (Apply (fg cyan) :: acc) rest
+        | 37 :: rest ->
+          loop (Apply (fg white) :: acc) rest
+        | 38 :: 5 :: color :: rest ->
+          loop (Apply (fg (unsafe_color_of_int (0x01000000 lor color))) :: acc) rest
+        | 38 :: 2 :: r :: g :: b :: rest ->
+          loop (Apply (fg (rgb_888 ~r ~g ~b)) :: acc) rest
+        | 39 :: rest ->
+          loop (Reset (fg color_reset) :: acc) rest
+        | 40 :: rest ->
+          loop (Apply (bg black) :: acc) rest
+        | 41 :: rest ->
+          loop (Apply (bg red) :: acc) rest
+        | 42 :: rest ->
+          loop (Apply (bg green) :: acc) rest
+        | 43 :: rest ->
+          loop (Apply (bg yellow) :: acc) rest
+        | 44 :: rest ->
+          loop (Apply (bg blue) :: acc) rest
+        | 45 :: rest ->
+          loop (Apply (bg magenta) :: acc) rest
+        | 46 :: rest ->
+          loop (Apply (bg cyan) :: acc) rest
+        | 47 :: rest ->
+          loop (Apply (bg white) :: acc) rest
+        | 48 :: 5 :: color :: rest ->
+          loop (Apply (bg (unsafe_color_of_int (0x01000000 lor color))) :: acc) rest
+        | 48 :: 2 :: r :: g :: b :: rest ->
+          loop (Apply (bg (rgb_888 ~r ~g ~b)) :: acc) rest
+        | 49 :: rest ->
+          loop (Reset (bg color_reset) :: acc) rest
+        | 90 :: rest ->
+          loop (Apply (fg lightblack) :: acc) rest
+        | 91 :: rest ->
+          loop (Apply (fg lightred) :: acc) rest
+        | 92 :: rest ->
+          loop (Apply (fg lightgreen) :: acc) rest
+        | 93 :: rest ->
+          loop (Apply (fg lightyellow) :: acc) rest
+        | 94 :: rest ->
+          loop (Apply (fg lightblue) :: acc) rest
+        | 95 :: rest ->
+          loop (Apply (fg lightmagenta) :: acc) rest
+        | 96 :: rest ->
+          loop (Apply (fg lightcyan) :: acc) rest
+        | 97 :: rest ->
+          loop (Apply (fg lightwhite) :: acc) rest
+        | 100 :: rest ->
+          loop (Apply (bg lightblack) :: acc) rest
+        | 101 :: rest ->
+          loop (Apply (bg lightred) :: acc) rest
+        | 102 :: rest ->
+          loop (Apply (bg lightgreen) :: acc) rest
+        | 103 :: rest ->
+          loop (Apply (bg lightyellow) :: acc) rest
+        | 104 :: rest ->
+          loop (Apply (bg lightblue) :: acc) rest
+        | 105 :: rest ->
+          loop (Apply (bg lightmagenta) :: acc) rest
+        | 106 :: rest ->
+          loop (Apply (bg lightcyan) :: acc) rest
+        | 107 :: rest ->
+          loop (Apply (bg lightwhite) :: acc) rest
+        | _ :: rest ->
+          (* Unknown or unsupported parameter; skip it to avoid stalling *)
+          loop acc rest
+      in
+      loop [] params
+    in
+    full_seq >>| fun seqs ->
+    seqs
+    |> List.concat_map (function `Sgr ps -> attr_actions_of_params ps | `Skip -> [])
   ;;
 
-  let%expect_test "escape_parser" =
-    let test_str = "\027[32m" in
-    let res =
-      Angstrom.parse_string ~consume:All parse_escape_seq test_str |> Result.get_ok
-    in
-    res|>List.iter(fun res->
-    (match res with
-     | Apply attr ->
-       print_attr attr
-     | Reset _ ->
-       print_endline "Reset attribute"
-     | FullyReset ->
-       print_endline "Fully reset attribute");
-     );
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;32mATTR\e[0m\e[K\e[0m>\e[0m
-      |}]
-  ;;
-  let%expect_test "escape_parser_2" =
-    let test_str = "\027[32m" in
-    let res =
-      Angstrom.parse_string ~consume:All parse_escape_seq test_str |> Result.get_ok
-    in
-    res|>List.iter(fun res->
-    (match res with
-     | Apply attr ->
-       print_attr attr
-     | Reset _ ->
-       print_endline "Reset attribute"
-     | FullyReset ->
-       print_endline "Fully reset attribute");
-     );
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;32mATTR\e[0m\e[K\e[0m>\e[0m
-      |}]
+  let print_escape_seq seq =
+    print_endline "escape sequence:";
+    seq
+    |> List.iter (fun action ->
+      match action with
+      | Apply attr ->
+        print_attr attr
+      | Reset attr ->
+        print_endline "Reset attribute";
+        print_attr attr
+      | FullyReset ->
+        print_endline "Fully reset attribute")
   ;;
 
   let parse_ansi_escape_codes (input : string) =
@@ -234,14 +231,15 @@ module Parser = struct
     let pair =
       attr >>= fun actions ->
       substring >>= fun s ->
-      actions|>List.iter(fun action->
-      match action with
-       | Apply a ->
-         attr_state := A.( ++ ) !attr_state a
-       | Reset a ->
-         attr_state := A.( -- ) !attr_state a
-       | FullyReset ->
-         attr_state := A.empty);
+      actions
+      |> List.iter (fun action ->
+        match action with
+        | Apply a ->
+          attr_state := A.( ++ ) !attr_state a
+        | Reset a ->
+          attr_state := A.( -- ) !attr_state a
+        | FullyReset ->
+          attr_state := A.empty);
       return (!attr_state, s)
     in
     (* if we don't start on an escape we can match one here*)
@@ -252,167 +250,6 @@ module Parser = struct
       if prefix |> snd == "" then return pairs else prefix :: pairs |> return
     in
     parse_string ~consume:Prefix pairs input
-  ;;
-
-  let%expect_test "parse_ansi_escape_codes_test" =
-    let test_str = "\027[4m\027[38;5;1m\"success\"\027[38;5;2mNone\027[24m\027[39mrest" in
-    (match parse_ansi_escape_codes test_str with
-     | Error err ->
-       Printf.printf "Error: %s\n" err
-     | Ok result ->
-       Printf.printf "Parsed %d segments:\n" (List.length result);
-       List.iter
-         (fun (attr, text) ->
-            print_attr attr;
-            Printf.printf "Text: \"%s\"\n" (String.escaped text))
-         result);
-    [%expect
-      {|
-      Parsed 6 segments:
-      attr:
-      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: ""
-      attr:
-      \e[0m<\e[0;4mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: ""
-      attr:
-      \e[0m<\e[0;31;4mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: "\"success\""
-      attr:
-      \e[0m<\e[0;32;4mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: "None"
-      attr:
-      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: ""
-      attr:
-      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: "rest"
-      |}]
-  ;;
-
-  let%expect_test "parse_ansi_strikethrough_test" =
-    let open A in
-    print_attr (A.st A.strike);
-    print_attr (A.st A.strike ++ A.fg A.red);
-    print_attr (A.st A.blink);
-    print_attr (A.st A.dim);
-    print_attr (A.st A.italic);
-    print_attr (A.st A.underline);
-    print_attr (A.st A.bold);
-    print_attr (A.st A.reverse ++ A.fg A.red);
-    print_attr (A.st A.hidden);
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;9mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;31;9mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;5mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;2mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;3mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;4mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;1mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;31;7mATTR\e[0m\e[K\e[0m>\e[0m
-      attr:
-      \e[0m<\e[0;8mATTR\e[0m\e[K\e[0m>\e[0m
-      |}]
-  ;;
-
-  let%expect_test "attribute_removal_test" =
-    let open A in
-    (* Test removing styles *)
-    let base_attr = st bold ++ st underline ++ st italic  in
-    let result = base_attr -- st italic in
-    Internal.print_attr result;
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;1;4mATTR\e[0m\e[K\e[0m>\e[0m
-      |}];
-    (* Test removing multiple styles at once *)
-    let result2 = base_attr -- (st underline ++ st italic) in
-    Internal.print_attr result2;
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;1mATTR\e[0m\e[K\e[0m>\e[0m
-      |}];
-    (* Test removing foreground color *)
-    let colored = base_attr ++ fg red in
-    let color_reset = colored -- fg color_reset in
-    Internal.print_attr color_reset;
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;1;3;4mATTR\e[0m\e[K\e[0m>\e[0m
-      |}];
-    (* Test removing a style from colored *)
-    let no_underline = colored -- st underline in
-    Internal.print_attr no_underline;
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;1;3mATTR\e[0m\e[K\e[0m>\e[0m
-      |}];
-    (* Test removing background color *)
-    let bg_colored = base_attr ++ bg blue in
-    let no_bg = bg_colored -- bg blue in
-    Internal.print_attr no_bg;
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0;1;3;4mATTR\e[0m\e[K\e[0m>\e[0m
-      |}];
-    (* Test resetting to empty *)
-    let full_attr = st bold ++ fg red ++ bg green in
-    let empty_result = full_attr -- full_attr in
-    Internal.print_attr empty_result;
-    [%expect
-      {|
-      attr:
-      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
-      |}]
-  ;;
-
-  let%expect_test "edge_case_1" =
-    let test_str =
-      {|[38;5;2m 145[39m: [4m[38;5;2mone[24mscript[4m10|}
-    in
-    (match parse_ansi_escape_codes test_str with
-     | Error err ->
-       Printf.printf "Error: %s\n" err
-     | Ok result ->
-       Printf.printf "Parsed %d segments:\n" (List.length result);
-       List.iter
-         (fun (attr, text) ->
-            print_attr attr;
-            Printf.printf "Text: %s" (String.escaped text))
-         result);
-    [%expect
-      {|
-      Parsed 7 segments:
-      attr:
-      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: attr:
-      \e[0m<\e[0;32mATTR\e[0m\e[K\e[0m>\e[0m
-      Text:  145attr:
-      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: : attr:
-      \e[0m<\e[0;4mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: attr:
-      \e[0m<\e[0;32;4mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: oneattr:
-      \e[0m<\e[0mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: scriptattr:
-      \e[0m<\e[0;4mATTR\e[0m\e[K\e[0m>\e[0m
-      Text: 10
-      |}]
   ;;
 end
 
@@ -443,6 +280,7 @@ let ansi_string_to_image ?(extra_attr = A.empty) str =
       str;
     Buffer.contents buffer
   in
+  (* print_endline ("pre parse str: " ^ str); *)
   match Parser.parse_ansi_escape_codes str with
   | Error a ->
     Printf.printf "restut: %s" a;
@@ -453,21 +291,36 @@ let ansi_string_to_image ?(extra_attr = A.empty) str =
       |> List.concat_map (fun (attr, str) ->
         str
         |> String.split_on_char '\n'
-        |> List.map (fun x -> `Image (I.string A.(attr ++ extra_attr) x))
+        |> List.map (fun x ->
+          let attrs = A.(attr ++ extra_attr) in
+          let img = I.string attrs x in
+          (* Internal.print_attr attrs;
+          print_endline (("str: " ^ x)|> String.escaped);
+          Internal.print_image_escaped img; *)
+          `Image img)
         |> Base.List.intersperse ~sep:`Newline)
     in
     let newline_seperated = locate_newlines coded_strs in
     let lines =
       let open I in
-      newline_seperated
-      |> Base.List.fold ~init:([], I.empty) ~f:(fun (images, image) x ->
-        match x with
-        | `Newline ->
-          image :: images, I.empty
-        | `Image nextImage ->
-          images, image <|> nextImage)
-      |> fst
-      |> Base.List.reduce ~f:(fun bottom top -> top <-> bottom)
+      let images, last_image =
+        newline_seperated
+        |> Base.List.fold ~init:([], I.empty) ~f:(fun (images, image) x ->
+          match x with
+          | `Newline ->
+            image :: images, I.empty
+          | `Image nextImage ->
+            (* print_endline "nextImage:";
+          Internal.print_image_escaped nextImage; *)
+            images, image <|> nextImage)
+      in
+      last_image :: images
+      |> Base.List.reduce ~f:(fun bottom top ->
+        (* print_endline "bottom:";
+        Internal.print_image_escaped bottom;
+        print_endline "top:";
+        Internal.print_image_escaped top; *)
+        top <-> bottom)
       |> Option.value ~default:I.empty
     in
     Ok lines

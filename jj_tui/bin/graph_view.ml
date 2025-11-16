@@ -85,7 +85,7 @@ module Make (Vars : Global_vars.Vars) = struct
           | `Selectable x ->
             let ui =
               W.Lists.selectable_item
-                (x ^ "\n"
+                (x 
                  (* TODO This won't work if we are on a branch, because that puts the @ further out*)
                  |> Jj_tui.AnsiReverse.colored_string
                  |> Ui.atom)

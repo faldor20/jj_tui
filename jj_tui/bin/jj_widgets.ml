@@ -37,7 +37,7 @@ module Make (Vars : Global_vars.Vars) = struct
           data = name
         ; id = name |> String.hash
         ; ui =
-            str ^ "\n"
+            str 
             |> Jj_tui.AnsiReverse.colored_string
             |> Ui.atom
             |> Ui.resize ~w:100 ~h:1 ~mw:100
@@ -95,7 +95,7 @@ module Make (Vars : Global_vars.Vars) = struct
           data = name
         ; id = name |> String.hash
         ; ui =
-            str ^ "\n"
+            str 
             |> Jj_tui.AnsiReverse.colored_string
             |> Ui.atom
             |> Ui.resize ~w:100 ~h:1 ~mw:100

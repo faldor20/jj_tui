@@ -72,7 +72,7 @@ module Make (Vars : Global_vars.Vars) = struct
       Control.yield ();
       res
     | Graph_preview rev ->
-      let log = jj_no_log ~snapshot:false [ "diff"; "--color-words"; "-r"; rev ] in
+      let log = jj_no_log ~snapshot:false [ "diff"; "-r"; rev ] in
       Control.yield ();
       let res = log |> AnsiReverse.colored_string in
       Control.yield ();
