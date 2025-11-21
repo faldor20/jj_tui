@@ -4,7 +4,7 @@
   # Flake inputs
   inputs = {
 
-    nixpkgs.url = "nixpkgs-unstable"; # also valid: "nixpkgs"
+  nixpkgs.url = "github:nixos/nixpkgs";
 
     ocaml-overlay = {
       url = "github:nix-ocaml/nix-overlays";
