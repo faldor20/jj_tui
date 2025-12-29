@@ -336,7 +336,7 @@ module Make (Vars : Global_vars.Vars) = struct
     ; {
         id = "rebase_with_bookmark"
       ; sorting_key = 22.0
-      ; description = "Rebase revision and all other revissions on its bookmark"
+      ; description = "Rebase revision and all other revisions on its bookmark"
       ; make_cmd =
           (fun () ->
             Dynamic_r
