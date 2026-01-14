@@ -1,4 +1,3 @@
-open Util
 open Logging
 
 type t = {

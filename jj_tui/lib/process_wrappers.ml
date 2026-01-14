@@ -1,9 +1,6 @@
 (** Collection of JJ specific widgets*)
-
-open Notty
-open Nottui
-open Lwd_infix
 open! Util
+
 open Process
 open Logging
 open Picos_std_structured
@@ -42,7 +39,7 @@ let find_selectable_from_graph limit str =
     str
     |> Re.split_full
          (Re.Pcre.regexp
-            ~flags:[ Re.Pcre.(`MULTILINE) ]
+            ~flags:[ `MULTILINE ]
             {|(^.*?)\$\$--START--\$\$\|(.+?)\|(.+?)\|(.+?)\|(.+?)\|([\s\S]*?)\$\$--END--\$\$\n?|})
   in
   let selectable_count = ref 0 in
@@ -80,7 +77,7 @@ let find_selectable_from_graph limit str =
                   change_id
                   commit_id
                   (Re.Group.get selectable 6 |> remove_ansi)];
-              let rev = { commit_id; change_id; divergent } in
+              let _rev = { commit_id; change_id; divergent } in
               let id =
                 if divergent || hidden then Duplicate commit_id else Unique change_id
               in
@@ -95,13 +92,14 @@ let find_selectable_from_graph limit str =
          ([], [])
   in
   let graph =
-    (if !selectable_count >= (limit)
+    (if !selectable_count >= limit
      then (
-  [%log debug "limit: %d selectable: %d" limit !selectable_count];
+       [%log debug "limit: %d selectable: %d" limit !selectable_count];
        let txt =
          Printf.sprintf
-           "\nHit limit of %d items.\nIncrease limit in config or make your revset more \
-            precise\n"
+           "\n\
+            Hit limit of %d items.\n\
+            Increase limit in config or make your revset more precise\n"
            limit
        in
        `Filler txt :: graph_rev)
@@ -150,7 +148,15 @@ struct
 
   let get_graph_info node_template revset_arg limit =
     let output =
-      jj_no_log ([ "log"; "-T"; graph_info_template node_template;"--limit"; limit |>string_of_int] @ revset_arg)
+      jj_no_log
+        ([
+           "log"
+         ; "-T"
+         ; graph_info_template node_template
+         ; "--limit"
+         ; limit |> string_of_int
+         ]
+         @ revset_arg)
     in
     output |> find_selectable_from_graph limit
   ;;
@@ -166,6 +172,40 @@ struct
     in
     let graph, revs = Promise.await graph in
     graph, revs |> Array.of_list
+  ;;
+
+  (** Fetch graph data as JSON and parse into commits *)
+  let get_graph_json ?revset limit =
+    let args =
+      [
+        "log"
+      ; "--no-graph"
+      ; "-T"
+      ; Jj_json.json_log_template
+      ; "--limit"
+      ; string_of_int limit
+      ]
+    in
+    let args = match revset with Some r -> args @ [ "-r"; r ] | None -> args in
+    let output = jj_no_log args ~color:false in
+    match Jj_json.parse_jj_log_output output with
+    | Ok commits ->
+      commits
+    | Error msg ->
+      failwith (Printf.sprintf "Failed to parse jj log JSON: %s" msg)
+  ;;
+
+  (** Fetch and convert to renderer nodes *)
+  let get_graph_nodes ?revset limit =
+    let commits = get_graph_json ?revset limit in
+    let nodes = Jj_json.commits_to_nodes commits in
+    let rev_ids =
+      commits
+      |> List.map (fun (c : Jj_json.jj_commit) ->
+        if c.divergent || c.hidden then Duplicate c.commit_id else Unique c.change_id)
+      |> Array.of_list
+    in
+    nodes, rev_ids
   ;;
 end
 
@@ -216,7 +256,7 @@ let test_data_3 =
 ;;
 
 let%expect_test "revs_graph_parsing" =
-  let graph, ids = find_selectable_from_graph 2000 test_data_3  in
+  let graph, ids = find_selectable_from_graph 2000 test_data_3 in
   let ids = ids |> Array.of_list in
   let ids_idx = ref 0 in
   graph

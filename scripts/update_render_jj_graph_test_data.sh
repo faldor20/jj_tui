@@ -14,7 +14,7 @@ set -euo pipefail
 # - Output is JSONL (one JSON object per line).
 # - `wip` is a heuristic derived from the description's first line starting with "wip:".
 
-REVSET="${1:-all()}"
+REVSET=""
 OUTFILE="${2:-test/jj_log.json}"
 
 echo "Updating $OUTFILE with revset: $REVSET" >&2
@@ -41,15 +41,12 @@ TEMPLATE=$(cat <<'JJTEMPLATE'
 JJTEMPLATE
 )
 
-if [[ "${VERBOSE:-0}" == "1" ]]; then
-  echo "TEMPLATE: $TEMPLATE" >&2
-fi
 
 mkdir -p "$(dirname "$OUTFILE")"
 # We want a stable "top-to-bottom" order like `jj log`, but without graph text.
 # Write to a temp file first so parse errors don't clobber the existing fixture.
 tmp_out="${OUTFILE}.tmp"
-jj log --no-graph -r "$REVSET" -T "$TEMPLATE" > "$tmp_out"
+jj log  -T "$TEMPLATE" > "$tmp_out"
 mv "$tmp_out" "$OUTFILE"
 
 echo "Wrote $OUTFILE" >&2

@@ -1,0 +1,1021 @@
+(**
+   `render_jj_graph.ml`
+
+   This module is a small, self-contained experiment for rendering jj-style commit graphs
+   in a terminal. The renderer is **lane-based**:
+
+   The tests in `render_jj_graph_tests.ml` are "golden" tests: they assert the exact glyph
+   output. When changing the algorithm, prefer updating the algorithm to match the golden
+   outputs, not the other way around.
+*)
+
+(** Glyph constants used by the renderer. *)
+module P = struct
+  let v = Util.make_uchar "│"
+  let vr = Util.make_uchar "├"
+  let vl = Util.make_uchar "┤"
+  let t = Util.make_uchar "┬"
+  let cross = Util.make_uchar "┼"
+  let h = Util.make_uchar "─"
+  let b = Util.make_uchar "┴"
+
+  (* elbow down right *)
+  let edr = Util.make_uchar "╮"
+  let eur = Util.make_uchar "╯"
+  let edl = Util.make_uchar "╭"
+  let eul = Util.make_uchar "╰"
+  let sp = Util.make_uchar " "
+  let ancestor = Util.make_uchar "╷"
+  let term = Util.make_uchar "~"
+
+  module Node = struct
+    let normal = Util.make_uchar "○"
+    let working_copy = Util.make_uchar "@"
+    let wip = Util.make_uchar "◌"
+    let immutable = Util.make_uchar "◆"
+  end
+end
+
+(** Node type for the graph. *)
+type node = {
+    parents : node list
+  ; creation_time : int64
+  ; working_copy : bool
+  ; immutable : bool
+  ; wip : bool
+  ; change_id : string
+  ; commit_id : string
+  ; description : string
+  ; bookmarks : string list
+  ; author_email : string
+  ; author_timestamp : string
+  ; empty : bool
+  ; hidden : bool
+  ; divergent : bool
+  ; is_preview : bool
+}
+
+(** Special marker for elided nodes *)
+let elided_marker = "~ELIDED~"
+
+(** Create a special node representing an elided section *)
+let make_elided_node () : node =
+  {
+    parents = []
+  ; creation_time = Int64.zero
+  ; working_copy = false
+  ; immutable = false
+  ; wip = false
+  ; change_id = elided_marker
+  ; commit_id = elided_marker
+  ; description = "(elided revisions)"
+  ; bookmarks = []
+  ; author_email = ""
+  ; author_timestamp = ""
+  ; empty = false
+  ; hidden = true
+  ; divergent = false
+  ; is_preview = false
+  }
+;;
+
+(** Check if a node represents an elided section *)
+let is_elided (n : node) : bool = n.commit_id = elided_marker
+
+(* ============================================================================
+   Preview Node Support
+   ============================================================================ *)
+
+(** Create a preview node with a label.
+    Preview nodes are used to visualize where commits would land during
+    rebase/move operations. *)
+let make_preview_node ~label ?target_commit_id () : node =
+  {
+    parents = []
+  ; creation_time = Int64.zero
+  ; working_copy = false
+  ; immutable = false
+  ; wip = false
+  ; change_id = Printf.sprintf "preview:%s" label
+  ; commit_id =
+      (match target_commit_id with
+       | Some id ->
+         Printf.sprintf "preview:%s:%s" label id
+       | None ->
+         Printf.sprintf "preview:%s" label)
+  ; description = label
+  ; bookmarks = []
+  ; author_email = ""
+  ; author_timestamp = ""
+  ; empty = false
+  ; hidden = false
+  ; divergent = false
+  ; is_preview = true
+  }
+;;
+
+(** Insert a preview node after the specified commit.
+    The preview node will be inserted as a child of the target commit. *)
+let insert_preview_after ~nodes ~after_commit_id ~preview : node list =
+  let rec insert acc = function
+    | [] ->
+      List.rev acc
+    | node :: rest when node.commit_id = after_commit_id ->
+      (* Found the target node - insert preview after it *)
+      let preview_with_parent = { preview with parents = [ node ] } in
+      List.rev_append acc (node :: preview_with_parent :: rest)
+    | node :: rest ->
+      insert (node :: acc) rest
+  in
+  insert [] nodes
+;;
+
+(** Insert a preview node before the specified commit.
+    The preview node will be inserted as a parent of the target commit,
+    and will inherit the target's parents. *)
+let insert_preview_before ~nodes ~before_commit_id ~preview : node list =
+  let rec insert acc = function
+    | [] ->
+      List.rev acc
+    | node :: rest when node.commit_id = before_commit_id ->
+      (* Found the target node - insert preview before it *)
+      let preview_with_parents = { preview with parents = node.parents } in
+      let node_with_preview_parent = { node with parents = [ preview_with_parents ] } in
+      List.rev_append acc (preview_with_parents :: node_with_preview_parent :: rest)
+    | node :: rest ->
+      insert (node :: acc) rest
+  in
+  insert [] nodes
+;;
+
+(** Row type classification for structured output *)
+type row_type =
+  | NodeRow (** The main row with the node glyph *)
+  | LinkRow (** Merge/fork connector lines *)
+  | PadRow (** Padding/continuation lines *)
+  | TermRow (** Termination lines with ~ *)
+
+(** Structured output for UI integration *)
+type graph_row_output = {
+    graph_chars : string (** The graph prefix like "○ " or "├─╮" *)
+  ; node : node (** The node this row represents *)
+  ; row_type : row_type (** What kind of row this is *)
+}
+
+(** Column state - tracks what occupies each graph column *)
+type column =
+  | Empty
+  | Blocked
+  | Reserved of node
+  | Ancestor of node
+  | Parent of node
+
+(** Ancestor type for parent specifications *)
+type ancestor_type =
+  | A_Ancestor of node
+  | A_Parent of node
+  | A_Anonymous
+
+(** State for the renderer *)
+type state = {
+    depth : int
+  ; columns : column array
+  ; pending_joins : (int * int) list
+}
+
+(** Node line entry - what to render in node row for each column *)
+type node_line_entry =
+  | NL_Blank
+  | NL_Ancestor
+  | NL_Parent
+  | NL_Node
+
+(** Pad line entry - what to render in padding rows *)
+type pad_line_entry =
+  | PL_Blank
+  | PL_Ancestor
+  | PL_Parent
+
+(** LinkLine module - bitflags for link row rendering *)
+module LinkLine = struct
+  type t = int
+
+  let empty = 0
+  let horiz_parent = 0x0001
+  let horiz_ancestor = 0x0002
+  let vert_parent = 0x0004
+  let vert_ancestor = 0x0008
+  let left_fork_parent = 0x0010
+  let left_fork_ancestor = 0x0020
+  let right_fork_parent = 0x0040
+  let right_fork_ancestor = 0x0080
+  let left_merge_parent = 0x0100
+  let left_merge_ancestor = 0x0200
+  let right_merge_parent = 0x0400
+  let right_merge_ancestor = 0x0800
+  let child = 0x1000
+
+  (* Compound flags *)
+  let horizontal = horiz_parent lor horiz_ancestor
+  let vertical = vert_parent lor vert_ancestor
+  let left_fork = left_fork_parent lor left_fork_ancestor
+  let right_fork = right_fork_parent lor right_fork_ancestor
+  let left_merge = left_merge_parent lor left_merge_ancestor
+  let right_merge = right_merge_parent lor right_merge_ancestor
+  let any_merge = left_merge lor right_merge
+  let any_fork = left_fork lor right_fork
+  let ( lor ) = ( lor )
+  let intersects a b = a land b <> 0
+  let contains a b = a land b = b
+end
+
+(** Graph row - intermediate representation for one node *)
+type graph_row = {
+    row_node : node
+  ; glyph : Uchar.t
+  ; message : string
+  ; merge : bool
+  ; node_line : node_line_entry array
+  ; link_line : LinkLine.t array option
+  ; term_line : bool array option
+  ; pad_lines : pad_line_entry array
+}
+
+(* ============================================================================
+   Column utilities (Rust ColumnsExt equivalent)
+   ============================================================================ *)
+
+let column_matches col n =
+  match col with Empty | Blocked -> false | Reserved o | Ancestor o | Parent o -> o == n
+;;
+
+let column_variant = function
+  | Empty ->
+    0
+  | Blocked ->
+    1
+  | Reserved _ ->
+    2
+  | Ancestor _ ->
+    3
+  | Parent _ ->
+    4
+;;
+
+let column_merge a b = if column_variant b > column_variant a then b else a
+
+let columns_find cols n =
+  let rec loop i =
+    if i >= Array.length cols
+    then None
+    else if column_matches cols.(i) n
+    then Some i
+    else loop (i + 1)
+  in
+  loop 0
+;;
+
+let columns_first_empty cols =
+  let rec loop i =
+    if i >= Array.length cols
+    then None
+    else (match cols.(i) with Empty -> Some i | _ -> loop (i + 1))
+  in
+  loop 0
+;;
+
+let columns_find_empty cols ~prefer =
+  if prefer < Array.length cols
+  then (match cols.(prefer) with Empty -> Some prefer | _ -> columns_first_empty cols)
+  else columns_first_empty cols
+;;
+
+let column_to_node_line = function
+  | Ancestor _ ->
+    NL_Ancestor
+  | Parent _ ->
+    NL_Parent
+  | _ ->
+    NL_Blank
+;;
+
+let column_to_link_line = function
+  | Ancestor _ ->
+    LinkLine.vert_ancestor
+  | Parent _ ->
+    LinkLine.vert_parent
+  | _ ->
+    LinkLine.empty
+;;
+
+let column_to_pad_line = function
+  | Ancestor _ ->
+    PL_Ancestor
+  | Parent _ ->
+    PL_Parent
+  | _ ->
+    PL_Blank
+;;
+
+let ancestor_to_column = function
+  | A_Ancestor n ->
+    Ancestor n
+  | A_Parent n ->
+    Parent n
+  | A_Anonymous ->
+    Blocked
+;;
+
+let ancestor_id = function
+  | A_Ancestor n ->
+    Some n
+  | A_Parent n ->
+    Some n
+  | A_Anonymous ->
+    None
+;;
+
+let ancestor_is_direct = function
+  | A_Ancestor _ ->
+    false
+  | A_Parent _ ->
+    true
+  | A_Anonymous ->
+    true
+;;
+
+let ancestor_to_link_line anc ~direct ~indirect =
+  if ancestor_is_direct anc then direct else indirect
+;;
+
+(* Reset columns: Blocked -> Empty, then trim trailing Empty *)
+let columns_reset cols =
+  let len = Array.length cols in
+  for i = 0 to len - 1 do
+    match cols.(i) with Blocked -> cols.(i) <- Empty | _ -> ()
+  done;
+  (* Find last non-empty *)
+  let rec find_last i =
+    if i < 0 then 0 else (match cols.(i) with Empty -> find_last (i - 1) | _ -> i + 1)
+  in
+  let new_len = find_last (len - 1) in
+  if new_len < len then Array.sub cols 0 new_len else cols
+;;
+
+(* ============================================================================
+   AncestorColumnBounds - for computing horizontal line ranges
+   ============================================================================ *)
+
+type ancestor_bounds = {
+    target : int
+  ; min_ancestor : int
+  ; min_parent : int
+  ; max_parent : int
+  ; max_ancestor : int
+}
+
+let compute_bounds parent_columns target =
+  if List.length parent_columns = 0
+  then None
+  else (
+    let indices = List.map fst parent_columns in
+    let min_ancestor = List.fold_left min target indices in
+    let max_ancestor = List.fold_left max target indices in
+    let direct_indices =
+      parent_columns
+      |> List.filter (fun (_, anc) -> ancestor_is_direct anc)
+      |> List.map fst
+    in
+    let min_parent =
+      if List.length direct_indices = 0
+      then target
+      else min target (List.fold_left min max_int direct_indices)
+    in
+    let max_parent =
+      if List.length direct_indices = 0
+      then target
+      else max target (List.fold_left max min_int direct_indices)
+    in
+    Some { target; min_ancestor; min_parent; max_parent; max_ancestor })
+;;
+
+let bounds_horizontal_line bounds index =
+  if index = bounds.target
+  then LinkLine.empty
+  else if index > bounds.min_parent && index < bounds.max_parent
+  then LinkLine.horiz_parent
+  else if index > bounds.min_ancestor && index < bounds.max_ancestor
+  then LinkLine.horiz_ancestor
+  else LinkLine.empty
+;;
+
+(* ============================================================================
+   GraphRowRenderer.next_row - core algorithm
+   ============================================================================ *)
+
+let next_row ~(columns : column array ref) (n : node) : graph_row =
+  let parents =
+    n.parents |> List.map (fun p -> if is_elided p then A_Anonymous else A_Parent p)
+    (* Elided parents are treated as anonymous to trigger termination lines *)
+  in
+  (* Find a column for this node *)
+  let column =
+    match columns_find !columns n with
+    | Some i ->
+      i
+    | None ->
+      (match columns_first_empty !columns with
+       | Some i ->
+         i
+       | None ->
+         let len = Array.length !columns in
+         columns := Array.append !columns [| Empty |];
+         len)
+  in
+  (* Clear the node's column *)
+  !columns.(column) <- Empty;
+  (* This row is for a merge if there are multiple parents *)
+  let merge = List.length parents > 1 in
+  (* Build initial row arrays from current columns *)
+  let node_line = Array.map column_to_node_line !columns in
+  node_line.(column) <- NL_Node;
+  let link_line = Array.map column_to_link_line !columns in
+  let term_line = Array.map (fun _ -> false) !columns in
+  let pad_lines = Array.map column_to_pad_line !columns in
+  let need_link_line = ref false in
+  let need_term_line = ref false in
+  let parent_columns = ref [] in
+  List.iter
+    (fun p ->
+       match ancestor_id p with
+       | Some parent_node ->
+         (match columns_find !columns parent_node with
+          | Some index ->
+            !columns.(index) <- column_merge !columns.(index) (ancestor_to_column p);
+            parent_columns := (index, p) :: !parent_columns
+          | None ->
+            (match columns_find_empty !columns ~prefer:column with
+             | Some index ->
+               !columns.(index) <- column_merge !columns.(index) (ancestor_to_column p);
+               parent_columns := (index, p) :: !parent_columns
+             | None ->
+               let new_idx = Array.length !columns in
+               columns := Array.append !columns [| ancestor_to_column p |];
+               parent_columns := (new_idx, p) :: !parent_columns))
+       | None ->
+         (match columns_find_empty !columns ~prefer:column with
+          | Some index ->
+            !columns.(index) <- column_merge !columns.(index) (ancestor_to_column p);
+            parent_columns := (index, p) :: !parent_columns
+          | None ->
+            let new_idx = Array.length !columns in
+            columns := Array.append !columns [| ancestor_to_column p |];
+            parent_columns := (new_idx, p) :: !parent_columns))
+    parents;
+  (* Ensure arrays are long enough for any new columns *)
+  let cols_len = Array.length !columns in
+  let extend arr default =
+    if Array.length arr < cols_len
+    then (
+      let new_arr = Array.make cols_len default in
+      Array.blit arr 0 new_arr 0 (Array.length arr);
+      new_arr)
+    else arr
+  in
+  let node_line = extend node_line NL_Blank in
+  let link_line = extend link_line LinkLine.empty in
+  let term_line = extend term_line false in
+  let pad_lines = extend pad_lines PL_Blank in
+  (* Mark anonymous parents as terminating *)
+  List.iter
+    (fun (i, p) ->
+       match ancestor_id p with
+       | None ->
+         term_line.(i) <- true;
+         need_term_line := true
+       | Some _ ->
+         ())
+    !parent_columns;
+  (* Reverse parent_columns to get proper order *)
+  parent_columns := List.rev !parent_columns;
+  (* Single parent swap optimization *)
+  let link_line =
+    if List.length parents = 1
+    then (
+      match !parent_columns with
+      | [ (parent_column, _) ] when parent_column > column ->
+        (* Swap columns *)
+        let tmp = !columns.(column) in
+        !columns.(column) <- !columns.(parent_column);
+        !columns.(parent_column) <- tmp;
+        (* Update parent_columns *)
+        let p = snd (List.hd !parent_columns) in
+        parent_columns := [ column, p ];
+        (* Generate link line from this column to old parent column *)
+        let was_direct =
+          LinkLine.intersects link_line.(parent_column) LinkLine.vert_parent
+        in
+        link_line.(column)
+        <- LinkLine.(
+             link_line.(column)
+             lor if was_direct then right_fork_parent else right_fork_ancestor);
+        for i = column + 1 to parent_column - 1 do
+          link_line.(i)
+          <- LinkLine.(
+               link_line.(i) lor if was_direct then horiz_parent else horiz_ancestor)
+        done;
+        link_line.(parent_column)
+        <- (if was_direct
+            then LinkLine.left_merge_parent
+            else LinkLine.left_merge_ancestor);
+        need_link_line := true;
+        (* Pad line for old parent column is now blank *)
+        pad_lines.(parent_column) <- PL_Blank;
+        link_line
+      | _ ->
+        link_line)
+    else link_line
+  in
+  (* Connect node column to all parent columns *)
+  (match compute_bounds !parent_columns column with
+   | Some bounds ->
+     (* Horizontal line between outermost ancestors *)
+     for i = bounds.min_ancestor + 1 to bounds.max_ancestor - 1 do
+       if i <> bounds.target
+       then (
+         link_line.(i) <- LinkLine.(link_line.(i) lor bounds_horizontal_line bounds i);
+         need_link_line := true)
+     done;
+     (* Merge markers on node column *)
+     if bounds.max_parent > column
+     then (
+       link_line.(column) <- LinkLine.(link_line.(column) lor right_merge_parent);
+       need_link_line := true)
+     else if bounds.max_ancestor > column
+     then (
+       link_line.(column) <- LinkLine.(link_line.(column) lor right_merge_ancestor);
+       need_link_line := true);
+     if bounds.min_parent < column
+     then (
+       link_line.(column) <- LinkLine.(link_line.(column) lor left_merge_parent);
+       need_link_line := true)
+     else if bounds.min_ancestor < column
+     then (
+       link_line.(column) <- LinkLine.(link_line.(column) lor left_merge_ancestor);
+       need_link_line := true);
+     (* Fork markers on each parent column *)
+     List.iter
+       (fun (i, p) ->
+          pad_lines.(i) <- column_to_pad_line !columns.(i);
+          if i < column
+          then
+            link_line.(i)
+            <- LinkLine.(
+                 link_line.(i)
+                 lor ancestor_to_link_line
+                       p
+                       ~direct:right_fork_parent
+                       ~indirect:right_fork_ancestor)
+          else if i = column
+          then
+            link_line.(i)
+            <- LinkLine.(
+                 link_line.(i)
+                 lor child
+                 lor ancestor_to_link_line p ~direct:vert_parent ~indirect:vert_ancestor)
+          else
+            link_line.(i)
+            <- LinkLine.(
+                 link_line.(i)
+                 lor ancestor_to_link_line
+                       p
+                       ~direct:left_fork_parent
+                       ~indirect:left_fork_ancestor))
+       !parent_columns
+   | None ->
+     ());
+  (* Reset columns *)
+  columns := columns_reset !columns;
+  (* Compute glyph for this node *)
+  let glyph =
+    if n.working_copy
+    then P.Node.working_copy
+    else if n.immutable
+    then P.Node.immutable
+    else if n.wip
+    then P.Node.wip
+    else P.Node.normal
+  in
+  {
+    row_node = n
+  ; glyph
+  ; message = ""
+  ; merge
+  ; node_line
+  ; link_line = (if !need_link_line then Some link_line else None)
+  ; term_line = (if !need_term_line then Some term_line else None)
+  ; pad_lines
+  }
+;;
+
+(* ============================================================================
+   BoxDrawing - glyph selection and string rendering
+   ============================================================================ *)
+
+module Glyph = struct
+  let space = 0
+  let horizontal = 1
+  let parent = 2
+  let ancestor = 3
+  let merge_left = 4
+  let merge_right = 5
+  let merge_both = 6
+  let fork_left = 7
+  let fork_right = 8
+  let fork_both = 9
+  let join_left = 10
+  let join_right = 11
+  let join_both = 12
+  let termination = 13
+end
+
+(** 2-character glyph strings matching Rust CURVED_GLYPHS.
+    Second character is "─" if horizontal line continues right, " " otherwise. *)
+let glyphs =
+  [|
+     "  " (* space *)
+   ; "──" (* horizontal *)
+   ; "│ " (* parent *)
+   ; "╷ " (* ancestor *)
+   ; "╯ " (* merge_left *)
+   ; "╰─" (* merge_right *)
+   ; "┴─" (* merge_both *)
+   ; "╮ " (* fork_left *)
+   ; "╭─" (* fork_right *)
+   ; "┬─" (* fork_both *)
+   ; "┤ " (* join_left *)
+   ; "├─" (* join_right *)
+   ; "┼─" (* join_both *)
+   ; "~ " (* termination *)
+  |]
+;;
+
+let pad_line_to_glyph = function
+  | PL_Parent ->
+    Glyph.parent
+  | PL_Ancestor ->
+    Glyph.ancestor
+  | PL_Blank ->
+    Glyph.space
+;;
+
+let select_link_glyph cur ~merge =
+  let open LinkLine in
+  if intersects cur horizontal
+  then
+    if intersects cur child
+    then Glyph.join_both
+    else if intersects cur any_fork && intersects cur any_merge
+    then Glyph.join_both
+    else if intersects cur any_fork && intersects cur vert_parent && not merge
+    then Glyph.join_both
+    else if intersects cur any_fork
+    then Glyph.fork_both
+    else if intersects cur any_merge
+    then Glyph.merge_both
+    else Glyph.horizontal
+  else if intersects cur vert_parent && not merge
+  then (
+    let left = intersects cur (left_merge lor left_fork) in
+    let right = intersects cur (right_merge lor right_fork) in
+    match left, right with
+    | true, true ->
+      Glyph.join_both
+    | true, false ->
+      Glyph.join_left
+    | false, true ->
+      Glyph.join_right
+    | false, false ->
+      Glyph.parent)
+  else if
+    intersects cur (vert_parent lor vert_ancestor)
+    && not (intersects cur (left_fork lor right_fork))
+  then (
+    let left = intersects cur left_merge in
+    let right = intersects cur right_merge in
+    match left, right with
+    | true, true ->
+      Glyph.join_both
+    | true, false ->
+      Glyph.join_left
+    | false, true ->
+      Glyph.join_right
+    | false, false ->
+      if intersects cur vert_ancestor then Glyph.ancestor else Glyph.parent)
+  else if intersects cur left_fork && intersects cur (left_merge lor child)
+  then Glyph.join_left
+  else if intersects cur right_fork && intersects cur (right_merge lor child)
+  then Glyph.join_right
+  else if intersects cur left_merge && intersects cur right_merge
+  then Glyph.merge_both
+  else if intersects cur left_fork && intersects cur right_fork
+  then Glyph.fork_both
+  else if intersects cur left_fork
+  then Glyph.fork_left
+  else if intersects cur left_merge
+  then Glyph.merge_left
+  else if intersects cur right_fork
+  then Glyph.fork_right
+  else if intersects cur right_merge
+  then Glyph.merge_right
+  else Glyph.space
+;;
+
+let render_row_to_string (row : graph_row) ~extra_pad_line_ref : string =
+  let buf = Buffer.create 64 in
+  (match !extra_pad_line_ref with
+   | Some s ->
+     Buffer.add_string buf (String.trim s);
+     Buffer.add_char buf '\n';
+     extra_pad_line_ref := None
+   | None ->
+     ());
+  Array.iter
+    (fun entry ->
+       match entry with
+       | NL_Node ->
+         Buffer.add_utf_8_uchar buf row.glyph;
+         Buffer.add_char buf ' '
+       | NL_Parent ->
+         Buffer.add_string buf glyphs.(Glyph.parent)
+       | NL_Ancestor ->
+         Buffer.add_string buf glyphs.(Glyph.ancestor)
+       | NL_Blank ->
+         Buffer.add_string buf glyphs.(Glyph.space))
+    row.node_line;
+  let node_str = Buffer.contents buf |> String.trim in
+  Buffer.reset buf;
+  Buffer.add_string buf node_str;
+  Buffer.add_char buf '\n';
+  (match row.link_line with
+   | Some link_row ->
+     let link_buf = Buffer.create 64 in
+     Array.iter
+       (fun cur ->
+          let glyph_idx = select_link_glyph cur ~merge:row.merge in
+          Buffer.add_string link_buf glyphs.(glyph_idx))
+       link_row;
+     let link_str = Buffer.contents link_buf |> String.trim in
+     Buffer.add_string buf link_str;
+     Buffer.add_char buf '\n'
+   | None ->
+     ());
+  let need_extra_pad = ref false in
+  (match row.term_line with
+   | Some term_row ->
+     let term_buf1 = Buffer.create 64 in
+     Array.iteri
+       (fun i term ->
+          if term
+          then Buffer.add_string term_buf1 glyphs.(Glyph.parent)
+          else (
+            let pad_glyph = pad_line_to_glyph row.pad_lines.(i) in
+            Buffer.add_string term_buf1 glyphs.(pad_glyph)))
+       term_row;
+     Buffer.add_string buf (Buffer.contents term_buf1 |> String.trim);
+     Buffer.add_char buf '\n';
+     let term_buf2 = Buffer.create 64 in
+     Array.iteri
+       (fun i term ->
+          if term
+          then Buffer.add_string term_buf2 glyphs.(Glyph.termination)
+          else (
+            let pad_glyph = pad_line_to_glyph row.pad_lines.(i) in
+            Buffer.add_string term_buf2 glyphs.(pad_glyph)))
+       term_row;
+     Buffer.add_string buf (Buffer.contents term_buf2 |> String.trim);
+     Buffer.add_char buf '\n';
+     need_extra_pad := true
+   | None ->
+     ());
+  let pad_buf = Buffer.create 64 in
+  Array.iter
+    (fun entry ->
+       let glyph_idx = pad_line_to_glyph entry in
+       Buffer.add_string pad_buf glyphs.(glyph_idx))
+    row.pad_lines;
+  let base_pad_line = Buffer.contents pad_buf in
+  if !need_extra_pad then extra_pad_line_ref := Some base_pad_line;
+  Buffer.contents buf
+;;
+
+(* ============================================================================
+   Public API - render_nodes_to_string
+   ============================================================================ *)
+
+let render_nodes_to_string ?(info_rows = fun _ -> 0) (_state : state) (nodes : node list)
+  : string
+  =
+  let columns = ref [||] in
+  let extra_pad_line_ref = ref None in
+  let buf = Buffer.create 256 in
+  List.iter
+    (fun n ->
+       let row = next_row ~columns n in
+       let row_str = render_row_to_string row ~extra_pad_line_ref in
+       Buffer.add_string buf row_str;
+       let extra_rows = info_rows n in
+       for _ = 1 to extra_rows do
+         let pad_buf = Buffer.create 64 in
+         Array.iter
+           (fun col ->
+              let glyph_idx = pad_line_to_glyph (column_to_pad_line col) in
+              Buffer.add_string pad_buf glyphs.(glyph_idx))
+           !columns;
+         Buffer.add_string buf (Buffer.contents pad_buf |> String.trim);
+         Buffer.add_char buf '\n'
+       done)
+    nodes;
+  (* Final extra pad line if pending *)
+  (match !extra_pad_line_ref with
+   | Some s ->
+     Buffer.add_string buf (String.trim s);
+     Buffer.add_char buf '\n'
+   | None ->
+     ());
+  Buffer.contents buf
+;;
+
+(* ============================================================================
+   Public API - render_nodes_structured
+   ============================================================================ *)
+
+let classify_row_type (line : string) : row_type =
+  let contains_str s substr =
+    try
+      let _ = Str.search_forward (Str.regexp_string substr) s 0 in
+      true
+    with
+    | Not_found ->
+      false
+  in
+  let has_node_glyph =
+    contains_str line "○"
+    || contains_str line "@"
+    || contains_str line "◌"
+    || contains_str line "◆"
+  in
+  let has_term = contains_str line "~" in
+  let has_merge_fork =
+    contains_str line "├"
+    || contains_str line "╮"
+    || contains_str line "╯"
+    || contains_str line "╰"
+    || contains_str line "┬"
+    || contains_str line "┴"
+    || contains_str line "┼"
+  in
+  if has_node_glyph
+  then NodeRow
+  else if has_term
+  then TermRow
+  else if has_merge_fork
+  then LinkRow
+  else PadRow
+;;
+
+(** Render nodes to structured output for UI integration *)
+let render_nodes_structured
+      ?(info_lines = fun _ -> 0)
+      (_state : state)
+      (nodes : node list) : graph_row_output list
+  =
+  let columns = ref [||] in
+  let extra_pad_line_ref = ref None in
+  let result = ref [] in
+  List.iter
+    (fun n ->
+       let row = next_row ~columns n in
+       (match !extra_pad_line_ref with
+        | Some s ->
+          let trimmed = String.trim s in
+          result
+          := { graph_chars = trimmed; node = n; row_type = classify_row_type trimmed }
+             :: !result;
+          extra_pad_line_ref := None
+        | None ->
+          ());
+       let node_buf = Buffer.create 64 in
+       Array.iter
+         (fun entry ->
+            match entry with
+            | NL_Node ->
+              Buffer.add_utf_8_uchar node_buf row.glyph;
+              Buffer.add_char node_buf ' '
+            | NL_Parent ->
+              Buffer.add_string node_buf glyphs.(Glyph.parent)
+            | NL_Ancestor ->
+              Buffer.add_string node_buf glyphs.(Glyph.ancestor)
+            | NL_Blank ->
+              Buffer.add_string node_buf glyphs.(Glyph.space))
+         row.node_line;
+       let node_str = Buffer.contents node_buf |> String.trim in
+       result
+       := { graph_chars = node_str; node = n; row_type = classify_row_type node_str }
+          :: !result;
+       (match row.link_line with
+        | Some link_row ->
+          let link_buf = Buffer.create 64 in
+          Array.iter
+            (fun cur ->
+               let glyph_idx = select_link_glyph cur ~merge:row.merge in
+               Buffer.add_string link_buf glyphs.(glyph_idx))
+            link_row;
+          let link_str = Buffer.contents link_buf |> String.trim in
+          result
+          := { graph_chars = link_str; node = n; row_type = classify_row_type link_str }
+             :: !result
+        | None ->
+          ());
+       let need_extra_pad = ref false in
+       (match row.term_line with
+        | Some term_row ->
+          let term_buf1 = Buffer.create 64 in
+          Array.iteri
+            (fun i term ->
+               if term
+               then Buffer.add_string term_buf1 glyphs.(Glyph.parent)
+               else (
+                 let pad_glyph = pad_line_to_glyph row.pad_lines.(i) in
+                 Buffer.add_string term_buf1 glyphs.(pad_glyph)))
+            term_row;
+          let term_str1 = Buffer.contents term_buf1 |> String.trim in
+          result
+          := { graph_chars = term_str1; node = n; row_type = classify_row_type term_str1 }
+             :: !result;
+          let term_buf2 = Buffer.create 64 in
+          Array.iteri
+            (fun i term ->
+               if term
+               then Buffer.add_string term_buf2 glyphs.(Glyph.termination)
+               else (
+                 let pad_glyph = pad_line_to_glyph row.pad_lines.(i) in
+                 Buffer.add_string term_buf2 glyphs.(pad_glyph)))
+            term_row;
+          let term_str2 = Buffer.contents term_buf2 |> String.trim in
+          result
+          := { graph_chars = term_str2; node = n; row_type = classify_row_type term_str2 }
+             :: !result;
+          need_extra_pad := true
+        | None ->
+          ());
+       let pad_buf = Buffer.create 64 in
+       Array.iter
+         (fun entry ->
+            let glyph_idx = pad_line_to_glyph entry in
+            Buffer.add_string pad_buf glyphs.(glyph_idx))
+         row.pad_lines;
+       let base_pad_line = Buffer.contents pad_buf in
+       if !need_extra_pad then extra_pad_line_ref := Some base_pad_line;
+       let extra_rows = info_lines n in
+       for _ = 1 to extra_rows do
+         let info_pad_buf = Buffer.create 64 in
+         Array.iter
+           (fun col ->
+              let glyph_idx = pad_line_to_glyph (column_to_pad_line col) in
+              Buffer.add_string info_pad_buf glyphs.(glyph_idx))
+           !columns;
+         let info_pad_str = Buffer.contents info_pad_buf |> String.trim in
+         result
+         := {
+              graph_chars = info_pad_str
+            ; node = n
+            ; row_type = classify_row_type info_pad_str
+            }
+            :: !result
+       done)
+    nodes;
+  (match !extra_pad_line_ref with
+   | Some s ->
+     let trimmed = String.trim s in
+     let last_node = List.hd (List.rev nodes) in
+     result
+     := { graph_chars = trimmed; node = last_node; row_type = classify_row_type trimmed }
+        :: !result
+   | None ->
+     ());
+  List.rev !result
+;;
+
+(* ============================================================================
+   Public API - render_nodes_to_ui (Notty output)
+   ============================================================================ *)
+
+let render_nodes_to_ui ?(info_rows = fun _ -> 0) (state : state) (nodes : node list) :
+  Notty.image
+  =
+  let str = render_nodes_to_string ~info_rows state nodes in
+  let lines = String.split_on_char '\n' str in
+  let images = List.map (fun line -> Notty.I.string Notty.A.empty line) lines in
+  Notty.I.vcat images
+;;

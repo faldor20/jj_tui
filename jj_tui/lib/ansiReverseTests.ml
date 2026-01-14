@@ -288,11 +288,11 @@ module ImageTests = struct
     Internal.print_image img;
     [%expect
       {|
-  image:
-  
-                  (x ^ "\n"
-                  (x 
-                           
-  |}]
+      image:
+      [0m[K[0m
+      [0;48;2;63;0;1m                (x [0m[K[0;48;2;144;16;17m^ "\n"[0m
+      [0;38;2;248;248;242;48;2;0;250;250m                (x[0m[K[0;35;7m [0m
+      [0m[K[0m                         [0m
+      |}]
   ;;
 end

@@ -16,6 +16,73 @@ module Make (Vars : Global_vars.Vars) = struct
   (* Import graph commands *)
   module GraphCommands = Graph_commands.Make (Vars)
 
+  (** Render commit content for a node - shows change_id, author, timestamp, description, bookmarks *)
+  let render_commit_content (node : Render_jj_graph.node) : Notty.image =
+    let open Notty in
+    let open Notty.A in
+    let styled_text attr text = I.string attr text in
+    let change_id_short =
+      String.sub node.change_id 0 (min 8 (String.length node.change_id))
+    in
+    let author_name =
+      match String.split_on_char '@' node.author_email with
+      | name :: _ ->
+        name
+      | [] ->
+        node.author_email
+    in
+    let description_line =
+      match String.split_on_char '\n' node.description with
+      | first :: _ when String.trim first <> "" ->
+        String.trim first
+      | _ ->
+        "(no description set)"
+    in
+    let parts = ref [] in
+    let change_id_attr =
+      if node.is_preview
+      then fg lightblack ++ st dim
+      else if node.working_copy
+      then fg lightcyan ++ st bold
+      else if node.immutable
+      then fg lightmagenta
+      else if node.empty
+      then fg yellow
+      else fg cyan
+    in
+    parts := styled_text change_id_attr change_id_short :: !parts;
+    parts := styled_text (fg white ++ st dim) (" " ^ author_name) :: !parts;
+    parts := styled_text (fg white ++ st dim) (" " ^ node.author_timestamp) :: !parts;
+    if List.length node.bookmarks > 0
+    then (
+      let bookmarks_str = " (" ^ String.concat ", " node.bookmarks ^ ")" in
+      parts := styled_text (fg green ++ st bold) bookmarks_str :: !parts);
+    let desc_attr =
+      if node.is_preview || node.empty
+      then fg white ++ st dim
+      else if node.wip
+      then fg lightyellow
+      else fg white
+    in
+    parts := styled_text desc_attr (" " ^ description_line) :: !parts;
+    !parts |> List.rev |> I.hcat
+  ;;
+
+  (** Render a graph row by combining graph prefix with content *)
+  let render_graph_row
+        (row : Render_jj_graph.graph_row_output)
+        ~(render_content : Render_jj_graph.node -> Notty.image) : Notty.image
+    =
+    let open Notty in
+    let graph_img = I.string A.empty row.graph_chars in
+    match row.row_type with
+    | NodeRow ->
+      let content_img = render_content row.node in
+      I.hcat [ graph_img; content_img ]
+    | LinkRow | PadRow | TermRow ->
+      graph_img
+  ;;
+
   let bookmark_select_prompt get_bookmark_list name func =
     Selection_prompt
       ( name
@@ -59,36 +126,37 @@ module Make (Vars : Global_vars.Vars) = struct
       |> Option.value ~default:(Ui.empty |> Lwd.pure)
     in
     let items =
-      let$ graph, rev_ids =
+      let$ rendered_rows, rev_ids =
         (*TODO I think this ads a slight delay to everything becasue it makes things need to be renedered twice. maybe I could try getting rid of it*)
         Vars.ui_state.trigger_update
         |> Lwd.get
         |> Lwd.map2 (Lwd.get Vars.ui_state.revset) ~f:(fun revset _ ->
           try
             let max_commits = (Vars.config |> Lwd.peek).max_commits in
-            let res = graph_and_revs ?revset max_commits () in
+            let nodes, rev_ids = get_graph_nodes ?revset max_commits in
+            let state =
+              Render_jj_graph.{ depth = 0; columns = [||]; pending_joins = [] }
+            in
+            let rendered_rows = Render_jj_graph.render_nodes_structured state nodes in
             error_var $= None;
-            res
+            rendered_rows, rev_ids
           with
           | Jj_process.JJError (cmd, error) ->
             (*If we have an error generating the graph,likely because the revset is wrong,just show the errror*)
             error_var $= Some (error |> Jj_tui.AnsiReverse.colored_string |> Ui.atom);
-            [||], [||])
+            [], [||])
       in
       (*We will make two arrays, one with both selectable and filler and one with only selectable*)
       let selectable_idx = ref 0 in
-      let selectable_items = Array.make (Array.length graph) (Obj.magic ()) in
+      let selectable_items = Array.make (Array.length rev_ids) (Obj.magic ()) in
       let items =
-        graph
-        |> Array.map (fun x ->
-          match x with
-          | `Selectable x ->
+        rendered_rows
+        |> List.map (fun (row : Render_jj_graph.graph_row_output) ->
+          match row.row_type with
+          | NodeRow ->
             let ui =
               W.Lists.selectable_item
-                (x 
-                 (* TODO This won't work if we are on a branch, because that puts the @ further out*)
-                 |> Jj_tui.AnsiReverse.colored_string
-                 |> Ui.atom)
+                (render_graph_row row ~render_content:render_commit_content |> Ui.atom)
             in
             let id = rev_ids.(!selectable_idx) in
             let data =
@@ -103,9 +171,10 @@ module Make (Vars : Global_vars.Vars) = struct
             Array.set selectable_items !selectable_idx data;
             selectable_idx := !selectable_idx + 1;
             W.Lists.(Selectable data)
-          | `Filler x ->
-            W.Lists.(
-              Filler (x |> Jj_tui.AnsiReverse.colored_string |> Ui.atom |> Lwd.pure)))
+          | LinkRow | PadRow | TermRow ->
+            let graph_img = I.string A.empty row.graph_chars in
+            W.Lists.(Filler (graph_img |> Ui.atom |> Lwd.pure)))
+        |> Array.of_list
       in
       items
     in
