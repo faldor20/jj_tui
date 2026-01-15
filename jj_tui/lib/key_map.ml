@@ -294,6 +294,7 @@ let default : key_config =
               cmd "r" "rebase_single"
             ; cmd "s" "rebase_with_descendants"
             ; cmd "b" "rebase_with_bookmark"
+            ; cmd "p" "rebase_preview_toggle"
             ]
         ; sub
             "g"

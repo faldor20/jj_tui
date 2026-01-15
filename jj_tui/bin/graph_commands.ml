@@ -309,6 +309,31 @@ module Make (Vars : Global_vars.Vars) = struct
       ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd_I [ "resolve"; "-r"; rev ]))
       }
     ; {
+        id = "rebase_preview_toggle"
+      ; sorting_key = 19.5
+      ; description = "Toggle rebase preview mode"
+      ; make_cmd =
+          (fun () ->
+            Fun
+              (fun _ ->
+                if Vars.get_rebase_preview_active ()
+                then (
+                  Vars.clear_rebase_preview ();
+                  ui_state.input $= `Normal;
+                  Vars.ui_state.trigger_update $= ())
+                else (
+                  Vars.set_rebase_preview_active true;
+                  Vars.set_rebase_preview_sources (Vars.get_active_revs ());
+                  let targets =
+                    let selected = Vars.get_selected_revs () in
+                    if List.length selected = 0 then [ Vars.get_hovered_rev () ] else selected
+                  in
+                  Vars.set_rebase_preview_targets targets;
+                  Vars.set_rebase_preview_invalid None;
+                  ui_state.input $= `Mode_no_popup (fun _ -> `Unhandled);
+                  Vars.ui_state.trigger_update $= ())))
+      }
+    ; {
         id = "rebase_single"
       ; sorting_key = 20.0
       ; description = "Rebase single revision "

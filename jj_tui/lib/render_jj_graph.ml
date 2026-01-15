@@ -97,7 +97,8 @@ let is_elided (n : node) : bool = n.commit_id = elided_marker
 (** Create a preview node with a label.
     Preview nodes are used to visualize where commits would land during
     rebase/move operations. *)
-let make_preview_node ~label ?target_commit_id () : node =
+let make_preview_node ~label ?description ?target_commit_id () : node =
+  let description = Option.value description ~default:label in
   {
     parents = []
   ; creation_time = Int64.zero
@@ -111,7 +112,7 @@ let make_preview_node ~label ?target_commit_id () : node =
          Printf.sprintf "preview:%s:%s" label id
        | None ->
          Printf.sprintf "preview:%s" label)
-  ; description = label
+  ; description
   ; bookmarks = []
   ; author_email = ""
   ; author_timestamp = ""
@@ -124,6 +125,209 @@ let make_preview_node ~label ?target_commit_id () : node =
   ; commit_id_prefix = ""
   ; commit_id_rest = ""
   }
+;;
+
+type preview_mode =
+  [ `Insert_before
+  | `Insert_after
+  | `Add_after
+  ]
+
+module StringSet = Set.Make (String)
+
+let node_matches_rev (n : node) rev = n.change_id = rev || n.commit_id = rev
+
+let resolve_revs (nodes : node list) (revs : string list) : string list =
+  revs
+  |> List.concat_map (fun rev ->
+    nodes
+    |> List.filter (fun n -> node_matches_rev n rev)
+    |> List.map (fun n -> n.commit_id))
+  |> List.sort_uniq String.compare
+;;
+
+let build_parent_map (nodes : node list) =
+  let map = Hashtbl.create (List.length nodes) in
+  List.iter
+    (fun n ->
+       Hashtbl.replace map n.commit_id (List.map (fun p -> p.commit_id) n.parents))
+    nodes;
+  map
+;;
+
+let build_children_map parent_map =
+  let children = Hashtbl.create (Hashtbl.length parent_map) in
+  Hashtbl.iter
+    (fun child_id parent_ids ->
+       List.iter
+         (fun parent_id ->
+            let existing = Option.value (Hashtbl.find_opt children parent_id) ~default:[] in
+            Hashtbl.replace children parent_id (child_id :: existing))
+         parent_ids)
+    parent_map;
+  children
+;;
+
+let build_ancestors parent_map =
+  let cache = Hashtbl.create (Hashtbl.length parent_map) in
+  let rec ancestors id =
+    match Hashtbl.find_opt cache id with
+    | Some result ->
+      result
+    | None ->
+      let parents = Option.value (Hashtbl.find_opt parent_map id) ~default:[] in
+      let result =
+        List.fold_left
+          (fun acc parent_id ->
+             let acc = StringSet.add parent_id acc in
+             StringSet.union acc (ancestors parent_id))
+          StringSet.empty
+          parents
+      in
+      Hashtbl.replace cache id result;
+      result
+  in
+  ancestors
+;;
+
+let preview_description sources =
+  match sources with
+  | [ rev ] ->
+    Printf.sprintf "preview: %s" rev
+  | _ ->
+    Printf.sprintf "preview: %d commits" (List.length sources)
+;;
+
+let apply_rebase_preview
+      ~(mode : preview_mode)
+      ~(sources : string list)
+      ~(targets : string list)
+      (nodes : node list) : node list * string option
+  =
+  if sources = [] || targets = [] then nodes, None
+  else (
+    let source_ids = resolve_revs nodes sources in
+    let target_ids = resolve_revs nodes targets in
+    if source_ids = [] || target_ids = []
+    then nodes, None
+    else (
+      let parent_map_all = build_parent_map nodes in
+      let ancestors_of = build_ancestors parent_map_all in
+      let removed_set = StringSet.of_list source_ids in
+      let nodes_filtered =
+        nodes |> List.filter (fun n -> not (StringSet.mem n.commit_id removed_set))
+      in
+      let parent_map = Hashtbl.create (List.length nodes_filtered) in
+      List.iter
+        (fun n ->
+           let parents =
+             n.parents
+             |> List.map (fun p -> p.commit_id)
+             |> List.filter (fun id -> not (StringSet.mem id removed_set))
+           in
+           Hashtbl.replace parent_map n.commit_id parents)
+        nodes_filtered;
+      let children_map = build_children_map parent_map in
+      let invalid = ref None in
+      let preview_by_target = Hashtbl.create (List.length target_ids) in
+      let base_nodes =
+        Hashtbl.create (List.length nodes_filtered + List.length target_ids)
+      in
+      List.iter (fun n -> Hashtbl.replace base_nodes n.commit_id n) nodes_filtered;
+      let add_preview_for_target target_id =
+        if not (Hashtbl.mem parent_map target_id)
+        then ()
+        else (
+          let invalid_target =
+            List.exists
+              (fun source_id ->
+                 if source_id = target_id
+                 then true
+                 else (
+                   let source_ancestors = ancestors_of source_id in
+                   let target_ancestors = ancestors_of target_id in
+                   match mode with
+                   | `Insert_before ->
+                     StringSet.mem target_id source_ancestors
+                   | `Insert_after | `Add_after ->
+                     StringSet.mem source_id target_ancestors))
+              source_ids
+          in
+          if invalid_target
+          then invalid := Some "Preview blocked: cycle detected"
+          else (
+            let preview_id = Printf.sprintf "preview:%s" target_id in
+            if not (Hashtbl.mem preview_by_target target_id)
+            then (
+              let label = "preview" in
+              let description = preview_description sources in
+              let preview_node =
+                make_preview_node ~label ~description ~target_commit_id:target_id ()
+              in
+              Hashtbl.replace base_nodes preview_id preview_node;
+              Hashtbl.replace preview_by_target target_id preview_id;
+              match mode with
+              | `Insert_before ->
+                let parents = Option.value (Hashtbl.find_opt parent_map target_id) ~default:[] in
+                Hashtbl.replace parent_map preview_id parents;
+                Hashtbl.replace parent_map target_id [ preview_id ]
+              | `Insert_after ->
+                Hashtbl.replace parent_map preview_id [ target_id ];
+                let children =
+                  Option.value (Hashtbl.find_opt children_map target_id) ~default:[]
+                in
+                List.iter
+                  (fun child_id ->
+                     let child_parents =
+                       Option.value (Hashtbl.find_opt parent_map child_id) ~default:[]
+                     in
+                     let updated =
+                       List.map
+                         (fun parent_id ->
+                            if parent_id = target_id then preview_id else parent_id)
+                         child_parents
+                     in
+                     Hashtbl.replace parent_map child_id updated)
+                  children
+              | `Add_after ->
+                Hashtbl.replace parent_map preview_id [ target_id ])))
+      in
+      List.iter add_preview_for_target target_ids;
+      (* Order must follow topological log order: children appear before parents. *)
+      let preview_before = match mode with `Insert_after | `Add_after -> true | _ -> false in
+      let preview_after = match mode with `Insert_before -> true | _ -> false in
+      let ordered_ids_rev =
+        List.fold_left
+          (fun acc n ->
+             let id = n.commit_id in
+             match Hashtbl.find_opt preview_by_target id with
+             | Some preview_id when preview_before ->
+               id :: preview_id :: acc
+             | Some preview_id when preview_after ->
+               preview_id :: id :: acc
+             | Some _ ->
+               id :: acc
+             | None ->
+               id :: acc)
+          []
+          nodes_filtered
+      in
+      let ordered_ids = List.rev ordered_ids_rev in
+      let final_nodes = Hashtbl.create (List.length ordered_ids) in
+      let rec build_node id =
+        match Hashtbl.find_opt final_nodes id with
+        | Some node ->
+          node
+        | None ->
+          let base = Hashtbl.find base_nodes id in
+          let parent_ids = Option.value (Hashtbl.find_opt parent_map id) ~default:[] in
+          let parents = List.map build_node parent_ids in
+          let node = { base with parents } in
+          Hashtbl.replace final_nodes id node;
+          node
+      in
+      let nodes = List.map build_node ordered_ids in
+      nodes, !invalid))
 ;;
 
 (** Insert a preview node after the specified commit.

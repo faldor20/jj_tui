@@ -79,7 +79,13 @@ module Make (Vars : Global_vars.Vars) = struct
                  (* | `Arrow _, [ `Ctrl ] *)
                  (* | `Arrow _, [ `Meta ] *)
                  | `Tab, [] ->
-                   `Handled
+                   if Vars.get_rebase_preview_active ()
+                   then (
+                     Vars.cycle_rebase_preview_mode ();
+                     Vars.set_rebase_preview_invalid None;
+                     Vars.ui_state.trigger_update $= ();
+                     `Handled)
+                   else `Handled
                  | `Tab, [ `Meta ] | `Tab, [ `Meta; `Shift ] ->
                    `Handled
                  | _ ->
@@ -94,6 +100,14 @@ module Make (Vars : Global_vars.Vars) = struct
                    (match event with
                     | `Escape, [] ->
                       show_popup None;
+                      ui_state.input $= `Normal;
+                      `Handled
+                    | _ ->
+                      `Unhandled)
+                 | `Mode_no_popup _, _, _ ->
+                   (match event with
+                    | `Escape, [] ->
+                      if Vars.get_rebase_preview_active () then Vars.clear_rebase_preview ();
                       ui_state.input $= `Normal;
                       `Handled
                     | _ ->

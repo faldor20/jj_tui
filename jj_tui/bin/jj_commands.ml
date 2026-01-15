@@ -460,6 +460,13 @@ module Make (Vars : Global_vars.Vars) = struct
     match Lwd.peek ui_state.input with
     | `Mode mode ->
       mode
+    | `Mode_no_popup mode ->
+      (fun key ->
+        match mode key with
+        | `Unhandled ->
+          command_input ~is_sub:false command_mapping key
+        | handled ->
+          handled)
     | `Normal ->
       command_input ~is_sub:false command_mapping
   ;;

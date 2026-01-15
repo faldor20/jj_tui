@@ -10,6 +10,12 @@ type cmd_args = string list
 
 open Jj_tui.Key_map
 
+type rebase_preview_mode =
+  [ `Insert_before
+  | `Insert_after
+  | `Add_after
+  ]
+
 type ui_state_t = {
     view :
       [ `Main (**Normal Mode*)
@@ -18,7 +24,12 @@ type ui_state_t = {
         (* | `Prompt of string * [ `Cmd of cmd_args | `Cmd_I of cmd_args ] *)
       ]
         Lwd.var
-  ; input : [ `Normal | `Mode of Nottui.Ui.key -> Ui.may_handle ] Lwd.var
+  ; input :
+      [ `Normal
+      | `Mode of Nottui.Ui.key -> Ui.may_handle
+      | `Mode_no_popup of Nottui.Ui.key -> Ui.may_handle
+      ]
+        Lwd.var
   ; show_popup : (Nottui.ui Lwd.t * string) option Lwd.var
   ; show_prompt : W.Overlay.text_prompt_data option Lwd.var
     (* ; show_graph_selection_prompt : *)
@@ -33,6 +44,11 @@ type ui_state_t = {
   ; jj_change_files : (string * string) list Lwd.var
   ; hovered_revision : string maybe_unique Lwd.var
   ; selected_revisions : string maybe_unique list Lwd.var
+  ; rebase_preview_active : bool Lwd.var
+  ; rebase_preview_mode : rebase_preview_mode Lwd.var
+  ; rebase_preview_targets : string list Lwd.var
+  ; rebase_preview_sources : string list Lwd.var
+  ; rebase_preview_invalid : string option Lwd.var
   ; revset : string option Lwd.var
   ; trigger_update : unit Lwd.var
   ; reset_selection : unit Signal.t
@@ -63,6 +79,18 @@ module type Vars = sig
   val get_selected_revs_lwd : unit -> string list Lwd.t
   val get_active_revs : unit -> string list
   val get_active_revs_lwd : unit -> string list Lwd.t
+  val get_rebase_preview_active : unit -> bool
+  val get_rebase_preview_mode : unit -> rebase_preview_mode
+  val get_rebase_preview_mode_lwd : unit -> rebase_preview_mode Lwd.t
+  val get_rebase_preview_targets : unit -> string list
+  val get_rebase_preview_sources : unit -> string list
+  val set_rebase_preview_active : bool -> unit
+  val set_rebase_preview_targets : string list -> unit
+  val set_rebase_preview_sources : string list -> unit
+  val set_rebase_preview_invalid : string option -> unit
+  val clear_rebase_preview : unit -> unit
+  val cycle_rebase_preview_mode : unit -> unit
+  val rebase_preview_label : unit -> string
   val config : Config.t Lwd.var
   val show_popup : (Nottui.ui Lwd.t * string) option -> unit
   val set_loading : string option -> unit
@@ -80,6 +108,11 @@ module Vars : Vars = struct
     ; jj_change_files = Lwd.var []
     ; hovered_revision = Lwd.var (Unique "@")
     ; selected_revisions = Lwd.var [ Unique "@" ]
+    ; rebase_preview_active = Lwd.var false
+    ; rebase_preview_mode = Lwd.var `Insert_after
+    ; rebase_preview_targets = Lwd.var []
+    ; rebase_preview_sources = Lwd.var []
+    ; rebase_preview_invalid = Lwd.var None
     ; revset = Lwd.var None
     ; graph_revs = Lwd.var [||]
     ; input = Lwd.var `Normal
@@ -138,6 +171,63 @@ module Vars : Vars = struct
     if selected |> List.length == 0
     then [ hovered |> get_unique_id ]
     else selected |> List.map get_unique_id
+  ;;
+
+  let get_rebase_preview_active () = Lwd.peek ui_state.rebase_preview_active
+
+  let get_rebase_preview_mode () = Lwd.peek ui_state.rebase_preview_mode
+
+  let get_rebase_preview_mode_lwd () = Lwd.get ui_state.rebase_preview_mode
+
+  let get_rebase_preview_targets () = Lwd.peek ui_state.rebase_preview_targets
+
+  let get_rebase_preview_sources () = Lwd.peek ui_state.rebase_preview_sources
+
+  let set_rebase_preview_active active =
+    Lwd.set ui_state.rebase_preview_active active
+  ;;
+
+  let set_rebase_preview_targets targets =
+    Lwd.set ui_state.rebase_preview_targets targets
+  ;;
+
+  let set_rebase_preview_sources sources =
+    Lwd.set ui_state.rebase_preview_sources sources
+  ;;
+
+  let set_rebase_preview_invalid msg = Lwd.set ui_state.rebase_preview_invalid msg
+
+  let clear_rebase_preview () =
+    ui_state.rebase_preview_active $= false;
+    ui_state.rebase_preview_targets $= [];
+    ui_state.rebase_preview_sources $= [];
+    ui_state.rebase_preview_invalid $= None
+  ;;
+
+  let cycle_rebase_preview_mode () =
+    let next =
+      match Lwd.peek ui_state.rebase_preview_mode with
+      | `Insert_before ->
+        `Insert_after
+      | `Insert_after ->
+        `Add_after
+      | `Add_after ->
+        `Insert_before
+    in
+    Lwd.set ui_state.rebase_preview_mode next
+  ;;
+
+  let rebase_preview_label () =
+    let mode_str =
+      match Lwd.peek ui_state.rebase_preview_mode with
+      | `Insert_before ->
+        "insert-before"
+      | `Insert_after ->
+        "insert-after"
+      | `Add_after ->
+        "add-after"
+    in
+    Printf.sprintf "Preview: %s" mode_str
   ;;
 
   let show_popup popup =

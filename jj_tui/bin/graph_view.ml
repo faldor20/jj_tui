@@ -132,6 +132,32 @@ module Make (Vars : Global_vars.Vars) = struct
         x |> Ui.resize ~mw:10000 ~sw:1 |> Lwd.pure |> W.Box.box ~pad_w:0 ~pad_h:0)
       |> Option.value ~default:(Ui.empty |> Lwd.pure)
     in
+    let mode_indicator =
+      let$ active = Lwd.get Vars.ui_state.rebase_preview_active
+      and$ mode = Lwd.get Vars.ui_state.rebase_preview_mode
+      and$ invalid = Lwd.get Vars.ui_state.rebase_preview_invalid in
+      if not active
+      then Ui.empty
+      else (
+        let mode_str =
+          match mode with
+          | `Insert_before ->
+            "insert-before"
+          | `Insert_after ->
+            "insert-after"
+          | `Add_after ->
+            "add-after"
+        in
+        let base = "Preview: " ^ mode_str in
+        let label =
+          match invalid with
+          | None ->
+            base
+          | Some msg ->
+            base ^ " - " ^ msg
+        in
+        W.string label)
+    in
     let items =
       let$ rendered_rows, rev_ids =
         (*TODO I think this ads a slight delay to everything becasue it makes things need to be renedered twice. maybe I could try getting rid of it*)
@@ -144,7 +170,42 @@ module Make (Vars : Global_vars.Vars) = struct
             let state =
               Render_jj_graph.{ depth = 0; columns = [||]; pending_joins = [] }
             in
-            let rendered_rows = Render_jj_graph.render_nodes_structured state nodes ~node_attr:(Commit_render.graph_node_attr) in
+            let node_id_map =
+              List.map2
+                (fun node rev_id -> node.Render_jj_graph.commit_id, rev_id)
+                nodes
+                (Array.to_list rev_ids)
+              |> List.to_seq
+              |> Hashtbl.of_seq
+            in
+            let nodes, invalid =
+              if Vars.get_rebase_preview_active ()
+              then
+                Render_jj_graph.apply_rebase_preview
+                  ~mode:(Vars.get_rebase_preview_mode ())
+                  ~sources:(Vars.get_rebase_preview_sources ())
+                  ~targets:(Vars.get_rebase_preview_targets ())
+                  nodes
+              else nodes, None
+            in
+            let current_invalid = Lwd.peek Vars.ui_state.rebase_preview_invalid in
+            if current_invalid <> invalid then Vars.set_rebase_preview_invalid invalid;
+            let rev_ids =
+              if Vars.get_rebase_preview_active ()
+              then
+                nodes
+                |> List.filter (fun node -> not node.Render_jj_graph.is_preview)
+                |> List.filter_map (fun node ->
+                  Hashtbl.find_opt node_id_map node.Render_jj_graph.commit_id)
+                |> Array.of_list
+              else rev_ids
+            in
+            let rendered_rows =
+              Render_jj_graph.render_nodes_structured
+                state
+                nodes
+                ~node_attr:(Commit_render.graph_node_attr)
+            in
             error_var $= None;
             rendered_rows, rev_ids
           with
@@ -168,28 +229,34 @@ module Make (Vars : Global_vars.Vars) = struct
           match rendered_group with
           | [] ->
             []
-          | (_first_row, first_img) :: rest_rows ->
-            let id = rev_ids.(!selectable_idx) in
-            let selectable_ui = W.Lists.selectable_item (first_img |> Ui.atom) in
-            let data =
-              W.Lists.
-                {
-                  ui = selectable_ui
-                ; id = id |> Global_vars.get_unique_id |> String.hash
-                ; data = rev_ids.(!selectable_idx)
-                }
-            in
-            (* Add to our selectable array *)
-            Array.set selectable_items !selectable_idx data;
-            selectable_idx := !selectable_idx + 1;
-            let first_item = W.Lists.(Selectable data) in
-            (* All other rows in the group become fillers *)
-            let filler_items =
+          | (first_row, first_img) :: rest_rows ->
+            if first_row.node.is_preview
+            then
               List.map
                 (fun (_row, img) -> W.Lists.(Filler (img |> Ui.atom |> Lwd.pure)))
-                rest_rows
-            in
-            first_item :: filler_items)
+                ((first_row, first_img) :: rest_rows)
+            else (
+              let id = rev_ids.(!selectable_idx) in
+              let selectable_ui = W.Lists.selectable_item (first_img |> Ui.atom) in
+              let data =
+                W.Lists.
+                  {
+                    ui = selectable_ui
+                  ; id = id |> Global_vars.get_unique_id |> String.hash
+                  ; data = rev_ids.(!selectable_idx)
+                  }
+              in
+              (* Add to our selectable array *)
+              Array.set selectable_items !selectable_idx data;
+              selectable_idx := !selectable_idx + 1;
+              let first_item = W.Lists.(Selectable data) in
+              (* All other rows in the group become fillers *)
+              let filler_items =
+                List.map
+                  (fun (_row, img) -> W.Lists.(Filler (img |> Ui.atom |> Lwd.pure)))
+                  rest_rows
+              in
+              first_item :: filler_items))
         |> Array.of_list
       in
       items
@@ -209,14 +276,31 @@ module Make (Vars : Global_vars.Vars) = struct
       |> W.Lists.multi_selection_list_exclusions
            ~reset_selections:Vars.ui_state.reset_selection
            ~on_selection_change:(fun ~hovered ~selected ->
-             (*Respond to change in selected revision*)
-             Lwd.set Vars.ui_state.hovered_revision hovered;
-             Lwd.set Vars.ui_state.selected_revisions selected;
-             (*If the files are focused we shouldn't send this*)
-             (if Focus.peek_has_focus focus
-              then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ()))));
-             [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
-             Global_funcs.update_views_async ())
+             let prev_hovered = Lwd.peek Vars.ui_state.hovered_revision in
+             let prev_selected = Lwd.peek Vars.ui_state.selected_revisions in
+             if prev_hovered <> hovered || prev_selected <> selected
+             then (
+               (*Respond to change in selected revision*)
+               Lwd.set Vars.ui_state.hovered_revision hovered;
+               Lwd.set Vars.ui_state.selected_revisions selected;
+               if Vars.get_rebase_preview_active ()
+               then (
+                 let targets =
+                   if List.length selected = 0
+                   then [ hovered |> Global_vars.get_unique_id ]
+                   else selected |> List.map Global_vars.get_unique_id
+                 in
+                 let current_targets = Vars.get_rebase_preview_targets () in
+                 if targets <> current_targets
+                 then (
+                   Vars.set_rebase_preview_targets targets;
+                   Vars.ui_state.trigger_update $= ()))
+               else (
+                 (*If the files are focused we shouldn't send this*)
+                 if Focus.peek_has_focus focus
+                 then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ())));
+                 [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
+                 Global_funcs.update_views_async ())))
            ~custom_handler:(fun ~selected ~selectable_items key -> handleKeys key)
     in
     let final_ui =
@@ -228,6 +312,6 @@ module Make (Vars : Global_vars.Vars) = struct
       and$ error = Lwd.get error_var in
       match error with Some e -> e |> Ui.keyboard_area handleKeys | None -> list_ui
     in
-    W.vbox [ revset_ui; final_ui ]
+    W.vbox [ revset_ui; mode_indicator; final_ui ]
   ;;
 end

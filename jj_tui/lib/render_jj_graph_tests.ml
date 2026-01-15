@@ -1,5 +1,109 @@
 open Render_jj_graph
 
+let make_node ?(parents = []) commit_id : node =
+  {
+    parents
+  ; creation_time = 0L
+  ; working_copy = false
+  ; immutable = false
+  ; wip = false
+  ; change_id = commit_id
+  ; commit_id
+  ; description = commit_id
+  ; bookmarks = []
+  ; author_email = ""
+  ; author_timestamp = ""
+  ; empty = false
+  ; hidden = false
+  ; divergent = false
+  ; is_preview = false
+  ; change_id_prefix = ""
+  ; change_id_rest = ""
+  ; commit_id_prefix = ""
+  ; commit_id_rest = ""
+  }
+;;
+
+let find_node_exn nodes commit_id =
+  nodes |> List.find (fun n -> n.commit_id = commit_id)
+;;
+
+let find_preview_exn nodes =
+  nodes |> List.find (fun n -> n.is_preview)
+;;
+
+let parent_ids node = node.parents |> List.map (fun p -> p.commit_id)
+;;
+
+let%expect_test "apply_rebase_preview_insert_before" =
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let a = make_node ~parents:[ b ] "a" in
+  let nodes, invalid =
+    apply_rebase_preview ~mode:`Insert_before ~sources:[ "c" ] ~targets:[ "b" ] [ a; b; c ]
+  in
+  let preview = find_preview_exn nodes in
+  let b = find_node_exn nodes "b" in
+  print_endline (Option.value invalid ~default:"ok");
+  parent_ids preview |> String.concat "," |> print_endline;
+  parent_ids b |> String.concat "," |> print_endline;
+  [%expect
+    {|
+    ok
+
+    preview:preview:b
+    |}]
+;;
+
+let%expect_test "apply_rebase_preview_insert_after" =
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let a = make_node ~parents:[ b ] "a" in
+  let nodes, invalid =
+    apply_rebase_preview ~mode:`Insert_after ~sources:[ "a" ] ~targets:[ "b" ] [ a; b; c ]
+  in
+  let preview = find_preview_exn nodes in
+  let has_a = nodes |> List.exists (fun n -> n.commit_id = "a") in
+  print_endline (Option.value invalid ~default:"ok");
+  parent_ids preview |> String.concat "," |> print_endline;
+  print_endline (string_of_bool has_a);
+  [%expect
+    {|
+    ok
+    b
+    false
+    |}]
+;;
+
+let%expect_test "apply_rebase_preview_removes_sources" =
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let a = make_node ~parents:[ b ] "a" in
+  let nodes, _invalid =
+    apply_rebase_preview ~mode:`Add_after ~sources:[ "a" ] ~targets:[ "b" ] [ a; b; c ]
+  in
+  let ids = nodes |> List.map (fun n -> n.commit_id) |> String.concat "," in
+  print_endline ids;
+  [%expect {| preview:preview:b,b,c |}]
+;;
+
+let%expect_test "apply_rebase_preview_invalid_cycle" =
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let a = make_node ~parents:[ b ] "a" in
+  let nodes, invalid =
+    apply_rebase_preview ~mode:`Insert_before ~sources:[ "a" ] ~targets:[ "b" ] [ a; b; c ]
+  in
+  let preview_count = nodes |> List.filter (fun n -> n.is_preview) |> List.length in
+  print_endline (Option.value invalid ~default:"ok");
+  print_endline (string_of_int preview_count);
+  [%expect
+    {|
+    Preview blocked: cycle detected
+    0
+    |}]
+;;
+
 let%expect_test "recreate_target_graph" =
   (* Graph: a (working copy) has parents [c; d] where c->b->d
      First parent (c) gets node's column (0), second parent (d) branches to column 1.
