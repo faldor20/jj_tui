@@ -16,71 +16,78 @@ module Make (Vars : Global_vars.Vars) = struct
   (* Import graph commands *)
   module GraphCommands = Graph_commands.Make (Vars)
 
-  (** Render commit content for a node - shows change_id, author, timestamp, description, bookmarks *)
-  let render_commit_content (node : Render_jj_graph.node) : Notty.image =
-    let open Notty in
-    let open Notty.A in
-    let styled_text attr text = I.string attr text in
-    let change_id_short =
-      String.sub node.change_id 0 (min 8 (String.length node.change_id))
-    in
-    let author_name =
-      match String.split_on_char '@' node.author_email with
-      | name :: _ ->
-        name
+  (* Use the library's render function for commit content *)
+  let render_commit_content = Commit_render.render_commit_content
+
+  (** Group rows by their owning node. Each group is (node_row, continuation_rows).
+      Each NodeRow starts a new group containing it and all following non-NodeRows until
+      the next NodeRow. *)
+  let group_rows_by_node (rows : Render_jj_graph.graph_row_output list) :
+    (Render_jj_graph.graph_row_output * Render_jj_graph.graph_row_output list) list
+    =
+    let open Render_jj_graph in
+    let rec loop acc current_group = function
       | [] ->
-        node.author_email
+        List.rev (match current_group with Some g -> g :: acc | None -> acc)
+      | row :: rest ->
+        (match row.row_type with
+         | NodeRow ->
+           let acc = match current_group with Some g -> g :: acc | None -> acc in
+           loop acc (Some (row, [])) rest
+         | _ ->
+           (match current_group with
+            | Some (node_row, conts) ->
+              loop acc (Some (node_row, conts @ [ row ])) rest
+            | None ->
+              (* Orphan row, shouldn't happen, but skip it *)
+              loop acc None rest))
     in
-    let description_line =
-      match String.split_on_char '\n' node.description with
-      | first :: _ when String.trim first <> "" ->
-        String.trim first
-      | _ ->
-        "(no description set)"
-    in
-    let parts = ref [] in
-    let change_id_attr =
-      if node.is_preview
-      then fg lightblack ++ st dim
-      else if node.working_copy
-      then fg lightcyan ++ st bold
-      else if node.immutable
-      then fg lightmagenta
-      else if node.empty
-      then fg yellow
-      else fg cyan
-    in
-    parts := styled_text change_id_attr change_id_short :: !parts;
-    parts := styled_text (fg white ++ st dim) (" " ^ author_name) :: !parts;
-    parts := styled_text (fg white ++ st dim) (" " ^ node.author_timestamp) :: !parts;
-    if List.length node.bookmarks > 0
-    then (
-      let bookmarks_str = " (" ^ String.concat ", " node.bookmarks ^ ")" in
-      parts := styled_text (fg green ++ st bold) bookmarks_str :: !parts);
-    let desc_attr =
-      if node.is_preview || node.empty
-      then fg white ++ st dim
-      else if node.wip
-      then fg lightyellow
-      else fg white
-    in
-    parts := styled_text desc_attr (" " ^ description_line) :: !parts;
-    !parts |> List.rev |> I.hcat
+    loop [] None rows
   ;;
 
-  (** Render a graph row by combining graph prefix with content *)
-  let render_graph_row
-        (row : Render_jj_graph.graph_row_output)
-        ~(render_content : Render_jj_graph.node -> Notty.image) : Notty.image
+  (** Render a node group by distributing content lines across available rows.
+      Returns a list of (row, rendered_image) pairs. *)
+  let render_node_group
+        ((node_row, continuation_rows) :
+          Render_jj_graph.graph_row_output * Render_jj_graph.graph_row_output list)
+        ~(render_content : Render_jj_graph.node -> Notty.image list) :
+    (Render_jj_graph.graph_row_output * Notty.image) list
     =
     let open Notty in
-    let graph_img = I.string A.empty row.graph_chars in
-    match row.row_type with
-    | NodeRow ->
-      let content_img = render_content row.node in
-      I.hcat [ graph_img; content_img ]
-    | LinkRow | PadRow | TermRow ->
-      graph_img
+    let open Render_jj_graph in
+    let content_lines = render_content node_row.node in
+  
+    let available_rows = node_row :: continuation_rows in
+    let result = ref [] in
+    (* Distribute content lines across available rows *)
+    List.iteri
+      (fun i row ->
+         let graph_img = row.graph_image in
+         let combined =
+           if i < List.length content_lines
+           then I.hcat [ graph_img; List.nth content_lines i ]
+           else graph_img
+         in
+         result := (row, combined) :: !result)
+      available_rows;
+    (* If content needs more lines than available, add synthetic continuation rows *)
+    if List.length content_lines > List.length available_rows
+    then (
+      let node_glyphs = [ "○"; "@"; "◌"; "◆" ] in
+      let synthetic_graph =
+        let chars = node_row.graph_chars in
+        let replaced = ref chars in
+        List.iter
+          (fun glyph ->
+             replaced := Str.global_replace (Str.regexp_string glyph) "│" !replaced)
+          node_glyphs;
+        I.string A.empty !replaced
+      in
+      for i = List.length available_rows to List.length content_lines - 1 do
+        let line_img = List.nth content_lines i in
+        result := (node_row, I.hcat [ synthetic_graph; line_img ]) :: !result
+      done);
+    List.rev !result
   ;;
 
   let bookmark_select_prompt get_bookmark_list name func =
@@ -137,7 +144,7 @@ module Make (Vars : Global_vars.Vars) = struct
             let state =
               Render_jj_graph.{ depth = 0; columns = [||]; pending_joins = [] }
             in
-            let rendered_rows = Render_jj_graph.render_nodes_structured state nodes in
+            let rendered_rows = Render_jj_graph.render_nodes_structured state nodes ~node_attr:(Commit_render.graph_node_attr) in
             error_var $= None;
             rendered_rows, rev_ids
           with
@@ -149,31 +156,40 @@ module Make (Vars : Global_vars.Vars) = struct
       (*We will make two arrays, one with both selectable and filler and one with only selectable*)
       let selectable_idx = ref 0 in
       let selectable_items = Array.make (Array.length rev_ids) (Obj.magic ()) in
+      (* Group rows by node and render each group with content distribution *)
+      let grouped_rows = group_rows_by_node rendered_rows in
       let items =
-        rendered_rows
-        |> List.map (fun (row : Render_jj_graph.graph_row_output) ->
-          match row.row_type with
-          | NodeRow ->
-            let ui =
-              W.Lists.selectable_item
-                (render_graph_row row ~render_content:render_commit_content |> Ui.atom)
-            in
+        grouped_rows
+        |> List.concat_map (fun group ->
+          let rendered_group =
+            render_node_group group ~render_content:render_commit_content
+          in
+          (* Convert rendered group to list items: first is Selectable, rest are Fillers *)
+          match rendered_group with
+          | [] ->
+            []
+          | (_first_row, first_img) :: rest_rows ->
             let id = rev_ids.(!selectable_idx) in
+            let selectable_ui = W.Lists.selectable_item (first_img |> Ui.atom) in
             let data =
               W.Lists.
                 {
-                  ui
+                  ui = selectable_ui
                 ; id = id |> Global_vars.get_unique_id |> String.hash
                 ; data = rev_ids.(!selectable_idx)
                 }
             in
-            (*Add to our selectable array*)
+            (* Add to our selectable array *)
             Array.set selectable_items !selectable_idx data;
             selectable_idx := !selectable_idx + 1;
-            W.Lists.(Selectable data)
-          | LinkRow | PadRow | TermRow ->
-            let graph_img = I.string A.empty row.graph_chars in
-            W.Lists.(Filler (graph_img |> Ui.atom |> Lwd.pure)))
+            let first_item = W.Lists.(Selectable data) in
+            (* All other rows in the group become fillers *)
+            let filler_items =
+              List.map
+                (fun (_row, img) -> W.Lists.(Filler (img |> Ui.atom |> Lwd.pure)))
+                rest_rows
+            in
+            first_item :: filler_items)
         |> Array.of_list
       in
       items

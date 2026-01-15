@@ -4,22 +4,27 @@ open Nottui
 module Jj_ui = Jj_ui.Make (Vars)
 open Picos_std_structured
 open Jj_tui.Logging
+
 let () =
   (* Handle --version / -v early. A module `Version` is expected to be
      available (provided by `version.ml`, generated at build-time or present
      as a fallback). It should expose `val version : string`. Use
      `Version.version` here so the code refers to that module explicitly. *)
-  if Array.length Sys.argv > 1 then
+  if Array.length Sys.argv > 1
+  then (
     match Sys.argv.(1) with
     | "--version" | "-v" ->
       print_endline Version.version;
       exit 0
-    | _ -> ();
-  Ui.global_config.border_style<-Nottui.Ui.Border.unicode_rounded;
-  Ui.global_config.border_style_focused<-Nottui.Ui.Border.unicode_rounded;
-  (* Ui.global_config.border_attr<-A.empty; *)
-  (* Ui.global_config.border_attr_focused<-; *)
+    | _ ->
+      ();
+      Ui.global_config.border_style <- Nottui.Ui.Border.unicode_rounded;
+      Ui.global_config.border_style_focused <- Nottui.Ui.Border.unicode_rounded)
 ;;
+
+(* Ui.global_config.border_attr<-A.empty; *)
+(* Ui.global_config.border_attr_focused<-; *)
+
 let await_read_unix fd timeout : [ `Ready | `NotReady ] =
   let rec select () =
     match Unix.select [ fd ] [] [ fd ] timeout with
@@ -61,7 +66,7 @@ let ui_loop ~quit ~term root =
     if term_width <> prev_term_width || term_height <> prev_term_height
     then Lwd.set Vars.term_width_height (term_width, term_height)
   in
-  Nottui_picos.Ui_loop.run   ~tick ~term ~renderer ~quit root
+  Nottui_picos.Ui_loop.run ~tick ~term ~renderer ~quit root
 ;;
 
 let start_ui () =

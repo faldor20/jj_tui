@@ -135,7 +135,8 @@ hi2
      (fst |> String.concat ";") ^ "][" ^ (snd |> String.concat ";") |> print_endline
    | Error e ->
      print_endline e);
-  [%expect {|
+  [%expect
+    {|
     hiii
     ][heyyyy
   |}]

@@ -80,23 +80,21 @@ module Make (Vars : Global_vars.Vars) = struct
   ;;
 
   let get_latest_message cursor =
-
-      let rec seek_latest last cursor=
-        let peeked=Stream.peek_opt cursor in
-        match peeked with
-        |Some (last,new_cursor)->
-          seek_latest last new_cursor
-        |None->
-          [%log debug "skipping to next status because two were queued"];
-          (last,cursor)
-      in
-      let msg, new_cursor = cursor |> Stream.read in
-
-      (*little 50ms delay to let us move to the next one if it's ready*)
-      Picos.Fiber.sleep ~seconds:0.05;
-      (*if the queue isn't empty just skip the current because we really only ever want the newest*)
-      seek_latest msg new_cursor
-
+    let rec seek_latest last cursor =
+      let peeked = Stream.peek_opt cursor in
+      match peeked with
+      | Some (last, new_cursor) ->
+        seek_latest last new_cursor
+      | None ->
+        [%log debug "skipping to next status because two were queued"];
+        last, cursor
+    in
+    let msg, new_cursor = cursor |> Stream.read in
+    (*little 50ms delay to let us move to the next one if it's ready*)
+    Picos.Fiber.sleep ~seconds:0.05;
+    (*if the queue isn't empty just skip the current because we really only ever want the newest*)
+    seek_latest msg new_cursor
+  ;;
 
   (* Wait for messages to come in the stream.
      When a message comes, we try to render it.
@@ -109,8 +107,8 @@ module Make (Vars : Global_vars.Vars) = struct
     let cursor = ref (Stream.tap stream) in
     while true do
       [%log debug "waiting for next status"];
-      let msg,new_cursor=get_latest_message  !cursor in
-      cursor:=new_cursor;
+      let msg, new_cursor = get_latest_message !cursor in
+      cursor := new_cursor;
       [%log debug "cancelling older status because of new message"];
       Promise.terminate_after ~seconds:0. !current_summary_computation;
       Promise.terminate_after ~seconds:0. !current_detail_computation;

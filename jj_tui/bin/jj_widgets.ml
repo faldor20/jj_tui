@@ -37,7 +37,7 @@ module Make (Vars : Global_vars.Vars) = struct
           data = name
         ; id = name |> String.hash
         ; ui =
-            str 
+            str
             |> Jj_tui.AnsiReverse.colored_string
             |> Ui.atom
             |> Ui.resize ~w:100 ~h:1 ~mw:100
@@ -79,12 +79,14 @@ module Make (Vars : Global_vars.Vars) = struct
     let lines = String.split_on_char '\n' log in
     lines
     |> List.filter_map (fun line ->
-      if line |>String.trim|> String.length =0
+      if line |> String.trim |> String.length = 0
       then None
       else (
         match Base.String.lsplit2 ~on:' ' line with
-        | Some (name, _) -> Some (name, line)
-        | None -> Some (line, line)))
+        | Some (name, _) ->
+          Some (name, line)
+        | None ->
+          Some (line, line)))
   ;;
 
   let get_remotes_selectable () =
@@ -95,7 +97,7 @@ module Make (Vars : Global_vars.Vars) = struct
           data = name
         ; id = name |> String.hash
         ; ui =
-            str 
+            str
             |> Jj_tui.AnsiReverse.colored_string
             |> Ui.atom
             |> Ui.resize ~w:100 ~h:1 ~mw:100
@@ -208,6 +210,4 @@ module Make (Vars : Global_vars.Vars) = struct
         | _ ->
           `Unhandled)
   ;;
-
-
 end

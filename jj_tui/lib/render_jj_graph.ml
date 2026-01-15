@@ -53,6 +53,10 @@ type node = {
   ; hidden : bool
   ; divergent : bool
   ; is_preview : bool
+  ; change_id_prefix : string
+  ; change_id_rest : string
+  ; commit_id_prefix : string
+  ; commit_id_rest : string
 }
 
 (** Special marker for elided nodes *)
@@ -76,6 +80,10 @@ let make_elided_node () : node =
   ; hidden = true
   ; divergent = false
   ; is_preview = false
+  ; change_id_prefix = ""
+  ; change_id_rest = ""
+  ; commit_id_prefix = ""
+  ; commit_id_rest = ""
   }
 ;;
 
@@ -111,6 +119,10 @@ let make_preview_node ~label ?target_commit_id () : node =
   ; hidden = false
   ; divergent = false
   ; is_preview = true
+  ; change_id_prefix = ""
+  ; change_id_rest = ""
+  ; commit_id_prefix = ""
+  ; commit_id_rest = ""
   }
 ;;
 
@@ -158,6 +170,7 @@ type row_type =
 (** Structured output for UI integration *)
 type graph_row_output = {
     graph_chars : string (** The graph prefix like "○ " or "├─╮" *)
+  ; graph_image : Notty.image (** Notty image for graph prefix, with styling *)
   ; node : node (** The node this row represents *)
   ; row_type : row_type (** What kind of row this is *)
 }
@@ -884,9 +897,18 @@ let classify_row_type (line : string) : row_type =
   else PadRow
 ;;
 
+(** Trim trailing whitespace from a graph image to match its string form. *)
+let trim_graph_image ~graph_chars (img : Notty.image) : Notty.image =
+  let open Notty in
+  let trimmed_width = I.width (I.string A.empty graph_chars) in
+  let width = I.width img in
+  if width > trimmed_width then I.hcrop 0 (width - trimmed_width) img else img
+;;
+
 (** Render nodes to structured output for UI integration *)
 let render_nodes_structured
       ?(info_lines = fun _ -> 0)
+      ?(node_attr = fun _ -> Notty.A.empty)
       (_state : state)
       (nodes : node list) : graph_row_output list
   =
@@ -897,43 +919,76 @@ let render_nodes_structured
     (fun n ->
        let row = next_row ~columns n in
        (match !extra_pad_line_ref with
-        | Some s ->
+        | Some (s, img) ->
           let trimmed = String.trim s in
+          let trimmed_img = trim_graph_image ~graph_chars:trimmed img in
           result
-          := { graph_chars = trimmed; node = n; row_type = classify_row_type trimmed }
+          := {
+               graph_chars = trimmed
+             ; graph_image = trimmed_img
+             ; node = n
+             ; row_type = classify_row_type trimmed
+             }
              :: !result;
           extra_pad_line_ref := None
         | None ->
           ());
        let node_buf = Buffer.create 64 in
+       let node_images = ref [] in
        Array.iter
          (fun entry ->
             match entry with
             | NL_Node ->
               Buffer.add_utf_8_uchar node_buf row.glyph;
-              Buffer.add_char node_buf ' '
+              Buffer.add_char node_buf ' ';
+              let glyph_img = Notty.I.uchar (node_attr row.row_node) row.glyph 1 1 in
+              let space_img = Notty.I.string Notty.A.empty " " in
+              node_images := Notty.I.hcat [ glyph_img; space_img ] :: !node_images
             | NL_Parent ->
-              Buffer.add_string node_buf glyphs.(Glyph.parent)
+              Buffer.add_string node_buf glyphs.(Glyph.parent);
+              node_images
+              := Notty.I.string Notty.A.empty glyphs.(Glyph.parent) :: !node_images
             | NL_Ancestor ->
-              Buffer.add_string node_buf glyphs.(Glyph.ancestor)
+              Buffer.add_string node_buf glyphs.(Glyph.ancestor);
+              node_images
+              := Notty.I.string Notty.A.empty glyphs.(Glyph.ancestor) :: !node_images
             | NL_Blank ->
-              Buffer.add_string node_buf glyphs.(Glyph.space))
+              Buffer.add_string node_buf glyphs.(Glyph.space);
+              node_images
+              := Notty.I.string Notty.A.empty glyphs.(Glyph.space) :: !node_images)
          row.node_line;
        let node_str = Buffer.contents node_buf |> String.trim in
+       let node_img = !node_images |> List.rev |> Notty.I.hcat in
+       let node_img = trim_graph_image ~graph_chars:node_str node_img in
        result
-       := { graph_chars = node_str; node = n; row_type = classify_row_type node_str }
+       := {
+            graph_chars = node_str
+          ; graph_image = node_img
+          ; node = n
+          ; row_type = classify_row_type node_str
+          }
           :: !result;
        (match row.link_line with
         | Some link_row ->
           let link_buf = Buffer.create 64 in
+          let link_images = ref [] in
           Array.iter
             (fun cur ->
                let glyph_idx = select_link_glyph cur ~merge:row.merge in
-               Buffer.add_string link_buf glyphs.(glyph_idx))
+               Buffer.add_string link_buf glyphs.(glyph_idx);
+               link_images
+               := Notty.I.string Notty.A.empty glyphs.(glyph_idx) :: !link_images)
             link_row;
           let link_str = Buffer.contents link_buf |> String.trim in
+          let link_img = !link_images |> List.rev |> Notty.I.hcat in
+          let link_img = trim_graph_image ~graph_chars:link_str link_img in
           result
-          := { graph_chars = link_str; node = n; row_type = classify_row_type link_str }
+          := {
+               graph_chars = link_str
+             ; graph_image = link_img
+             ; node = n
+             ; row_type = classify_row_type link_str
+             }
              :: !result
         | None ->
           ());
@@ -941,54 +996,89 @@ let render_nodes_structured
        (match row.term_line with
         | Some term_row ->
           let term_buf1 = Buffer.create 64 in
+          let term_images1 = ref [] in
           Array.iteri
             (fun i term ->
                if term
-               then Buffer.add_string term_buf1 glyphs.(Glyph.parent)
+               then (
+                 Buffer.add_string term_buf1 glyphs.(Glyph.parent);
+                 term_images1
+                 := Notty.I.string Notty.A.empty glyphs.(Glyph.parent) :: !term_images1)
                else (
                  let pad_glyph = pad_line_to_glyph row.pad_lines.(i) in
-                 Buffer.add_string term_buf1 glyphs.(pad_glyph)))
+                 Buffer.add_string term_buf1 glyphs.(pad_glyph);
+                 term_images1
+                 := Notty.I.string Notty.A.empty glyphs.(pad_glyph) :: !term_images1))
             term_row;
           let term_str1 = Buffer.contents term_buf1 |> String.trim in
+          let term_img1 = !term_images1 |> List.rev |> Notty.I.hcat in
+          let term_img1 = trim_graph_image ~graph_chars:term_str1 term_img1 in
           result
-          := { graph_chars = term_str1; node = n; row_type = classify_row_type term_str1 }
+          := {
+               graph_chars = term_str1
+             ; graph_image = term_img1
+             ; node = n
+             ; row_type = classify_row_type term_str1
+             }
              :: !result;
           let term_buf2 = Buffer.create 64 in
+          let term_images2 = ref [] in
           Array.iteri
             (fun i term ->
                if term
-               then Buffer.add_string term_buf2 glyphs.(Glyph.termination)
+               then (
+                 Buffer.add_string term_buf2 glyphs.(Glyph.termination);
+                 term_images2
+                 := Notty.I.string Notty.A.empty glyphs.(Glyph.termination) :: !term_images2)
                else (
                  let pad_glyph = pad_line_to_glyph row.pad_lines.(i) in
-                 Buffer.add_string term_buf2 glyphs.(pad_glyph)))
+                 Buffer.add_string term_buf2 glyphs.(pad_glyph);
+                 term_images2
+                 := Notty.I.string Notty.A.empty glyphs.(pad_glyph) :: !term_images2))
             term_row;
           let term_str2 = Buffer.contents term_buf2 |> String.trim in
+          let term_img2 = !term_images2 |> List.rev |> Notty.I.hcat in
+          let term_img2 = trim_graph_image ~graph_chars:term_str2 term_img2 in
           result
-          := { graph_chars = term_str2; node = n; row_type = classify_row_type term_str2 }
+          := {
+               graph_chars = term_str2
+             ; graph_image = term_img2
+             ; node = n
+             ; row_type = classify_row_type term_str2
+             }
              :: !result;
           need_extra_pad := true
         | None ->
           ());
        let pad_buf = Buffer.create 64 in
+       let pad_images = ref [] in
        Array.iter
          (fun entry ->
             let glyph_idx = pad_line_to_glyph entry in
-            Buffer.add_string pad_buf glyphs.(glyph_idx))
+            Buffer.add_string pad_buf glyphs.(glyph_idx);
+            pad_images := Notty.I.string Notty.A.empty glyphs.(glyph_idx) :: !pad_images)
          row.pad_lines;
        let base_pad_line = Buffer.contents pad_buf in
-       if !need_extra_pad then extra_pad_line_ref := Some base_pad_line;
+       let base_pad_img = !pad_images |> List.rev |> Notty.I.hcat in
+       if !need_extra_pad then extra_pad_line_ref := Some (base_pad_line, base_pad_img);
        let extra_rows = info_lines n in
        for _ = 1 to extra_rows do
          let info_pad_buf = Buffer.create 64 in
+         let info_pad_images = ref [] in
          Array.iter
            (fun col ->
               let glyph_idx = pad_line_to_glyph (column_to_pad_line col) in
-              Buffer.add_string info_pad_buf glyphs.(glyph_idx))
+              Buffer.add_string info_pad_buf glyphs.(glyph_idx);
+              info_pad_images
+              := Notty.I.string Notty.A.empty glyphs.(glyph_idx) :: !info_pad_images)
            !columns;
          let info_pad_str = Buffer.contents info_pad_buf |> String.trim in
+         let info_pad_img = !info_pad_images |> List.rev |> Notty.I.hcat in
+         let info_pad_img = trim_graph_image ~graph_chars:info_pad_str info_pad_img in
          result
          := {
               graph_chars = info_pad_str
+            ; graph_image = info_pad_img
             ; node = n
             ; row_type = classify_row_type info_pad_str
             }
@@ -996,11 +1086,17 @@ let render_nodes_structured
        done)
     nodes;
   (match !extra_pad_line_ref with
-   | Some s ->
+   | Some (s, img) ->
      let trimmed = String.trim s in
+     let trimmed_img = trim_graph_image ~graph_chars:trimmed img in
      let last_node = List.hd (List.rev nodes) in
      result
-     := { graph_chars = trimmed; node = last_node; row_type = classify_row_type trimmed }
+     := {
+          graph_chars = trimmed
+        ; graph_image = trimmed_img
+        ; node = last_node
+        ; row_type = classify_row_type trimmed
+        }
         :: !result
    | None ->
      ());

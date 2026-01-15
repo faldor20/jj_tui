@@ -50,14 +50,12 @@ module Make (Vars : Global_vars.Vars) = struct
           let rev_args = List.concat_map (fun r -> [ "-r"; r ]) revs in
           let title = Printf.sprintf "Git push (%s) will:" remote in
           let dry_run_cmd =
-            [ "git"; "push"; "--allow-new";  "--dry-run"; "--remote"; remote ]
-            @ rev_args
+            [ "git"; "push"; "--allow-new"; "--dry-run"; "--remote"; remote ] @ rev_args
           in
           let real_cmd =
             Cmd_async
               ( "pushing to remote..."
-              , [ "git"; "push"; "--allow-new";  "--remote"; remote ]
-                @ rev_args )
+              , [ "git"; "push"; "--allow-new"; "--remote"; remote ] @ rev_args )
           in
           confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
     in
@@ -66,14 +64,12 @@ module Make (Vars : Global_vars.Vars) = struct
         (fun () ->
           let title = Printf.sprintf "Git push (%s) will:" remote in
           let dry_run_cmd =
-            [ "git"; "push";"--deleted"; "--allow-new"; "--dry-run"; "--remote"; remote ]
-            
+            [ "git"; "push"; "--deleted"; "--allow-new"; "--dry-run"; "--remote"; remote ]
           in
           let real_cmd =
             Cmd_async
               ( "pushing to remote..."
-              , [ "git"; "push"; "--allow-new"; "--deleted";  "--remote"; remote ]
-                )
+              , [ "git"; "push"; "--allow-new"; "--deleted"; "--remote"; remote ] )
           in
           confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
     in
@@ -90,13 +86,13 @@ module Make (Vars : Global_vars.Vars) = struct
              ; sort_key = 0.
              ; description = Printf.sprintf "git push hovered to %s" remote
              ; cmd = push_cmd ()
-             } );
-           ( Key.key_of_string_exn "P"
+             } )
+         ; ( Key.key_of_string_exn "P"
            , {
                key = Key.key_of_string_exn "P"
              ; sort_key = 0.1
              ; description = Printf.sprintf "git push all to %s" remote
-             ; cmd = push_all_cmd()
+             ; cmd = push_all_cmd ()
              } )
          ; ( Key.key_of_string_exn "f"
            , {
@@ -356,12 +352,11 @@ module Make (Vars : Global_vars.Vars) = struct
                 let rev_args = revs |> List.concat_map (fun x -> [ "-r"; x ]) in
                 let title = "Git push will:" in
                 let dry_run_cmd =
-                  [ "git"; "push";  "--allow-new"; "--dry-run" ] @ rev_args
+                  [ "git"; "push"; "--allow-new"; "--dry-run" ] @ rev_args
                 in
                 let real_cmd =
                   Cmd_async
-                    ( "pushing to remote..."
-                    , [ "git"; "push";  "--allow-new" ] @ rev_args )
+                    ("pushing to remote...", [ "git"; "push"; "--allow-new" ] @ rev_args)
                 in
                 confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd))
       }
@@ -375,12 +370,11 @@ module Make (Vars : Global_vars.Vars) = struct
               (fun () ->
                 let title = "Git push will:" in
                 let dry_run_cmd =
-                  [ "git"; "push"; "--deleted"; "--allow-new"; "--dry-run" ] 
+                  [ "git"; "push"; "--deleted"; "--allow-new"; "--dry-run" ]
                 in
                 let real_cmd =
                   Cmd_async
-                    ( "pushing to remote..."
-                    , [ "git"; "push"; "--deleted"; "--allow-new" ] )
+                    ("pushing to remote...", [ "git"; "push"; "--deleted"; "--allow-new" ])
                 in
                 confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd))
       }

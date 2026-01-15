@@ -1,7 +1,7 @@
 (executable
  (public_name jj_tui)
  (name main)
- (modes byte native )
+ (modes byte native)
  (libraries
   signal
   jj_tui
@@ -30,12 +30,13 @@
 ;; (useful in CI), otherwise falls back to `git describe`. If neither is
 ;; available, it writes "unknown". This uses only shell builtins and common
 ;; utilities (no python required).
+
 (rule
  (targets version.ml)
  (action
-  (with-stdout-to version.ml
-   (run sh -c
-   "v=${GIT_DESCRIBE:-$(git describe --tags --always --dirty 2>/dev/null || echo unknown)};
-   esc=$(printf '%s' \"$v\" | sed 's/\\\\/\\\\\\\\/g; s/\"/\\\\\\\"/g');
-   printf 'let version = \"%s\"\\n' \"$esc\""
-   ))))
+  (with-stdout-to
+   version.ml
+   (run
+    sh
+    -c
+    "v=${GIT_DESCRIBE:-$(git describe --tags --always --dirty 2>/dev/null || echo unknown)};\n   esc=$(printf '%s' \"$v\" | sed 's/\\\\/\\\\\\\\/g; s/\"/\\\\\\\"/g');\n   printf 'let version = \"%s\"\\n' \"$esc\""))))

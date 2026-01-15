@@ -12,16 +12,17 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* Import file commands *)
   module FileCommands = File_commands.Make (Vars)
-  
   open Jj_tui.Key_map
+
   let active_files = Lwd.var [ "" ]
 
   (* Remove the hardcoded make_command_mapping function and use the dynamic one *)
   let command_mapping = ref None
-  
+
   let rec get_command_mapping () =
     match !command_mapping with
-    | Some mapping -> mapping
+    | Some mapping ->
+      mapping
     | None ->
       let key_map = (Lwd.peek ui_state.config).key_map.file in
       let registry = FileCommands.get_command_registry active_files get_command_mapping in
@@ -29,7 +30,7 @@ module Make (Vars : Global_vars.Vars) = struct
       command_mapping := Some mapping;
       mapping
   ;;
-  
+
   let hovered_var = ref "./"
 
   let file_view ~focus summary_focus =
@@ -66,8 +67,8 @@ module Make (Vars : Global_vars.Vars) = struct
              | `Enter, [] ->
                Focus.request_reversable summary_focus;
                `Handled
-             |  k  ->
-              handleInputs (get_command_mapping ()) k
+             | k ->
+               handleInputs (get_command_mapping ()) k
              | _ ->
                `Unhandled)
     in
@@ -79,5 +80,4 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     ui
   ;;
-
 end

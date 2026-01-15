@@ -6,7 +6,6 @@ open Jj_tui.Logging
 open Jj_tui.Key_map
 open Jj_tui.Key
 open Jj_tui
-
 open Log
 
 (** Internal to this module. I'm trying this out as a way to avoid .mli files*)
@@ -159,19 +158,22 @@ module Intern (Vars : Global_vars.Vars) = struct
     let space_command =
       render_command_line ~indent_level:0 "<space>" "toggle selection (multi-select)"
     in
-    let enter_command=
-      render_command_line ~indent_level:0 "<Enter>" "Focus status view to enlarge and scroll diff"
+    let enter_command =
+      render_command_line
+        ~indent_level:0
+        "<Enter>"
+        "Focus status view to enlarge and scroll diff"
     in
-    ((commands |> render_commands) @ if include_arrows then [ move_command; space_command;enter_command ] else [])
+    ((commands |> render_commands)
+     @ if include_arrows then [ move_command; space_command; enter_command ] else [])
     |> I.vcat
     |> Ui.atom
     |> Lwd.pure
     |> W.Scroll.area
   ;;
 
-  let rec handleCommand description (cmd:string command_variant) =
-    [%log
-      info "Handling command. description: %s"  description];
+  let rec handleCommand description (cmd : string command_variant) =
+    [%log info "Handling command. description: %s" description];
     let noOut args =
       let _ = args in
       let _result = jj args in
@@ -219,22 +221,28 @@ module Intern (Vars : Global_vars.Vars) = struct
                      ())
              }
     in
-    
     let change_view view = Lwd.set ui_state.view view in
     let send_cmd args = change_view (`Cmd_I args) in
     match cmd with
-    | Cmd_async (loading_msg,args) ->
-        jj_async
-          args
-          ~on_start:(fun () -> show_popup @@ Some (W.hbox [ Nottui_picos.Widgets.throbber ;(W.string (" "^loading_msg)|>Lwd.pure)  ], "loading..."))
-          ~on_success:(fun _ ->
-              Global_funcs.update_status ~cause_snapshot:true ();
-              show_popup None)
-          ~on_error:(fun code str ->
-              handle_jj_error
-                ~cmd:("jj " ^ (args |> String.concat " "))
-                ~error:(Printf.sprintf "Exited with code %i; Message:\n%s" code str);
-              );
+    | Cmd_async (loading_msg, args) ->
+      jj_async
+        args
+        ~on_start:(fun () ->
+          show_popup
+          @@ Some
+               ( W.hbox
+                   [
+                     Nottui_picos.Widgets.throbber
+                   ; W.string (" " ^ loading_msg) |> Lwd.pure
+                   ]
+               , "loading..." ))
+        ~on_success:(fun _ ->
+          Global_funcs.update_status ~cause_snapshot:true ();
+          show_popup None)
+        ~on_error:(fun code str ->
+          handle_jj_error
+            ~cmd:("jj " ^ (args |> String.concat " "))
+            ~error:(Printf.sprintf "Exited with code %i; Message:\n%s" code str));
       raise Handled
     | Cmd_I args ->
       show_popup None;
@@ -350,8 +358,8 @@ module Make (Vars : Global_vars.Vars) = struct
       ; cmd =
           Fun
             (fun _ ->
-              show_popup@@
-              Some
+              show_popup
+              @@ Some
                    (commands_list_ui ~include_arrows:true (make_default_list ()), "Help");
               ui_state.input $= `Mode (fun _ -> `Unhandled))
       }
@@ -381,16 +389,13 @@ module Make (Vars : Global_vars.Vars) = struct
     Fun
       (fun _ ->
         let subcmds =
-          [ (let key = key_of_string_exn "y" in
-             ( key
-             , { key
-               ; sort_key = 0.
-               ; description = "proceed"
-               ; cmd = real_cmd
-               } ))
+          [
+            (let key = key_of_string_exn "y" in
+             key, { key; sort_key = 0.; description = "proceed"; cmd = real_cmd })
           ; (let key = key_of_string_exn "n" in
              ( key
-             , { key
+             , {
+                 key
                ; sort_key = 1.
                ; description = "exit"
                ; cmd =
@@ -418,16 +423,13 @@ module Make (Vars : Global_vars.Vars) = struct
     Fun
       (fun _ ->
         let subcmds =
-          [ (let key = key_of_string_exn "y" in
-             ( key
-             , { key
-               ; sort_key = 0.
-               ; description = "proceed"
-               ; cmd = real_cmd
-               } ))
+          [
+            (let key = key_of_string_exn "y" in
+             key, { key; sort_key = 0.; description = "proceed"; cmd = real_cmd })
           ; (let key = key_of_string_exn "n" in
              ( key
-             , { key
+             , {
+                 key
                ; sort_key = 1.
                ; description = "exit"
                ; cmd =

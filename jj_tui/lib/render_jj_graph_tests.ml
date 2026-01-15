@@ -21,6 +21,10 @@ let%expect_test "recreate_target_graph" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let b : node =
@@ -40,6 +44,10 @@ let%expect_test "recreate_target_graph" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let c : node =
@@ -59,6 +67,10 @@ let%expect_test "recreate_target_graph" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let a : node =
@@ -78,6 +90,10 @@ let%expect_test "recreate_target_graph" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let state : state = { depth = 0; columns = [||]; pending_joins = [] } in
@@ -122,6 +138,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let rzmu : node =
@@ -141,6 +161,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let osynn : node =
@@ -160,6 +184,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let tzrqs : node =
@@ -179,6 +207,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let qlnop : node =
@@ -198,6 +230,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let loxn : node =
@@ -217,6 +253,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let otsz : node =
@@ -236,6 +276,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let yrsq : node =
@@ -255,6 +299,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let xysm : node =
@@ -274,6 +322,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let wwtl : node =
@@ -293,6 +345,10 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   (* Render order matching the example top-to-bottom. *)
@@ -386,6 +442,10 @@ let%expect_test "render_jj_output" =
       ; hidden = false
       ; divergent = false
       ; is_preview = false
+      ; change_id_prefix = ""
+      ; change_id_rest = ""
+      ; commit_id_prefix = ""
+      ; commit_id_rest = ""
       }
     in
     Hashtbl.add node_tbl jj_node.commit_id n);
@@ -510,6 +570,10 @@ let%expect_test "is_elided_false" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   Printf.printf "is_elided: %b\n" (Render_jj_graph.is_elided normal);
@@ -537,6 +601,10 @@ let%expect_test "render_nodes_structured_simple" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let child : node =
@@ -602,6 +670,10 @@ let%expect_test "render_nodes_structured_row_types" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let b : node =
@@ -621,6 +693,10 @@ let%expect_test "render_nodes_structured_row_types" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let c : node =
@@ -640,6 +716,10 @@ let%expect_test "render_nodes_structured_row_types" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let a : node =
@@ -659,6 +739,10 @@ let%expect_test "render_nodes_structured_row_types" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let state : state = { depth = 0; columns = [||]; pending_joins = [] } in
@@ -721,6 +805,10 @@ let%expect_test "elided_parent_creates_termination_line" =
     ; hidden = false
     ; divergent = false
     ; is_preview = false
+    ; change_id_prefix = ""
+    ; change_id_rest = ""
+    ; commit_id_prefix = ""
+    ; commit_id_rest = ""
     }
   in
   let state : state = { depth = 0; columns = [||]; pending_joins = [] } in

@@ -3,11 +3,13 @@ open Logging
 type t = {
     key_map : Key_map.key_config [@updater]
   ; single_pane_width_threshold : int
-  ; max_commits: int
+  ; max_commits : int
 }
 [@@deriving yaml, record_updater ~derive:yaml]
 
-let default_config : t = { key_map = Key_map.default; single_pane_width_threshold = 100; max_commits= 100}
+let default_config : t =
+  { key_map = Key_map.default; single_pane_width_threshold = 100; max_commits = 100 }
+;;
 
 let get_config_dir () =
   let os = Os.poll_os () in

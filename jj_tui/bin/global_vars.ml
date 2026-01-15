@@ -41,11 +41,7 @@ type ui_state_t = {
 }
 
 let get_unique_id maybe_unique_rev =
-  match maybe_unique_rev with
-  | Unique s ->
-    s
-  | Duplicate s ->
-    s
+  match maybe_unique_rev with Unique s -> s | Duplicate s -> s
 ;;
 
 (** Global variables for the ui. Here we keep anything that's just a pain to pipe around*)
@@ -82,10 +78,8 @@ module Vars : Vars = struct
     ; jj_show_promise = ref @@ Promise.of_value ()
     ; jj_branches = Lwd.var I.empty
     ; jj_change_files = Lwd.var []
-    ; hovered_revision =
-        Lwd.var (Unique "@")
-    ; selected_revisions =
-        Lwd.var [ Unique  "@"; ]
+    ; hovered_revision = Lwd.var (Unique "@")
+    ; selected_revisions = Lwd.var [ Unique "@" ]
     ; revset = Lwd.var None
     ; graph_revs = Lwd.var [||]
     ; input = Lwd.var `Normal

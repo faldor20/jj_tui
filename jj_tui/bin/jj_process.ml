@@ -19,19 +19,22 @@ let read_fd_contents fd =
   let output = Buffer.create buffer_size in
   let rec read_loop () =
     match Unix.read fd buffer 0 buffer_size with
-    | 0 -> Buffer.contents output  (* EOF reached *)
+    | 0 ->
+      Buffer.contents output (* EOF reached *)
     | n ->
       Buffer.add_subbytes output buffer 0 n;
       read_loop ()
     | exception Unix.Unix_error (Unix.EINTR, _, _) ->
       read_loop ()
     | exception Unix.Unix_error (Unix.EBADF, _, _) ->
-      Buffer.contents output  (* Handle EBADF error *)
+      Buffer.contents output (* Handle EBADF error *)
     | exception Unix.Unix_error (Unix.EAGAIN, _, _) ->
-      Unix.sleepf 0.01;  (* Short sleep to avoid busy waiting *)
+      Unix.sleepf 0.01;
+      (* Short sleep to avoid busy waiting *)
       read_loop ()
   in
   read_loop ()
+;;
 
 module Make (Vars : Global_vars.Vars) = struct
   (** Makes a new process that has acess to all input and output
@@ -40,15 +43,15 @@ module Make (Vars : Global_vars.Vars) = struct
     let stdout = Unix.stdout in
     let stdin = Unix.stdin in
     (* Create a pipe for stderr to capture it *)
-      let stderr_r, stderr_w = Unix.pipe () in
+    let stderr_r, stderr_w = Unix.pipe () in
     let pid = Unix.create_process command.(0) command stdin stdout stderr_w in
     (* Close write end in parent *)
-      Unix.close stderr_w;
-      let _, status = Unix.waitpid [] pid in
-      (* Read stderr contents *)
-      let stderr_content = read_fd_contents stderr_r in
-      Unix.close stderr_r;
-      status, stderr_content
+    Unix.close stderr_w;
+    let _, status = Unix.waitpid [] pid in
+    (* Read stderr contents *)
+    let stderr_content = read_fd_contents stderr_r in
+    Unix.close stderr_r;
+    status, stderr_content
   ;;
 
   (*
@@ -134,22 +137,22 @@ module Make (Vars : Global_vars.Vars) = struct
     let@ stdout_o, stdout_i =
       finally
         (fun (o, i) ->
-          Unix.close o;
-          dispose i)
+           Unix.close o;
+           dispose i)
         (Picos_io.Unix.pipe ~cloexec:true)
     in
     let@ stdin_o, stdin_i =
       finally
         (fun (o, i) ->
-          Unix.close i;
-          dispose o)
+           Unix.close i;
+           dispose o)
         (Picos_io.Unix.pipe ~cloexec:true)
     in
     let@ stderr_o, stderr_i =
       finally
         (fun (o, i) ->
-          Unix.close o;
-          dispose i)
+           Unix.close o;
+           dispose i)
         (Picos_io.Unix.pipe ~cloexec:true)
     in
     (* This should ensure that all children processes are killed before we cleanup the pipes*)
@@ -158,27 +161,30 @@ module Make (Vars : Global_vars.Vars) = struct
     let@ pid =
       finally
         (fun pid ->
-          (* if the process didn't finish we will kill the process and then wait it's pid to release the pid*)
-          if not !isDone
-          then (
-            try
-              [%log debug "pid: %i Cleaning up cancelled command %s" pid (args |> String.concat " ")];
-              Unix.kill pid Sys.sigkill;
-              Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
-            with
-            | _ ->
-              ()))
+           (* if the process didn't finish we will kill the process and then wait it's pid to release the pid*)
+           if not !isDone
+           then (
+             try
+               [%log
+                 debug
+                   "pid: %i Cleaning up cancelled command %s"
+                   pid
+                   (args |> String.concat " ")];
+               Unix.kill pid Sys.sigkill;
+               Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
+             with
+             | _ ->
+               ()))
         (fun _ ->
-          Unix.create_process_env
-            cmd
-            (cmd :: args |> Array.of_list)
-            (Unix.environment ())
-            stdin_o
-            stdout_i
-            stderr_i)
+           Unix.create_process_env
+             cmd
+             (cmd :: args |> Array.of_list)
+             (Unix.environment ())
+             stdin_o
+             stdout_i
+             stderr_i)
     in
-
-    [%log debug "pid: %i started" pid ];
+    [%log debug "pid: %i started" pid];
     let prom = Flock.fork_as_promise (fun () -> Unix.waitpid [] pid) in
     (* Close unused pipe ends in the parent process *)
     Unix.close stdout_i;
@@ -193,25 +199,23 @@ module Make (Vars : Global_vars.Vars) = struct
     isDone := true;
     (* let stderr = read_fd_to_end stderr_i in *)
     (* let stdout= ""in *)
-    code, status, stdout, stderr,pid
+    code, status, stdout, stderr, pid
   ;;
-
 
   (* Ui_loop.run (Lwd.pure (W.printf "Hello world"));; *)
   let cmdArgs cmd args =
     let start_time = Unix.gettimeofday () in
-    let code, status, out_content, err_content,pid = picos_process cmd args in
+    let code, status, out_content, err_content, pid = picos_process cmd args in
     let end_time = Unix.gettimeofday () in
-    let exit_code_text=
+    let exit_code_text =
       match status with
       | Unix.WEXITED code ->
         Printf.sprintf "exit: %i" code
-      | Unix.WSIGNALED x->
+      | Unix.WSIGNALED x ->
         Printf.sprintf "signalled: %i" x
-      | Unix.WSTOPPED x->
+      | Unix.WSTOPPED x ->
         Printf.sprintf "stopped: %i" x
-      in
-
+    in
     [%log
       debug
         "Executing pid:%i %s '%s %s' took: %fms "
@@ -318,8 +322,7 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     on_start ();
     Picos_std_structured.Flock.fork (fun () ->
-      try run ()
-      with
+      try run () with
       | exn ->
         let msg = Printexc.to_string exn in
         [%log warn "Exception in jj_async: %s" msg];

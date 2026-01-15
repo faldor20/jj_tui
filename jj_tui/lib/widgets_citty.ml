@@ -114,17 +114,17 @@ let word_wrap_string_table table width =
     *)
     Lwd_table.map_reduce
       (fun _ x ->
-        match control_character_index x 0 with
-        | exception Not_found ->
-          x, None
-        | i ->
-          let prefix = String.sub x 0 i in
-          (match split_lines x [] (i + 1) with
-           | [] ->
-             assert false
-           | suffix :: rest ->
-             let ui = rest |> List.rev_map wrap_line |> Lwd_utils.reduce Ui.pack_y in
-             prefix, Some (ui, suffix)))
+         match control_character_index x 0 with
+         | exception Not_found ->
+           x, None
+         | i ->
+           let prefix = String.sub x 0 i in
+           (match split_lines x [] (i + 1) with
+            | [] ->
+              assert false
+            | suffix :: rest ->
+              let ui = rest |> List.rev_map wrap_line |> Lwd_utils.reduce Ui.pack_y in
+              prefix, Some (ui, suffix)))
       ( ("", None)
       , fun (pa, ta) (pb, tb) ->
           match ta with
@@ -140,7 +140,8 @@ let word_wrap_string_table table width =
                  | Some (ub, sb) ->
                    join3 ua (wrap_line line) ub, sb) ) )
       table
-    |> (* After reducing the table, we produce the final UI, interpreting
+    |>
+    (* After reducing the table, we produce the final UI, interpreting
           unterminated prefix and suffix has line of their own. *)
     Lwd.map ~f:(function
       | pa, None ->

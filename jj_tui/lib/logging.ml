@@ -70,11 +70,7 @@ module Internal = struct
       in
       let with_stamp h tags k ppf fmt =
         let stamp =
-          match tags with
-          | None ->
-            None
-          | Some tags ->
-            Logs.Tag.find timestamp_tag tags
+          match tags with None -> None | Some tags -> Logs.Tag.find timestamp_tag tags
         in
         let dt = Format.pp_print_option (Logs.Tag.printer timestamp_tag) in
         Format.kfprintf

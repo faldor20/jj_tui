@@ -14,7 +14,8 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* Define all file commands *)
   let get_command_registry active_files get_commands =
-    [ {
+    [
+      {
         id = "show_help"
       ; description = "Show help"
       ; sorting_key = 0.0
@@ -36,15 +37,16 @@ module Make (Vars : Global_vars.Vars) = struct
               ( "Revision to move file to"
               , fun rev ->
                   Cmd
-                    ( [ "squash"
-                      ; "-u"
-                      ; "--keep-emptied"
-                      ; "--from"
-                      ; get_hovered_rev ()
-                      ; "--into"
-                      ; rev
-                      ]
-                    @ Lwd.peek active_files ) ))
+                    ([
+                       "squash"
+                     ; "-u"
+                     ; "--keep-emptied"
+                     ; "--from"
+                     ; get_hovered_rev ()
+                     ; "--into"
+                     ; rev
+                     ]
+                     @ Lwd.peek active_files) ))
       }
     ; {
         id = "move_to_child"
@@ -55,15 +57,10 @@ module Make (Vars : Global_vars.Vars) = struct
             Dynamic_r
               (fun rev ->
                 Cmd
-                  ( [ "squash"
-                    ; "-u"
-                    ; "--keep-emptied"
-                    ; "--from"
-                    ; rev
-                    ; "--into"
-                    ; rev ^ "+"
-                    ]
-                  @ Lwd.peek active_files )))
+                  ([
+                     "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "+"
+                   ]
+                   @ Lwd.peek active_files)))
       }
     ; {
         id = "move_to_parent"
@@ -74,15 +71,10 @@ module Make (Vars : Global_vars.Vars) = struct
             Dynamic_r
               (fun rev ->
                 Cmd
-                  ( [ "squash"
-                    ; "-u"
-                    ; "--keep-emptied"
-                    ; "--from"
-                    ; rev
-                    ; "--into"
-                    ; rev ^ "-"
-                    ]
-                  @ Lwd.peek active_files )))
+                  ([
+                     "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "-"
+                   ]
+                   @ Lwd.peek active_files)))
       }
     ; {
         id = "commit"
@@ -93,14 +85,14 @@ module Make (Vars : Global_vars.Vars) = struct
             PromptThen
               ( "Commit message"
               , fun message ->
-              
-                    Fun
-                    (fun _-> (* I need this to work with any commit. So i should split then describe instead*)
-                      let rev=Vars.get_hovered_rev () in
+                  Fun
+                    (fun _ ->
+                      (* I need this to work with any commit. So i should split then describe instead*)
+                      let rev = Vars.get_hovered_rev () in
                       jj
-                        ( [ "split";"-r"; rev; "-m";message; "--insert-before"; "@" ]
-                        @ Lwd.peek active_files )|>ignore;
-                        )))
+                        ([ "split"; "-r"; rev; "-m"; message; "--insert-before"; "@" ]
+                         @ Lwd.peek active_files)
+                      |> ignore) ))
       }
     ; {
         id = "abandon"
@@ -116,11 +108,13 @@ module Make (Vars : Global_vars.Vars) = struct
                    ^ (selected |> String.concat "\n")
                    ^ "\nin rev "
                    ^ rev)
-                  (Cmd (["restore"; "--to"; rev; "--from"; rev ^ "-"] @ selected))))
+                  (Cmd ([ "restore"; "--to"; rev; "--from"; rev ^ "-" ] @ selected))))
       }
     ; {
         id = "absorb"
-      ; description = "Move changes from this revision to the nearest parent that modified the same lines"
+      ; description =
+          "Move changes from this revision to the nearest parent that modified the same \
+           lines"
       ; sorting_key = 5.0
       ; make_cmd =
           (fun () ->
@@ -132,7 +126,7 @@ module Make (Vars : Global_vars.Vars) = struct
                    ^ (selected |> String.concat "\n")
                    ^ "\nin rev "
                    ^ rev)
-                  (Cmd (["absorb"; "--from"; rev] @ selected))))
+                  (Cmd ([ "absorb"; "--from"; rev ] @ selected))))
       }
     ; {
         id = "absorb-into"
@@ -143,15 +137,15 @@ module Make (Vars : Global_vars.Vars) = struct
             PromptThen
               ( "Revision to move file to"
               , fun dest ->
-                Dynamic_r
-                  (fun rev ->
-                    let selected = Lwd.peek active_files in
-                    confirm_prompt
-                      ("absorb all changes to:\n"
-                       ^ (selected |> String.concat "\n")
-                       ^ "\nin rev "
-                       ^ rev)
-                      (Cmd (["absorb"; "--from"; rev;"--to"; dest] @ selected)))))
+                  Dynamic_r
+                    (fun rev ->
+                      let selected = Lwd.peek active_files in
+                      confirm_prompt
+                        ("absorb all changes to:\n"
+                         ^ (selected |> String.concat "\n")
+                         ^ "\nin rev "
+                         ^ rev)
+                        (Cmd ([ "absorb"; "--from"; rev; "--to"; dest ] @ selected))) ))
       }
     ; {
         id = "undo"
@@ -163,4 +157,5 @@ module Make (Vars : Global_vars.Vars) = struct
     |> List.to_seq
     |> Seq.map (fun x -> x.id, x)
     |> Hashtbl.of_seq
-end 
+  ;;
+end

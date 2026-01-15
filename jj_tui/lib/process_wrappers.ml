@@ -174,17 +174,12 @@ struct
     graph, revs |> Array.of_list
   ;;
 
-  (** Fetch graph data as JSON and parse into commits *)
+  (** Fetch graph data as JSON and parse into commits.
+      Uses graph output (not --no-graph) because the graph ensures nodes are
+      in the correct topological order for rendering. *)
   let get_graph_json ?revset limit =
     let args =
-      [
-        "log"
-      ; "--no-graph"
-      ; "-T"
-      ; Jj_json.json_log_template
-      ; "--limit"
-      ; string_of_int limit
-      ]
+      [ "log"; "-T"; Jj_json.json_log_template; "--limit"; string_of_int limit ]
     in
     let args = match revset with Some r -> args @ [ "-r"; r ] | None -> args in
     let output = jj_no_log args ~color:false in

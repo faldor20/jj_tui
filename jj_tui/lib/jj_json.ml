@@ -29,6 +29,10 @@ type jj_commit = {
   ; empty : bool
   ; bookmarks : string list
   ; author : jj_author
+  ; change_id_prefix : string
+  ; change_id_rest : string
+  ; commit_id_prefix : string
+  ; commit_id_rest : string
 }
 [@@deriving yojson]
 
@@ -46,12 +50,18 @@ let json_log_template =
   ++ ',"divergent":' ++ json(divergent)
   ++ ',"empty":' ++ json(empty)
   ++ ',"bookmarks":[' ++ bookmarks.map(|b| json(b.name())).join(",") ++ ']'
-  ++ ',"author":{"email":' ++ json(author.email()) ++ ',"timestamp":' ++ json(author.timestamp()) ++ '}'
+  ++ ',"author":{"email":' ++ json(author.email().local()) ++ ',"timestamp":' ++ json(author.timestamp().local().format("%Y-%m-%d %H:%M:%S")) ++ '}'
+  ++ ',"change_id_prefix":' ++ json(change_id.shortest(8).prefix())
+  ++ ',"change_id_rest":' ++ json(change_id.shortest(8).rest())
+  ++ ',"commit_id_prefix":' ++ json(commit_id.shortest(8).prefix())
+  ++ ',"commit_id_rest":' ++ json(commit_id.shortest(8).rest())
   ++ '}
 '|}
 ;;
 
-(** Parse JSONL (one JSON object per line) from jj log output *)
+(** Parse JSONL (one JSON object per line) from jj log output.
+    When graph is included, trim all content before the first '{' on each line
+    and skip lines without '{' (graph-only lines). *)
 let parse_jj_log_output (input : string) : (jj_commit list, string) result =
   try
     let lines =
@@ -59,8 +69,18 @@ let parse_jj_log_output (input : string) : (jj_commit list, string) result =
     in
     let commits =
       lines
-      |> List.map (fun line ->
-        let json = Yojson.Safe.from_string line in
+      |> List.filter_map (fun line ->
+        (* Find the first '{' to skip graph characters *)
+        match String.index_opt line '{' with
+        | None ->
+          (* No JSON on this line, skip it (e.g., graph-only lines) *)
+          None
+        | Some idx ->
+          (* Extract JSON from first '{' to end of line *)
+          let json_str = String.sub line idx (String.length line - idx) in
+          Some json_str)
+      |> List.map (fun json_str ->
+        let json = Yojson.Safe.from_string json_str in
         match jj_commit_of_yojson json with
         | Ok commit ->
           commit
@@ -109,6 +129,10 @@ let commits_to_nodes (commits : jj_commit list) : Render_jj_graph.node list =
       ; hidden = jj_commit.hidden
       ; divergent = jj_commit.divergent
       ; is_preview = false
+      ; change_id_prefix = jj_commit.change_id_prefix
+      ; change_id_rest = jj_commit.change_id_rest
+      ; commit_id_prefix = jj_commit.commit_id_prefix
+      ; commit_id_rest = jj_commit.commit_id_rest
       }
     in
     Hashtbl.add node_tbl jj_commit.commit_id n);
