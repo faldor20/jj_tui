@@ -206,8 +206,12 @@ let multi_selection_list_exclusions
               (Lwd.peek selected_items_var |> MyMap.to_list |> List.map (fun (_, a) -> a));
           `Handled
         | `Escape, [] ->
-          Lwd.set selected_items_var MyMap.empty;
-          `Handled
+          let selected = Lwd.peek selected_items_var in
+          if MyMap.is_empty selected
+          then `Unhandled
+          else (
+            Lwd.set selected_items_var MyMap.empty;
+            `Handled)
         | a -> custom_handler ~selected:(Lwd.peek selected_items_var) ~selectable_items a)
   in
   let rendered_size_var = Lwd.var (0, 0) in

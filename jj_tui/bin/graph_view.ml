@@ -135,6 +135,7 @@ module Make (Vars : Global_vars.Vars) = struct
     let mode_indicator =
       let$ active = Lwd.get Vars.ui_state.rebase_preview_active
       and$ mode = Lwd.get Vars.ui_state.rebase_preview_mode
+      and$ source_mode = Lwd.get Vars.ui_state.rebase_preview_source_mode
       and$ invalid = Lwd.get Vars.ui_state.rebase_preview_invalid in
       if not active
       then Ui.empty
@@ -148,7 +149,18 @@ module Make (Vars : Global_vars.Vars) = struct
           | `Add_after ->
             "add-after"
         in
-        let base = "Preview: " ^ mode_str in
+        let source_str =
+          match source_mode with
+          | `Revisions ->
+            "revisions"
+          | `Source ->
+            "source"
+          | `Branch ->
+            "branch"
+        in
+        let base =
+          Printf.sprintf "Preview: dest=%s source=%s" mode_str source_str
+        in
         let label =
           match invalid with
           | None ->
@@ -180,12 +192,19 @@ module Make (Vars : Global_vars.Vars) = struct
             in
             let nodes, invalid =
               if Vars.get_rebase_preview_active ()
-              then
+              then (
+                let expanded_sources =
+                  Render_jj_graph.expand_preview_sources
+                    ~mode:(Vars.get_rebase_preview_source_mode ())
+                    ~sources:(Vars.get_rebase_preview_sources ())
+                    ~targets:(Vars.get_rebase_preview_targets ())
+                    nodes
+                in
                 Render_jj_graph.apply_rebase_preview
                   ~mode:(Vars.get_rebase_preview_mode ())
-                  ~sources:(Vars.get_rebase_preview_sources ())
+                  ~sources:expanded_sources
                   ~targets:(Vars.get_rebase_preview_targets ())
-                  nodes
+                  nodes)
               else nodes, None
             in
             let current_invalid = Lwd.peek Vars.ui_state.rebase_preview_invalid in
@@ -263,11 +282,18 @@ module Make (Vars : Global_vars.Vars) = struct
     in
     (* run commands when there is keybaord input*)
     let handleKeys = function
+      | `Escape, [] when Vars.get_rebase_preview_active () ->
+        Vars.clear_rebase_preview ();
+        Vars.ui_state.trigger_update $= ();
+        Vars.ui_state.input $= `Normal;
+        `Handled
       | `Enter, [] ->
         Focus.request_reversable summary_focus;
         `Handled
       | k ->
-        handleInputs (get_command_mapping ()) k
+        if Vars.get_rebase_preview_active ()
+        then `Unhandled
+        else handleInputs (get_command_mapping ()) k
       | _ ->
         `Unhandled
     in

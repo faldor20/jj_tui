@@ -16,6 +16,12 @@ type rebase_preview_mode =
   | `Add_after
   ]
 
+type rebase_preview_source_mode =
+  [ `Revisions
+  | `Source
+  | `Branch
+  ]
+
 type ui_state_t = {
     view :
       [ `Main (**Normal Mode*)
@@ -46,6 +52,7 @@ type ui_state_t = {
   ; selected_revisions : string maybe_unique list Lwd.var
   ; rebase_preview_active : bool Lwd.var
   ; rebase_preview_mode : rebase_preview_mode Lwd.var
+  ; rebase_preview_source_mode : rebase_preview_source_mode Lwd.var
   ; rebase_preview_targets : string list Lwd.var
   ; rebase_preview_sources : string list Lwd.var
   ; rebase_preview_invalid : string option Lwd.var
@@ -82,6 +89,9 @@ module type Vars = sig
   val get_rebase_preview_active : unit -> bool
   val get_rebase_preview_mode : unit -> rebase_preview_mode
   val get_rebase_preview_mode_lwd : unit -> rebase_preview_mode Lwd.t
+  val get_rebase_preview_source_mode : unit -> rebase_preview_source_mode
+  val get_rebase_preview_source_mode_lwd : unit -> rebase_preview_source_mode Lwd.t
+  val set_rebase_preview_source_mode : rebase_preview_source_mode -> unit
   val get_rebase_preview_targets : unit -> string list
   val get_rebase_preview_sources : unit -> string list
   val set_rebase_preview_active : bool -> unit
@@ -90,6 +100,7 @@ module type Vars = sig
   val set_rebase_preview_invalid : string option -> unit
   val clear_rebase_preview : unit -> unit
   val cycle_rebase_preview_mode : unit -> unit
+  val cycle_rebase_preview_source_mode : unit -> unit
   val rebase_preview_label : unit -> string
   val config : Config.t Lwd.var
   val show_popup : (Nottui.ui Lwd.t * string) option -> unit
@@ -110,6 +121,7 @@ module Vars : Vars = struct
     ; selected_revisions = Lwd.var [ Unique "@" ]
     ; rebase_preview_active = Lwd.var false
     ; rebase_preview_mode = Lwd.var `Insert_after
+    ; rebase_preview_source_mode = Lwd.var `Revisions
     ; rebase_preview_targets = Lwd.var []
     ; rebase_preview_sources = Lwd.var []
     ; rebase_preview_invalid = Lwd.var None
@@ -179,6 +191,14 @@ module Vars : Vars = struct
 
   let get_rebase_preview_mode_lwd () = Lwd.get ui_state.rebase_preview_mode
 
+  let get_rebase_preview_source_mode () = Lwd.peek ui_state.rebase_preview_source_mode
+
+  let get_rebase_preview_source_mode_lwd () = Lwd.get ui_state.rebase_preview_source_mode
+
+  let set_rebase_preview_source_mode mode =
+    Lwd.set ui_state.rebase_preview_source_mode mode
+  ;;
+
   let get_rebase_preview_targets () = Lwd.peek ui_state.rebase_preview_targets
 
   let get_rebase_preview_sources () = Lwd.peek ui_state.rebase_preview_sources
@@ -215,6 +235,19 @@ module Vars : Vars = struct
         `Insert_before
     in
     Lwd.set ui_state.rebase_preview_mode next
+  ;;
+
+  let cycle_rebase_preview_source_mode () =
+    let next =
+      match Lwd.peek ui_state.rebase_preview_source_mode with
+      | `Revisions ->
+        `Source
+      | `Source ->
+        `Branch
+      | `Branch ->
+        `Revisions
+    in
+    Lwd.set ui_state.rebase_preview_source_mode next
   ;;
 
   let rebase_preview_label () =
