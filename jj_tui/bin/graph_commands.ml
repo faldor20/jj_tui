@@ -316,6 +316,63 @@ module Make (Vars : Global_vars.Vars) = struct
           (fun () ->
             Fun
               (fun _ ->
+                let build_rebase_args () =
+                  let sources = Vars.get_rebase_preview_sources () in
+                  let targets = Vars.get_rebase_preview_targets () in
+                  if sources = [] || targets = []
+                  then None
+                  else (
+                    let source_flag =
+                      match Vars.get_rebase_preview_source_mode () with
+                      | `Revisions ->
+                        "-r"
+                      | `Source ->
+                        "-s"
+                      | `Branch ->
+                        "-b"
+                    in
+                    let dest_flag =
+                      match Vars.get_rebase_preview_mode () with
+                      | `Insert_before ->
+                        "-B"
+                      | `Insert_after ->
+                        "-A"
+                      | `Add_after ->
+                        "-o"
+                    in
+                    let source_args =
+                      sources |> List.concat_map (fun rev -> [ source_flag; rev ])
+                    in
+                    let target_args =
+                      targets |> List.concat_map (fun rev -> [ dest_flag; rev ])
+                    in
+                    Some ([ "rebase" ] @ source_args @ target_args))
+                in
+                let preview_input key =
+                  match key with
+                  | `ASCII 'y', [] ->
+                    (match build_rebase_args () with
+                     | None ->
+                       `Handled
+                     | Some args ->
+                       Vars.clear_rebase_preview ();
+                       ui_state.input $= `Normal;
+                       jj args |> ignore;
+                       Global_funcs.update_status ~cause_snapshot:false ();
+                       `Handled)
+                  | `ASCII 'd', [] ->
+                    Vars.cycle_rebase_preview_mode ();
+                    Vars.set_rebase_preview_invalid None;
+                    Vars.ui_state.trigger_update $= ();
+                    `Handled
+                  | `ASCII 's', [] ->
+                    Vars.cycle_rebase_preview_source_mode ();
+                    Vars.set_rebase_preview_invalid None;
+                    Vars.ui_state.trigger_update $= ();
+                    `Handled
+                  | _ ->
+                    `Unhandled
+                in
                 if Vars.get_rebase_preview_active ()
                 then (
                   Vars.clear_rebase_preview ();
@@ -330,8 +387,19 @@ module Make (Vars : Global_vars.Vars) = struct
                   in
                   Vars.set_rebase_preview_targets targets;
                   Vars.set_rebase_preview_invalid None;
-                  ui_state.input $= `Mode_no_popup (fun _ -> `Unhandled);
+                  ui_state.input $= `Mode_no_popup preview_input;
                   Vars.ui_state.trigger_update $= ())))
+      }
+    ; {
+        id = "rebase_preview_cycle_source_mode"
+      ; sorting_key = 19.6
+      ; description = "Cycle rebase preview source mode (revisions/source/branch)"
+      ; make_cmd =
+          (fun () ->
+            Fun
+              (fun _ ->
+                Vars.cycle_rebase_preview_source_mode ();
+                Vars.ui_state.trigger_update $= ()))
       }
     ; {
         id = "rebase_single"

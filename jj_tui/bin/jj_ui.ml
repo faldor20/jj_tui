@@ -107,7 +107,10 @@ module Make (Vars : Global_vars.Vars) = struct
                  | `Mode_no_popup _, _, _ ->
                    (match event with
                     | `Escape, [] ->
-                      if Vars.get_rebase_preview_active () then Vars.clear_rebase_preview ();
+                      if Vars.get_rebase_preview_active ()
+                      then (
+                        Vars.clear_rebase_preview ();
+                        Vars.ui_state.trigger_update $= ());
                       ui_state.input $= `Normal;
                       `Handled
                     | _ ->

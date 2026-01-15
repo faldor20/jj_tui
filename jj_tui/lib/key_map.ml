@@ -295,6 +295,7 @@ let default : key_config =
             ; cmd "s" "rebase_with_descendants"
             ; cmd "b" "rebase_with_bookmark"
             ; cmd "p" "rebase_preview_toggle"
+            ; cmd "m" "rebase_preview_cycle_source_mode"
             ]
         ; sub
             "g"
