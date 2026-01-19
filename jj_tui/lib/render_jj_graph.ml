@@ -593,7 +593,18 @@ let apply_rebase_preview
     else (
       let parent_map_all = build_parent_map nodes in
       let children_map_all = build_children_map parent_map_all in
-      let ancestors_of = build_ancestors parent_map_all in
+      let parent_map_validation = Hashtbl.copy parent_map_all in
+      List.iter
+        (fun source_id -> Hashtbl.remove parent_map_validation source_id)
+        source_ids;
+      Hashtbl.iter
+        (fun child_id parent_ids ->
+           let filtered =
+             List.filter (fun id -> not (StringSet.mem id source_set)) parent_ids
+           in
+           Hashtbl.replace parent_map_validation child_id filtered)
+        parent_map_validation;
+      let ancestors_of = build_ancestors parent_map_validation in
       let nodes_filtered, parent_map, children_map =
         build_filtered_maps ~nodes ~source_set
       in
@@ -624,12 +635,12 @@ let apply_rebase_preview
                   then (
                     let child_parents =
                       Option.value (Hashtbl.find_opt parent_map_all child_id) ~default:[]
-                      |> List.filter (fun id -> not (StringSet.mem id source_set))
                     in
                     let updated =
                       child_parents
                       |> List.concat_map (fun parent_id ->
                         if parent_id = source_id then source_parents else [ parent_id ])
+                      |> List.filter (fun id -> not (StringSet.mem id source_set))
                       |> dedupe_preserve_order
                     in
                     Hashtbl.replace parent_map child_id updated))
