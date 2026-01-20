@@ -554,6 +554,8 @@ let apply_rebase_preview_multi
         ~preview_before
         ~preview_after
     in
+    if not (Hashtbl.mem base_nodes elided_marker)
+    then Hashtbl.replace base_nodes elided_marker (make_elided_node ());
     let final_nodes = Hashtbl.create (List.length ordered_ids) in
     let rec build_node id =
       match Hashtbl.find_opt final_nodes id with
@@ -563,7 +565,8 @@ let apply_rebase_preview_multi
         let base = Hashtbl.find base_nodes id in
         let parent_ids =
           Option.value (Hashtbl.find_opt parent_map id) ~default:[]
-          |> List.filter (fun parent_id -> Hashtbl.mem base_nodes parent_id)
+          |> List.filter (fun parent_id ->
+            Hashtbl.mem base_nodes parent_id || parent_id = elided_marker)
         in
         let parents = List.map build_node parent_ids in
         let node = { base with parents } in
@@ -766,6 +769,8 @@ let apply_rebase_preview
             ~preview_before
             ~preview_after
         in
+        if not (Hashtbl.mem base_nodes elided_marker)
+        then Hashtbl.replace base_nodes elided_marker (make_elided_node ());
         let final_nodes = Hashtbl.create (List.length ordered_ids) in
         let rec build_node id =
           match Hashtbl.find_opt final_nodes id with
@@ -775,7 +780,8 @@ let apply_rebase_preview
             let base = Hashtbl.find base_nodes id in
             let parent_ids =
               Option.value (Hashtbl.find_opt parent_map id) ~default:[]
-              |> List.filter (fun parent_id -> Hashtbl.mem base_nodes parent_id)
+              |> List.filter (fun parent_id ->
+                Hashtbl.mem base_nodes parent_id || parent_id = elided_marker)
             in
             let parents = List.map build_node parent_ids in
             let node = { base with parents } in
