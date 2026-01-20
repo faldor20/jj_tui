@@ -49,7 +49,21 @@ let json_log_template =
   ++ ',"hidden":' ++ json(hidden)
   ++ ',"divergent":' ++ json(divergent)
   ++ ',"empty":' ++ json(empty)
-  ++ ',"bookmarks":[' ++ bookmarks.map(|b| json(b.name())).join(",") ++ ']'
+  ++ ',"bookmarks":['
+  ++ bookmarks
+       .map(|b|
+         json(
+           stringify(
+             if(
+               b.remote(),
+               b.name() ++ "@" ++ b.remote(),
+               if(b.tracked() && !b.synced(), b.name() ++ "*", b.name())
+             )
+           )
+         )
+       )
+       .join(",")
+  ++ ']'
   ++ ',"author":{"email":' ++ json(author.email().local()) ++ ',"timestamp":' ++ json(author.timestamp().local().format("%Y-%m-%d %H:%M:%S")) ++ '}'
   ++ ',"change_id_prefix":' ++ json(change_id.shortest(8).prefix())
   ++ ',"change_id_rest":' ++ json(change_id.shortest(8).rest())
