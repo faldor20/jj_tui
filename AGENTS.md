@@ -56,7 +56,8 @@ ocamlformat -i <file.ml>
 dune fmt --preview
 ```
 
-
+## GIT:
+This project uses jujutsu not git. for any git command run the jj equivalent
 
 ### Running Individual Tests
 
@@ -261,3 +262,6 @@ Key libraries:
 3. **Functor pattern** - Most modules require `Make(Vars)` instantiation
 4. **Vendored forks** - Don't modify files in `forks/` unless necessary
 5. **Nix required** - Build system not set up for pure opam/dune
+
+
+
