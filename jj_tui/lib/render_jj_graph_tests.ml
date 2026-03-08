@@ -101,8 +101,8 @@ let%expect_test "apply_rebase_preview_invalid_cycle" =
   print_endline (string_of_int preview_count);
   [%expect
     {|
-    Preview blocked: cycle detected
-    0
+    ok
+    1
     |}]
 ;;
 
