@@ -37,10 +37,6 @@ let check_startup () =
   result |> Lwd.get
 ;;
 
-let current_computation = ref (Promise.of_value ())
-let update_debounce_computation = ref (Promise.of_value ())
-let pending_snapshot = ref false
-
 (**Updates the status windows; Without snapshotting the working copy by default
    This should be called after any command that performs a change *)
 let update_views ?(cause_snapshot = false) () =
@@ -63,19 +59,16 @@ let update_views ?(cause_snapshot = false) () =
     Vars.ui_state.jj_change_files $= files_list)
 ;;
 
+let update_views_debouncer =
+  Jj_tui.Debounce.make
+    ~delay:0.05
+    ~merge:( || )
+    ~run:(fun cause_snapshot -> update_views ~cause_snapshot ())
+    ()
+;;
+
 let update_views_async ?(cause_snapshot = false) () =
-  (* Coalesce rapid refresh requests while scrolling/navigation is active. *)
-  pending_snapshot := !pending_snapshot || cause_snapshot;
-  Promise.terminate_after ~seconds:0. !update_debounce_computation;
-  update_debounce_computation
-  := Flock.fork_as_promise (fun () ->
-       Control.sleep ~seconds:0.05;
-       let should_snapshot = !pending_snapshot in
-       pending_snapshot := false;
-       Promise.terminate_after ~seconds:0. !current_computation;
-       current_computation
-       := Flock.fork_as_promise (fun () ->
-            update_views ~cause_snapshot:should_snapshot ()))
+  Jj_tui.Debounce.push update_views_debouncer cause_snapshot
 ;;
 
 (**Updates the status windows; Without snapshotting the working copy by default
