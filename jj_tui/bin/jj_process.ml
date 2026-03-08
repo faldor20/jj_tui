@@ -134,6 +134,22 @@ module Make (Vars : Global_vars.Vars) = struct
     let open Picos_io in
     let closed_one_end = ref false in
     let dispose fd = if not !closed_one_end then Unix.close fd in
+    let reap_lock = Mutex.create () in
+    let reaped = ref false in
+    let reap_once ?(flags = []) pid =
+      (* Ensure there is exactly one waitpid owner for this child process. *)
+      Mutex.lock reap_lock;
+      Fun.protect
+        ~finally:(fun () -> Mutex.unlock reap_lock)
+        (fun () ->
+           if !reaped
+           then None
+           else (
+             reaped := true;
+             try Some (Unix.waitpid flags pid) with
+             | Unix.Unix_error (Unix.ECHILD, "waitpid", _) ->
+               None))
+    in
     let@ stdout_o, stdout_i =
       finally
         (fun (o, i) ->
@@ -164,17 +180,17 @@ module Make (Vars : Global_vars.Vars) = struct
            (* if the process didn't finish we will kill the process and then wait it's pid to release the pid*)
            if not !isDone
            then (
-             try
-               [%log
-                 debug
-                   "pid: %i Cleaning up cancelled command %s"
-                   pid
-                   (args |> String.concat " ")];
-               Unix.kill pid Sys.sigkill;
-               Unix.waitpid [ Unix.WUNTRACED ] pid |> ignore
-             with
-             | _ ->
-               ()))
+             [%log
+               debug
+                 "pid: %i Cleaning up cancelled command %s"
+                 pid
+                 (args |> String.concat " ")];
+             (try Unix.kill pid Sys.sigkill with
+              | Unix.Unix_error (Unix.ESRCH, _, _) ->
+                ()
+              | _ ->
+                ());
+             reap_once ~flags:[ Unix.WUNTRACED ] pid |> ignore))
         (fun _ ->
            Unix.create_process_env
              cmd
@@ -185,7 +201,15 @@ module Make (Vars : Global_vars.Vars) = struct
              stderr_i)
     in
     [%log debug "pid: %i started" pid];
-    let prom = Flock.fork_as_promise (fun () -> Unix.waitpid [] pid) in
+    let prom =
+      Flock.fork_as_promise (fun () ->
+        match reap_once pid with
+        | Some waited ->
+          waited
+        | None ->
+          [%log debug "pid: %i already reaped before waitpid" pid];
+          pid, Unix.WEXITED 0)
+    in
     (* Close unused pipe ends in the parent process *)
     Unix.close stdout_i;
     Unix.close stdin_o;
