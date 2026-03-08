@@ -13,10 +13,9 @@ let image_to_string img =
   Notty.Render.to_buffer buf Notty.Cap.dumb (0, 0) (w, h) img;
   Buffer.contents buf
 ;;
-let render_and_print node=
-  render_commit_content node
-  |>List.iter (fun img->print_endline (image_to_string img));
 
+let render_and_print node =
+  render_commit_content node |> List.iter (fun img -> print_endline (image_to_string img))
 ;;
 
 (** Create a test node with specified prefix/rest values *)
@@ -50,6 +49,7 @@ let make_test_node
     ; empty
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview
     ; change_id_prefix
     ; change_id_rest
@@ -107,7 +107,7 @@ let%expect_test "render_empty_commit" =
       ()
   in
   let img = render_commit_content node in
-  img|>List.iter (fun img->print_endline (image_to_string img));
+  img |> List.iter (fun img -> print_endline (image_to_string img));
   [%expect
     {|
     xyz123 test@example.com 2024-01-01 aaabbb
@@ -144,7 +144,7 @@ let%expect_test "render_commit_no_rest" =
       ~description:"Short IDs"
       ()
   in
-render_and_print node;
+  render_and_print node;
   [%expect
     {|
     short test@example.com 2024-01-01 min
@@ -162,7 +162,7 @@ let%expect_test "render_multiline_description" =
       ~description:"First line\nSecond line\nThird line"
       ()
   in
-render_and_print node;
+  render_and_print node;
   [%expect
     {|
     multiline test@example.com 2024-01-01 abcdef
@@ -180,7 +180,7 @@ let%expect_test "render_no_description" =
       ~description:""
       ()
   in
-render_and_print node;
+  render_and_print node;
   [%expect
     {|
     nodesc test@example.com 2024-01-01 111222

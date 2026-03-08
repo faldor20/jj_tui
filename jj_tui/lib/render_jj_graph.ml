@@ -33,6 +33,7 @@ module P = struct
     let working_copy = Util.make_uchar "@"
     let wip = Util.make_uchar "◌"
     let immutable = Util.make_uchar "◆"
+    let conflict = Util.make_uchar "×"
   end
 end
 
@@ -52,6 +53,7 @@ type node = {
   ; empty : bool
   ; hidden : bool
   ; divergent : bool
+  ; conflict : bool
   ; is_preview : bool
   ; change_id_prefix : string
   ; change_id_rest : string
@@ -79,6 +81,7 @@ let make_elided_node () : node =
   ; empty = false
   ; hidden = true
   ; divergent = false
+  ; conflict = false
   ; is_preview = false
   ; change_id_prefix = ""
   ; change_id_rest = ""
@@ -119,6 +122,7 @@ let make_preview_node ~label ?description ?target_commit_id () : node =
   ; empty = false
   ; hidden = false
   ; divergent = false
+  ; conflict = false
   ; is_preview = true
   ; change_id_prefix = ""
   ; change_id_rest = ""
@@ -1279,6 +1283,8 @@ let next_row ~(columns : column array ref) (n : node) : graph_row =
   let glyph =
     if n.working_copy
     then P.Node.working_copy
+    else if n.conflict
+    then P.Node.conflict
     else if n.immutable
     then P.Node.immutable
     else if n.wip
@@ -1543,6 +1549,7 @@ let classify_row_type (line : string) : row_type =
     || contains_str line "@"
     || contains_str line "◌"
     || contains_str line "◆"
+    || contains_str line "×"
   in
   let has_term = contains_str line "~" in
   let has_merge_fork =

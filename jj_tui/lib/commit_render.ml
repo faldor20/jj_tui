@@ -22,6 +22,8 @@ let graph_node_attr (node : Render_jj_graph.node) : Notty.A.t =
   then fg lightblack
   else if node.working_copy
   then fg green ++ st bold
+  else if node.conflict
+  then fg red ++ st bold
   else if node.immutable
   then fg cyan
   else fg white

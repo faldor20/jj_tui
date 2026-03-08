@@ -63,7 +63,7 @@ let () =
   Printf.printf "│  (empty) (no description set)\n";
   Printf.printf "\nActual rendering test:\n";
 
-  let node_glyphs = [ "○"; "@"; "◌"; "◆" ] in
+  let node_glyphs = [ "○"; "@"; "◌"; "◆"; "×" ] in
   let graph_continuation =
     let chars = "@  " in
     let replaced = ref chars in

@@ -2,8 +2,8 @@ open Jj_json
 
 let%expect_test "parse_valid_jsonl" =
   let input =
-    {|{"commit_id":"abc123","parents":[],"change_id":"xyz","description":"First commit","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"abc","commit_id_rest":"123"}
-{"commit_id":"def456","parents":["abc123"],"change_id":"uvw","description":"Second commit","working_copy":true,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":["main"],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"uv","change_id_rest":"w","commit_id_prefix":"def","commit_id_rest":"456"}|}
+    {|{"commit_id":"abc123","parents":[],"change_id":"xyz","description":"First commit","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"abc","commit_id_rest":"123"}
+{"commit_id":"def456","parents":["abc123"],"change_id":"uvw","description":"Second commit","working_copy":true,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":["main"],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"uv","change_id_rest":"w","commit_id_prefix":"def","commit_id_rest":"456"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -27,7 +27,7 @@ let%expect_test "parse_valid_jsonl" =
 
 let%expect_test "parse_root_commit" =
   let input =
-    {|{"commit_id":"root","parents":[],"change_id":"xyz","description":"Root","working_copy":false,"immutable":true,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"ro","commit_id_rest":"ot"}|}
+    {|{"commit_id":"root","parents":[],"change_id":"xyz","description":"Root","working_copy":false,"immutable":true,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"ro","commit_id_rest":"ot"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -43,8 +43,8 @@ let%expect_test "parse_root_commit" =
 
 let%expect_test "commits_to_nodes_parent_linking" =
   let input =
-    {|{"commit_id":"parent","parents":[],"change_id":"p","description":"Parent","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"p","change_id_rest":"","commit_id_prefix":"par","commit_id_rest":"ent"}
-{"commit_id":"child","parents":["parent"],"change_id":"c","description":"Child","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"","commit_id_prefix":"chi","commit_id_rest":"ld"}|}
+    {|{"commit_id":"parent","parents":[],"change_id":"p","description":"Parent","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"p","change_id_rest":"","commit_id_prefix":"par","commit_id_rest":"ent"}
+{"commit_id":"child","parents":["parent"],"change_id":"c","description":"Child","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"","commit_id_prefix":"chi","commit_id_rest":"ld"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -70,9 +70,9 @@ let%expect_test "commits_to_nodes_parent_linking" =
 
 let%expect_test "parse_multiple_parents" =
   let input =
-    {|{"commit_id":"parent1","parents":[],"change_id":"p1","description":"Parent 1","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"p","change_id_rest":"1","commit_id_prefix":"par","commit_id_rest":"ent1"}
-{"commit_id":"parent2","parents":[],"change_id":"p2","description":"Parent 2","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"p","change_id_rest":"2","commit_id_prefix":"par","commit_id_rest":"ent2"}
-{"commit_id":"merge","parents":["parent1","parent2"],"change_id":"m","description":"Merge commit","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"m","change_id_rest":"","commit_id_prefix":"mer","commit_id_rest":"ge"}|}
+    {|{"commit_id":"parent1","parents":[],"change_id":"p1","description":"Parent 1","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"p","change_id_rest":"1","commit_id_prefix":"par","commit_id_rest":"ent1"}
+{"commit_id":"parent2","parents":[],"change_id":"p2","description":"Parent 2","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"p","change_id_rest":"2","commit_id_prefix":"par","commit_id_rest":"ent2"}
+{"commit_id":"merge","parents":["parent1","parent2"],"change_id":"m","description":"Merge commit","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"m","change_id_rest":"","commit_id_prefix":"mer","commit_id_rest":"ge"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -100,7 +100,7 @@ let%expect_test "parse_multiple_parents" =
 
 let%expect_test "parse_commit_with_bookmarks" =
   let input =
-    {|{"commit_id":"abc123","parents":[],"change_id":"xyz","description":"Commit with bookmarks","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":["main","feature"],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"abc","commit_id_rest":"123"}|}
+    {|{"commit_id":"abc123","parents":[],"change_id":"xyz","description":"Commit with bookmarks","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":["main","feature"],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"abc","commit_id_rest":"123"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -119,7 +119,7 @@ let%expect_test "parse_commit_with_bookmarks" =
 
 let%expect_test "parse_wip_commit" =
   let input =
-    {|{"commit_id":"wip123","parents":[],"change_id":"xyz","description":"wip: work in progress","working_copy":true,"immutable":false,"wip":true,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"wip","commit_id_rest":"123"}|}
+    {|{"commit_id":"wip123","parents":[],"change_id":"xyz","description":"wip: work in progress","working_copy":true,"immutable":false,"wip":true,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"wip","commit_id_rest":"123"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -165,9 +165,9 @@ let%expect_test "parse_empty_input" =
 
 let%expect_test "commits_to_nodes_preserves_order" =
   let input =
-    {|{"commit_id":"first","parents":[],"change_id":"f","description":"First","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"f","change_id_rest":"","commit_id_prefix":"fir","commit_id_rest":"st"}
-{"commit_id":"second","parents":["first"],"change_id":"s","description":"Second","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"s","change_id_rest":"","commit_id_prefix":"sec","commit_id_rest":"ond"}
-{"commit_id":"third","parents":["second"],"change_id":"t","description":"Third","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"t","change_id_rest":"","commit_id_prefix":"thi","commit_id_rest":"rd"}|}
+    {|{"commit_id":"first","parents":[],"change_id":"f","description":"First","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"f","change_id_rest":"","commit_id_prefix":"fir","commit_id_rest":"st"}
+{"commit_id":"second","parents":["first"],"change_id":"s","description":"Second","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"s","change_id_rest":"","commit_id_prefix":"sec","commit_id_rest":"ond"}
+{"commit_id":"third","parents":["second"],"change_id":"t","description":"Third","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"t","change_id_rest":"","commit_id_prefix":"thi","commit_id_rest":"rd"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -186,7 +186,7 @@ let%expect_test "commits_to_nodes_preserves_order" =
 
 let%expect_test "commits_to_nodes_copies_fields" =
   let input =
-    {|{"commit_id":"test","parents":[],"change_id":"xyz","description":"Test commit","working_copy":true,"immutable":true,"wip":true,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"te","commit_id_rest":"st"}|}
+    {|{"commit_id":"test","parents":[],"change_id":"xyz","description":"Test commit","working_copy":true,"immutable":true,"wip":true,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"xy","change_id_rest":"z","commit_id_prefix":"te","commit_id_rest":"st"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -210,7 +210,7 @@ let%expect_test "commits_to_nodes_copies_fields" =
 
 let%expect_test "commits_to_nodes_missing_parent_creates_elided" =
   let input =
-    {|{"commit_id":"child","parents":["missing_parent"],"change_id":"c","description":"Child with missing parent","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"","commit_id_prefix":"chi","commit_id_rest":"ld"}|}
+    {|{"commit_id":"child","parents":["missing_parent"],"change_id":"c","description":"Child with missing parent","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"","commit_id_prefix":"chi","commit_id_rest":"ld"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -237,8 +237,8 @@ let%expect_test "commits_to_nodes_missing_parent_creates_elided" =
 
 let%expect_test "commits_to_nodes_multiple_children_same_missing_parent" =
   let input =
-    {|{"commit_id":"child1","parents":["missing_parent"],"change_id":"c1","description":"Child 1","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"1","commit_id_prefix":"chi","commit_id_rest":"ld1"}
-{"commit_id":"child2","parents":["missing_parent"],"change_id":"c2","description":"Child 2","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"c","change_id_rest":"2","commit_id_prefix":"chi","commit_id_rest":"ld2"}|}
+    {|{"commit_id":"child1","parents":["missing_parent"],"change_id":"c1","description":"Child 1","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"1","commit_id_prefix":"chi","commit_id_rest":"ld1"}
+{"commit_id":"child2","parents":["missing_parent"],"change_id":"c2","description":"Child 2","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"c","change_id_rest":"2","commit_id_prefix":"chi","commit_id_rest":"ld2"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
@@ -264,8 +264,8 @@ let%expect_test "commits_to_nodes_multiple_children_same_missing_parent" =
 
 let%expect_test "commits_to_nodes_same_missing_parent_physical_equality" =
   let input =
-    {|{"commit_id":"child1","parents":["missing_parent"],"change_id":"c1","description":"Child 1","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"1","commit_id_prefix":"chi","commit_id_rest":"ld1"}
-{"commit_id":"child2","parents":["missing_parent"],"change_id":"c2","description":"Child 2","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"c","change_id_rest":"2","commit_id_prefix":"chi","commit_id_rest":"ld2"}|}
+    {|{"commit_id":"child1","parents":["missing_parent"],"change_id":"c1","description":"Child 1","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"c","change_id_rest":"1","commit_id_prefix":"chi","commit_id_rest":"ld1"}
+{"commit_id":"child2","parents":["missing_parent"],"change_id":"c2","description":"Child 2","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"bookmarks":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"c","change_id_rest":"2","commit_id_prefix":"chi","commit_id_rest":"ld2"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->

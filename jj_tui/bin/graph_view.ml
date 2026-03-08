@@ -56,7 +56,6 @@ module Make (Vars : Global_vars.Vars) = struct
     let open Notty in
     let open Render_jj_graph in
     let content_lines = render_content node_row.node in
-  
     let available_rows = node_row :: continuation_rows in
     let result = ref [] in
     (* Distribute content lines across available rows *)
@@ -73,7 +72,7 @@ module Make (Vars : Global_vars.Vars) = struct
     (* If content needs more lines than available, add synthetic continuation rows *)
     if List.length content_lines > List.length available_rows
     then (
-      let node_glyphs = [ "○"; "@"; "◌"; "◆" ] in
+      let node_glyphs = [ "○"; "@"; "◌"; "◆"; "×" ] in
       let synthetic_graph =
         let chars = node_row.graph_chars in
         let replaced = ref chars in
@@ -158,16 +157,8 @@ module Make (Vars : Global_vars.Vars) = struct
           | `Branch ->
             "branch"
         in
-        let base =
-          Printf.sprintf "Preview: dest=%s source=%s" mode_str source_str
-        in
-        let label =
-          match invalid with
-          | None ->
-            base
-          | Some msg ->
-            base ^ " - " ^ msg
-        in
+        let base = Printf.sprintf "Preview: dest=%s source=%s" mode_str source_str in
+        let label = match invalid with None -> base | Some msg -> base ^ " - " ^ msg in
         W.string label)
     in
     let items =
@@ -223,7 +214,7 @@ module Make (Vars : Global_vars.Vars) = struct
               Render_jj_graph.render_nodes_structured
                 state
                 nodes
-                ~node_attr:(Commit_render.graph_node_attr)
+                ~node_attr:Commit_render.graph_node_attr
             in
             error_var $= None;
             rendered_rows, rev_ids
@@ -323,8 +314,8 @@ module Make (Vars : Global_vars.Vars) = struct
                    Vars.ui_state.trigger_update $= ()))
                else (
                  (*If the files are focused we shouldn't send this*)
-                 if Focus.peek_has_focus focus
-                 then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ())));
+                 (if Focus.peek_has_focus focus
+                  then Show_view.(push_status (Graph_preview (Vars.get_hovered_rev ()))));
                  [%log debug "Hovered revision: '%s'" (Global_vars.get_unique_id hovered)];
                  Global_funcs.update_views_async ())))
            ~custom_handler:(fun ~selected ~selectable_items key -> handleKeys key)

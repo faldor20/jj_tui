@@ -16,6 +16,7 @@ let make_node ?(parents = []) commit_id : node =
   ; empty = false
   ; hidden = false
   ; divergent = false
+  ; conflict = false
   ; is_preview = false
   ; change_id_prefix = ""
   ; change_id_rest = ""
@@ -24,23 +25,20 @@ let make_node ?(parents = []) commit_id : node =
   }
 ;;
 
-let find_node_exn nodes commit_id =
-  nodes |> List.find (fun n -> n.commit_id = commit_id)
-;;
-
-let find_preview_exn nodes =
-  nodes |> List.find (fun n -> n.is_preview)
-;;
-
+let find_node_exn nodes commit_id = nodes |> List.find (fun n -> n.commit_id = commit_id)
+let find_preview_exn nodes = nodes |> List.find (fun n -> n.is_preview)
 let parent_ids node = node.parents |> List.map (fun p -> p.commit_id)
-;;
 
 let%expect_test "apply_rebase_preview_insert_before" =
   let c = make_node "c" in
   let b = make_node ~parents:[ c ] "b" in
   let a = make_node ~parents:[ b ] "a" in
   let nodes, invalid =
-    apply_rebase_preview ~mode:`Insert_before ~sources:[ "c" ] ~targets:[ "b" ] [ a; b; c ]
+    apply_rebase_preview
+      ~mode:`Insert_before
+      ~sources:[ "c" ]
+      ~targets:[ "b" ]
+      [ a; b; c ]
   in
   let preview = find_preview_exn nodes in
   let b = find_node_exn nodes "b" in
@@ -92,7 +90,11 @@ let%expect_test "apply_rebase_preview_invalid_cycle" =
   let b = make_node ~parents:[ c ] "b" in
   let a = make_node ~parents:[ b ] "a" in
   let nodes, invalid =
-    apply_rebase_preview ~mode:`Insert_before ~sources:[ "a" ] ~targets:[ "b" ] [ a; b; c ]
+    apply_rebase_preview
+      ~mode:`Insert_before
+      ~sources:[ "a" ]
+      ~targets:[ "b" ]
+      [ a; b; c ]
   in
   let preview_count = nodes |> List.filter (fun n -> n.is_preview) |> List.length in
   print_endline (Option.value invalid ~default:"ok");
@@ -124,6 +126,7 @@ let%expect_test "recreate_target_graph" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -147,6 +150,7 @@ let%expect_test "recreate_target_graph" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -170,6 +174,7 @@ let%expect_test "recreate_target_graph" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -193,6 +198,7 @@ let%expect_test "recreate_target_graph" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -241,6 +247,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -264,6 +271,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -287,6 +295,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -310,6 +319,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -333,6 +343,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -356,6 +367,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -379,6 +391,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -402,6 +415,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -425,6 +439,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -448,6 +463,7 @@ let%expect_test "complex_graph_golden_graph_only" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -545,6 +561,7 @@ let%expect_test "render_jj_output" =
       ; empty = false
       ; hidden = false
       ; divergent = false
+      ; conflict = false
       ; is_preview = false
       ; change_id_prefix = ""
       ; change_id_rest = ""
@@ -673,6 +690,7 @@ let%expect_test "is_elided_false" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -704,6 +722,7 @@ let%expect_test "render_nodes_structured_simple" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -773,6 +792,7 @@ let%expect_test "render_nodes_structured_row_types" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -796,6 +816,7 @@ let%expect_test "render_nodes_structured_row_types" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -819,6 +840,7 @@ let%expect_test "render_nodes_structured_row_types" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -842,6 +864,7 @@ let%expect_test "render_nodes_structured_row_types" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""
@@ -908,6 +931,7 @@ let%expect_test "elided_parent_creates_termination_line" =
     ; empty = false
     ; hidden = false
     ; divergent = false
+    ; conflict = false
     ; is_preview = false
     ; change_id_prefix = ""
     ; change_id_rest = ""

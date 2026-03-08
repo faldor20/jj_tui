@@ -26,6 +26,7 @@ type jj_commit = {
   ; wip : bool
   ; hidden : bool
   ; divergent : bool
+  ; conflict : bool
   ; empty : bool
   ; bookmarks : string list
   ; author : jj_author
@@ -48,6 +49,7 @@ let json_log_template =
   ++ ',"wip":' ++ json(description.first_line().starts_with("wip:"))
   ++ ',"hidden":' ++ json(hidden)
   ++ ',"divergent":' ++ json(divergent)
+  ++ ',"conflict":' ++ json(conflict)
   ++ ',"empty":' ++ json(empty)
   ++ ',"bookmarks":['
   ++ bookmarks
@@ -142,6 +144,7 @@ let commits_to_nodes (commits : jj_commit list) : Render_jj_graph.node list =
       ; empty = jj_commit.empty
       ; hidden = jj_commit.hidden
       ; divergent = jj_commit.divergent
+      ; conflict = jj_commit.conflict
       ; is_preview = false
       ; change_id_prefix = jj_commit.change_id_prefix
       ; change_id_rest = jj_commit.change_id_rest
