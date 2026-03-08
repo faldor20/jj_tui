@@ -143,12 +143,17 @@ module Vars : Vars = struct
   let term_width_height : (int * int) Lwd.var = Lwd.var (0, 0)
   let get_term () = Option.get !term
 
-  let reset_selection () =
-    Flock.fork (fun _ ->
-      Picos_std_structured.Control.sleep ~seconds:0.7;
-      [%log info "Resetting selection"];
-      ui_state.reset_selection |> Signal.trigger)
+  let reset_selection_debouncer =
+    Jj_tui.Debounce.make
+      ~delay:0.7
+      ~merge:(fun () () -> ())
+      ~run:(fun () ->
+        [%log info "Resetting selection"];
+        ui_state.reset_selection |> Signal.trigger)
+      ()
   ;;
+
+  let reset_selection () = Jj_tui.Debounce.push reset_selection_debouncer ()
 
   (**Gets an id for the currently hovered revision. If the change_id is unique we use that, if it's not we return a commit_id instead*)
   let get_hovered_rev () = Lwd.peek ui_state.hovered_revision |> get_unique_id
@@ -186,13 +191,9 @@ module Vars : Vars = struct
   ;;
 
   let get_rebase_preview_active () = Lwd.peek ui_state.rebase_preview_active
-
   let get_rebase_preview_mode () = Lwd.peek ui_state.rebase_preview_mode
-
   let get_rebase_preview_mode_lwd () = Lwd.get ui_state.rebase_preview_mode
-
   let get_rebase_preview_source_mode () = Lwd.peek ui_state.rebase_preview_source_mode
-
   let get_rebase_preview_source_mode_lwd () = Lwd.get ui_state.rebase_preview_source_mode
 
   let set_rebase_preview_source_mode mode =
@@ -200,21 +201,10 @@ module Vars : Vars = struct
   ;;
 
   let get_rebase_preview_targets () = Lwd.peek ui_state.rebase_preview_targets
-
   let get_rebase_preview_sources () = Lwd.peek ui_state.rebase_preview_sources
-
-  let set_rebase_preview_active active =
-    Lwd.set ui_state.rebase_preview_active active
-  ;;
-
-  let set_rebase_preview_targets targets =
-    Lwd.set ui_state.rebase_preview_targets targets
-  ;;
-
-  let set_rebase_preview_sources sources =
-    Lwd.set ui_state.rebase_preview_sources sources
-  ;;
-
+  let set_rebase_preview_active active = Lwd.set ui_state.rebase_preview_active active
+  let set_rebase_preview_targets targets = Lwd.set ui_state.rebase_preview_targets targets
+  let set_rebase_preview_sources sources = Lwd.set ui_state.rebase_preview_sources sources
   let set_rebase_preview_invalid msg = Lwd.set ui_state.rebase_preview_invalid msg
 
   let clear_rebase_preview () =
