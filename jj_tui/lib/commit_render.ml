@@ -24,6 +24,8 @@ let graph_node_attr (node : Render_jj_graph.node) : Notty.A.t =
   then fg green ++ st bold
   else if node.conflict
   then fg red ++ st bold
+  else if node.divergent
+  then fg red ++ st bold
   else if node.immutable
   then fg cyan
   else fg white
@@ -42,9 +44,9 @@ let render_commit_content (node : Render_jj_graph.node) : Notty.image list =
   let open Notty in
   let open Notty.A in
 
-  let magenta= if node.working_copy then lightmagenta else magenta in
-(*make style bold if working copy*)
-let bs = if node.working_copy then st bold else st A.no_style  in
+  let magenta = if node.working_copy then lightmagenta else magenta in
+  (* make style bold if working copy *)
+  let bs = if node.working_copy then st bold else st A.no_style in
   let styled_text attr text = I.string attr text in
   let description_line =
     match String.split_on_char '\n' node.description with
@@ -55,13 +57,16 @@ let bs = if node.working_copy then st bold else st A.no_style  in
   in
   (* Line 1: change_id email timestamp bookmarks commit_id_short *)
   let line1_parts = ref [] in
-  (* Determine base color for change_id based on node state *)
-
   (* Render change_id with prefix highlighting *)
-  let change_id_prefix_attr =
-    fg magenta ++ st bold
+  let change_id_prefix_attr, change_id_rest_attr =
+    if node.hidden
+    then
+      let duplicate_attr = fg white ++ st bold in
+      duplicate_attr, duplicate_attr
+    else if node.divergent
+    then fg red ++ st bold, fg red ++ bs
+    else fg magenta ++ st bold, fg lightblack ++ bs
   in
-  let change_id_rest_attr = fg lightblack ++bs  in
   let change_id_img =
     render_id
       ~prefix_attr:change_id_prefix_attr
@@ -71,18 +76,18 @@ let bs = if node.working_copy then st bold else st A.no_style  in
   in
   line1_parts := change_id_img :: !line1_parts;
   (* Author email and timestamp *)
-  line1_parts
-  := styled_text (fg  yellow ++bs) (" " ^ node.author_email) :: !line1_parts;
-  line1_parts
-  := styled_text (fg cyan++bs ) (" " ^ node.author_timestamp) :: !line1_parts;
+  line1_parts := styled_text (fg yellow ++ bs) (" " ^ node.author_email) :: !line1_parts;
+  line1_parts := styled_text (fg cyan ++ bs) (" " ^ node.author_timestamp) :: !line1_parts;
   (* Add bookmarks after timestamp if they exist *)
   if List.length node.bookmarks > 0
   then (
     let bookmarks_str = " " ^ String.concat " " node.bookmarks in
-    line1_parts := styled_text (fg magenta ) bookmarks_str :: !line1_parts);
+    line1_parts := styled_text (fg magenta) bookmarks_str :: !line1_parts);
   (* Render commit_id with prefix highlighting *)
-  let commit_id_prefix_attr = (if node.working_copy then fg lightblue else fg blue) ++ st bold in
-  let commit_id_rest_attr = fg lightblack ++bs  in
+  let commit_id_prefix_attr =
+    (if node.working_copy then fg lightblue else fg blue) ++ st bold
+  in
+  let commit_id_rest_attr = fg lightblack ++ bs in
   let commit_id_img =
     render_id
       ~prefix_attr:commit_id_prefix_attr
@@ -91,19 +96,29 @@ let bs = if node.working_copy then st bold else st A.no_style  in
       ~rest:node.commit_id_rest
   in
   line1_parts := commit_id_img :: !line1_parts;
+  let labels =
+    [ if node.hidden then Some (fg lightblack ++ bs, "(hidden)") else None
+    ; if node.divergent then Some (fg red ++ bs, "(divergent)") else None
+    ]
+    |> List.filter_map Fun.id
+  in
+  labels
+  |> List.iter (fun (attr, label) ->
+    line1_parts := styled_text attr (" " ^ label) :: !line1_parts);
   let line1 = !line1_parts |> List.rev |> I.hcat in
   (* Line 2: (empty) description *)
   let desc_attr =
-   ( if node.is_preview || node.empty
-    then lightgreen
-    else if  node.description=""
-    then yellow 
-    else white)
-    |>fg|> (++) bs
+    (if node.is_preview || node.empty
+     then lightgreen
+     else if node.description = ""
+     then yellow
+     else white)
+    |> fg
+    |> ( ++ ) bs
   in
   let description_with_prefix =
     if node.empty then "(empty) " ^ description_line else description_line
   in
   let line2 = styled_text desc_attr description_with_prefix in
-  [add_padding line1; add_padding line2 ]
+  [ add_padding line1; add_padding line2 ]
 ;;

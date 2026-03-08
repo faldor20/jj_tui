@@ -913,6 +913,58 @@ let%expect_test "render_nodes_structured_row_types" =
     |}]
 ;;
 
+let%expect_test "render_nodes_structured_divergent_node_row" =
+  let divergent : node =
+    {
+      parents = []
+    ; creation_time = Int64.zero
+    ; working_copy = false
+    ; immutable = false
+    ; wip = false
+    ; change_id = "lqzzqwqx/0"
+    ; commit_id = "5ab39974"
+    ; description = "disable worker mode"
+    ; bookmarks = []
+    ; author_email = "test@example.com"
+    ; author_timestamp = "2024-01-01"
+    ; empty = false
+    ; hidden = false
+    ; divergent = true
+    ; conflict = false
+    ; is_preview = false
+    ; change_id_prefix = "lqzzqwqx"
+    ; change_id_rest = "/0"
+    ; commit_id_prefix = "5ab39974"
+    ; commit_id_rest = ""
+    }
+  in
+  let state : state = { depth = 0; columns = [||]; pending_joins = [] } in
+  let rows =
+    Render_jj_graph.render_nodes_structured state [ divergent ] ~info_lines:(fun _ -> 0)
+  in
+  Printf.printf "Total rows: %d\n" (List.length rows);
+  List.iter
+    (fun row ->
+       let row_type_str =
+         match row.row_type with
+         | NodeRow ->
+           "NodeRow"
+         | LinkRow ->
+           "LinkRow"
+         | PadRow ->
+           "PadRow"
+         | TermRow ->
+           "TermRow"
+       in
+       Printf.printf "%s: '%s'\n" row_type_str row.graph_chars)
+    rows;
+  [%expect
+    {|
+    Total rows: 1
+    NodeRow: '○'
+    |}]
+;;
+
 let%expect_test "elided_parent_creates_termination_line" =
   let elided = Render_jj_graph.make_elided_node () in
   let child : node =
