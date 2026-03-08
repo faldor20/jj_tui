@@ -73,11 +73,16 @@ module Make (Vars : Global_vars.Vars) = struct
                `Unhandled)
     in
     let$ ui = ui
+    and$ files = Lwd.get Vars.ui_state.jj_change_files
     and$ _ =
       Focus.status focus |>$ fun focus ->
       if Focus.has_focus focus
       then Show_view.(push_status (File_preview (Vars.get_hovered_rev (), !hovered_var)))
     in
+    if files |> List.length = 0 && (Lwd.peek active_files <> [ "" ] || !hovered_var <> "")
+    then (
+      Lwd.set active_files [ "" ];
+      hovered_var := "");
     ui
   ;;
 end

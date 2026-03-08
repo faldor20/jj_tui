@@ -37,15 +37,7 @@ let check_startup () =
   result |> Lwd.get
 ;;
 
-(**Updates the status windows; Without snapshotting the working copy by default
-   This should be called after any command that performs a change *)
-let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
-  safe_jj (fun () ->
-    let rev = Lwd.peek Vars.ui_state.hovered_revision in
-    let log_res = jj_no_log ~snapshot:cause_snapshot [ "log" ] |> colored_string in
-    (* TODO: chagne this because it makes us always a frame behind *)
-    if update_graph then Vars.ui_state.trigger_update $= ())
-;;
+let current_computation = ref (Promise.of_value ())
 
 (**Updates the status windows; Without snapshotting the working copy by default
    This should be called after any command that performs a change *)
@@ -69,12 +61,18 @@ let update_views ?(cause_snapshot = false) () =
     Vars.ui_state.jj_change_files $= files_list)
 ;;
 
-let current_computation = ref (Promise.of_value ())
-
 let update_views_async ?(cause_snapshot = false) () =
   Promise.terminate_after ~seconds:0. !current_computation;
   let comp = Flock.fork_as_promise (fun () -> update_views ~cause_snapshot ()) in
   current_computation := comp
+;;
+
+(**Updates the status windows; Without snapshotting the working copy by default
+   This should be called after any command that performs a change *)
+let update_status ?(update_graph = true) ?(cause_snapshot = false) () =
+  (* Keep graph redraw immediate, and refresh file/browser state asynchronously. *)
+  if update_graph then Vars.ui_state.trigger_update $= ();
+  update_views_async ~cause_snapshot ()
 ;;
 
 let last_op_id = ref ""
