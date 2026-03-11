@@ -6,12 +6,62 @@ open Jj_tui.Logging
 
 let colored_string = Jj_tui.AnsiReverse.colored_string
 
-(**lists the files in a specific revision*)
-let list_files ?(rev = "@") () =
-  jj_no_log ~snapshot:false ~color:false [ "diff"; "-r"; rev; "--summary" ]
+let parse_changed_files output =
+  output
   |> String.split_on_char '\n'
   |> List.filter_map (fun x ->
     if x |> String.trim <> "" then Base.String.lsplit2 ~on:' ' x else None)
+;;
+
+let is_missing_revision_error error =
+  Base.String.is_substring error ~substring:"doesn't exist"
+  || Base.String.is_substring error ~substring:"Revision `"
+;;
+
+(** History-rewriting jj commands like squash can delete the revision currently held
+    in UI state. When that happens, the graph will soon refresh to a valid node, but
+    the file pane may still try to diff the stale revision in the meantime. Reset the
+    transient selection state so follow-up refreshes target a revision that still exists. *)
+let recover_missing_revision rev =
+  let hovered_matches = String.equal (Vars.get_hovered_rev ()) rev in
+  let selected_contains = Vars.get_selected_revs () |> List.exists (String.equal rev) in
+  if hovered_matches then Vars.ui_state.hovered_revision $= Unique "@";
+  if hovered_matches || selected_contains
+  then (
+    Vars.ui_state.selected_revisions $= [];
+    Vars.reset_selection ())
+;;
+
+(**lists the files in a specific revision*)
+let list_files ?(rev = "@") () =
+  let diff_summary rev =
+    jj_no_log_errorable ~snapshot:false ~color:false [ "diff"; "-r"; rev; "--summary" ]
+  in
+  match diff_summary rev with
+  | Ok (output, _) ->
+    output |> parse_changed_files
+  | Error (`BadExit (_, error)) when is_missing_revision_error error ->
+    (* This is the crash path hit after squash: the selected revision disappeared
+       between UI updates. Recover locally instead of raising through startup/render
+       fibers, then repopulate the file list from the working copy. *)
+    [%log
+      warn "Revision '%s' disappeared while updating file list; falling back to @" rev];
+    recover_missing_revision rev;
+    (match diff_summary "@" with
+     | Ok (output, _) ->
+       output |> parse_changed_files
+     | Error (`BadExit (_, error)) ->
+       [%log warn "Failed to refresh fallback file list for @: %s" error];
+       []
+     | Error (`Exception error) ->
+       [%log warn "Failed to refresh fallback file list for @: %s" error];
+       [])
+  | Error (`BadExit (_, error)) ->
+    [%log warn "Failed to update file list for revision '%s': %s" rev error];
+    []
+  | Error (`Exception error) ->
+    [%log warn "Failed to update file list for revision '%s': %s" rev error];
+    []
 ;;
 
 let check_startup () =
