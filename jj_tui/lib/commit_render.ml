@@ -98,6 +98,7 @@ let render_commit_content (node : Render_jj_graph.node) : Notty.image list =
   line1_parts := commit_id_img :: !line1_parts;
   let labels =
     [ if node.hidden then Some (fg lightblack ++ bs, "(hidden)") else None
+    ; if node.conflict then Some (fg red ++ bs, "(conflict)") else None
     ; if node.divergent then Some (fg red ++ bs, "(divergent)") else None
     ]
     |> List.filter_map Fun.id

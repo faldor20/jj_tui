@@ -33,6 +33,7 @@ let make_test_node
       ?(is_preview = false)
       ?(hidden = false)
       ?(divergent = false)
+      ?(conflict = false)
       ?(bookmarks = [])
       ~change_id_prefix
       ~change_id_rest
@@ -57,7 +58,7 @@ let make_test_node
     ; empty
     ; hidden
     ; divergent
-    ; conflict = false
+    ; conflict
     ; is_preview
     ; change_id_prefix
     ; change_id_rest
@@ -232,6 +233,27 @@ let%expect_test "render_divergent_commit" =
   [%expect
     {|
     lqzzqwqx/0 test@example.com 2024-01-01 main?? main@git 5ab39974 (divergent)
+    disable worker mode
+    |}]
+;;
+
+let%expect_test "render_conflict_and_divergent_commit" =
+  let node =
+    make_test_node
+      ~change_id_prefix:"lqzzqwqx"
+      ~change_id_rest:"/0"
+      ~commit_id_prefix:"5ab39974"
+      ~commit_id_rest:""
+      ~description:"disable worker mode"
+      ~bookmarks:[ "main??"; "main@git" ]
+      ~conflict:true
+      ~divergent:true
+      ()
+  in
+  render_and_print node;
+  [%expect
+    {|
+    lqzzqwqx/0 test@example.com 2024-01-01 main?? main@git 5ab39974 (conflict) (divergent)
     disable worker mode
     |}]
 ;;
