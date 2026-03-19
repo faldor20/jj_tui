@@ -131,36 +131,6 @@ module Make (Vars : Global_vars.Vars) = struct
         x |> Ui.resize ~mw:10000 ~sw:1 |> Lwd.pure |> W.Box.box ~pad_w:0 ~pad_h:0)
       |> Option.value ~default:(Ui.empty |> Lwd.pure)
     in
-    let mode_indicator =
-      let$ active = Lwd.get Vars.ui_state.rebase_preview_active
-      and$ mode = Lwd.get Vars.ui_state.rebase_preview_mode
-      and$ source_mode = Lwd.get Vars.ui_state.rebase_preview_source_mode
-      and$ invalid = Lwd.get Vars.ui_state.rebase_preview_invalid in
-      if not active
-      then Ui.empty
-      else (
-        let mode_str =
-          match mode with
-          | `Insert_before ->
-            "insert-before"
-          | `Insert_after ->
-            "insert-after"
-          | `Add_after ->
-            "add-after"
-        in
-        let source_str =
-          match source_mode with
-          | `Revisions ->
-            "revisions"
-          | `Source ->
-            "source"
-          | `Branch ->
-            "branch"
-        in
-        let base = Printf.sprintf "Preview: dest=%s source=%s" mode_str source_str in
-        let label = match invalid with None -> base | Some msg -> base ^ " - " ^ msg in
-        W.string label)
-    in
     let items =
       let$ rendered_rows, rev_ids =
         (*TODO I think this ads a slight delay to everything becasue it makes things need to be renedered twice. maybe I could try getting rid of it*)
@@ -329,6 +299,6 @@ module Make (Vars : Global_vars.Vars) = struct
       and$ error = Lwd.get error_var in
       match error with Some e -> e |> Ui.keyboard_area handleKeys | None -> list_ui
     in
-    W.vbox [ revset_ui; mode_indicator; final_ui ]
+    W.vbox [ revset_ui; final_ui ]
   ;;
 end

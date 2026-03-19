@@ -173,6 +173,36 @@ let resolve_sources_targets
   { source_ids; target_ids; source_set }
 ;;
 
+(** [default_preview_targets ~sources nodes]
+    Computes default rebase target revisions by collecting the parents of each
+    root in the source set (root = source commit whose parents are all outside
+    the source set).  This preserves the existing tree shape when entering
+    preview mode instead of using the currently-hovered commit as the target. *)
+let default_preview_targets ~(sources : string list) (nodes : node list) : string list =
+  if sources = []
+  then []
+  else (
+    let source_ids = resolve_revs nodes sources in
+    let source_set = StringSet.of_list source_ids in
+    let seen = Hashtbl.create 8 in
+    (* Walk roots in graph order and keep parent order stable so the preview
+       starts from the commit's existing parent layout. *)
+    nodes
+    |> List.filter (fun n -> StringSet.mem n.commit_id source_set)
+    |> List.filter (fun n ->
+      not (List.exists (fun p -> StringSet.mem p.commit_id source_set) n.parents))
+    |> List.concat_map (fun root ->
+      root.parents
+      |> List.map (fun p -> p.commit_id)
+      |> List.filter (fun id -> not (StringSet.mem id source_set)))
+    |> List.filter (fun id ->
+      if Hashtbl.mem seen id
+      then false
+      else (
+        Hashtbl.add seen id ();
+        true)))
+;;
+
 let validate_preview_cycles
       ~(mode : preview_mode)
       ~(ancestors_of : string -> StringSet.t)

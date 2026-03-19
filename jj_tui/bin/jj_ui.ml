@@ -57,21 +57,23 @@ module Make (Vars : Global_vars.Vars) = struct
         event
         |> forward_events
              [
-               custom;
-                (fun x->
-                  (*Try to remap the key if needed *)
-                  match x with
-                  | `ASCII k, modifiers ->
-                    let key = Key.{ key = k; modifiers } in
-                    let key=Key_map.Key_Map.find_opt key (Lwd.peek ui_state.config).key_map.remap in
-                   ( match key with
+               custom
+             ; (fun x ->
+                 (*Try to remap the key if needed *)
+                 match x with
+                 | `ASCII k, modifiers ->
+                   let key = Key.{ key = k; modifiers } in
+                   let key =
+                     Key_map.Key_Map.find_opt key (Lwd.peek ui_state.config).key_map.remap
+                   in
+                   (match key with
                     | Some remap ->
                       (** This needs to be type converted so our limited variants get upcast into a full nottui event*)
-                      (`Remap (remap.remap, modifiers):>  Nottui.Ui.may_handle)
+                      (`Remap (remap.remap, modifiers) :> Nottui.Ui.may_handle)
                     | None ->
                       `Unhandled)
-                  | _ ->
-                    `Unhandled)
+                 | _ ->
+                   `Unhandled)
              ; (function
                  | `ASCII 'q', _ ->
                    Vars.quit $= true;
@@ -150,24 +152,23 @@ module Make (Vars : Global_vars.Vars) = struct
   (** Makes a UI element responsive to terminal width and focus state 
       - When focused: shows at full width if terminal is wide enough, or fills terminal if narrow
       - When unfocused: shows at normal width if terminal is wide enough, or collapses if narrow *)
-  let responsive_view  ?(shrunk_width=0) ?(shrink_on= `Focus) ~focus ui =
-    let$* w, h = Lwd.get Vars.term_width_height in 
-  let$ ui = ui 
-and$ focus = focus|>Focus.status in
-
-    let should_shrink = match shrink_on with
-      | `Focus -> focus|>Focus.has_focus
-      | `Unfocus -> not (focus|>Focus.has_focus)
-
+  let responsive_view ?(shrunk_width = 0) ?(shrink_on = `Focus) ~focus ui =
+    let$* w, h = Lwd.get Vars.term_width_height in
+    let$ ui = ui
+    and$ focus = focus |> Focus.status in
+    let should_shrink =
+      match shrink_on with
+      | `Focus ->
+        focus |> Focus.has_focus
+      | `Unfocus ->
+        not (focus |> Focus.has_focus)
     in
-    let threhold=(Lwd.peek Vars.config).single_pane_width_threshold in
+    let threhold = (Lwd.peek Vars.config).single_pane_width_threshold in
     if should_shrink
-    then if w < threhold 
-      then ui |> Ui.resize ~w:w ~mw:w
-      else ui
+    then if w < threhold then ui |> Ui.resize ~w ~mw:w else ui
     else if w < threhold
-      then ui |> Ui.resize ~w:shrunk_width ~mw:shrunk_width
-      else ui
+    then ui |> Ui.resize ~w:shrunk_width ~mw:shrunk_width
+    else ui
   ;;
 
   (** The primary view for the UI with the file_view graph_view and summary*)
@@ -212,7 +213,7 @@ and$ focus = focus|>Focus.status in
                    ~mw:1000)
             |> W.Box.focusable ~focus:branch_focus ~pad_h:0 ~pad_w:1
           ]
-          |> responsive_view  ~focus:summary_focus ~shrink_on:`Unfocus  ~shrunk_width:0 
+        |> responsive_view ~focus:summary_focus ~shrink_on:`Unfocus ~shrunk_width:0
       ; (*Right side summary/status/fileinfo view*)
         (let ui =
            Show_view.render summary_focus
@@ -222,13 +223,14 @@ and$ focus = focus|>Focus.status in
            |> W.on_focus ~focus:summary_focus (Ui.resize ~sw:3 ~mw:1000)
            |> W.Box.focusable ~focus:summary_focus ~pad_h:0 ~pad_w:1
          in
-         responsive_view ~focus:summary_focus ~shrunk_width:0  ui)
+         responsive_view ~focus:summary_focus ~shrunk_width:0 ui)
       ]
     (*These outer prompts can popup and show them selves over the main view*)
     |> W.Overlay.text_prompt ~char_count:true ~show_prompt_var:ui_state.show_prompt
     |> W.Overlay.popup ~show_popup_var:ui_state.show_popup
     |> W.Overlay.selection_list_prompt_filterable
-         ~list_outline_focus_attr:A.(empty) (*highlighting the outline inside the propt is a bit over the top*)
+         ~list_outline_focus_attr:A.(empty)
+           (*highlighting the outline inside the propt is a bit over the top*)
          ~show_prompt_var:ui_state.show_string_selection_prompt
     |> inputs ~custom:(fun x -> Jj_commands.handleInputs Jj_commands.default_list x)
   ;;
@@ -245,6 +247,87 @@ and$ focus = focus|>Focus.status in
     |> W.Scroll.area
     |> W.Box.box ~pad_w:1 ~pad_h:0
     |> inputs
+  ;;
+
+  (** Tab bar like [W.keyboard_tabs] but renders preview status + hotkeys on the
+      right side when rebase preview is active, leaving tab switching intact. *)
+  let keyboard_tabs_with_preview (tabs : (string * (unit -> Ui.t Lwd.t)) list) :
+    Ui.t Lwd.t
+    =
+    let char_to_int c =
+      if c >= '0' && c <= '9' then Some (int_of_char c - int_of_char '0') else None
+    in
+    match tabs with
+    | [] ->
+      Lwd.return Ui.empty
+    | _ ->
+      let cur = Lwd.var 0 in
+      let$* idx_sel = Lwd.get cur in
+      let _, f = List.nth tabs idx_sel in
+      (* Build the static tab-label portion (depends only on current tab index). *)
+      let tab_labels =
+        tabs
+        |> List.mapi (fun i (s, _) ->
+          let attr = if i = idx_sel then A.(st underline) else A.empty in
+          let label = W.printf ~attr "%s [%d]" s (i + 1) in
+          if i = 0 then [ label ] else [ W.string " | "; label ])
+        |> List.concat
+        |> Ui.hcat
+      in
+      (* Reactive tab bar: combines labels with optional preview info on the right. *)
+      let tab_bar =
+        (let$ active = Lwd.get Vars.ui_state.rebase_preview_active
+         and$ mode = Lwd.get Vars.ui_state.rebase_preview_mode
+         and$ source_mode = Lwd.get Vars.ui_state.rebase_preview_source_mode
+         and$ invalid = Lwd.get Vars.ui_state.rebase_preview_invalid in
+         let preview_part =
+           if not active
+           then Ui.empty
+           else (
+             let mode_str =
+               match mode with
+               | `Insert_before ->
+                 "insert-before"
+               | `Insert_after ->
+                 "insert-after"
+               | `Add_after ->
+                 "add-after"
+             in
+             let source_str =
+               match source_mode with
+               | `Revisions ->
+                 "revisions"
+               | `Source ->
+                 "source"
+               | `Branch ->
+                 "branch"
+             in
+             let status =
+               Printf.sprintf "Preview: dest=%s source=%s" mode_str source_str
+             in
+             let status =
+               match invalid with None -> status | Some msg -> status ^ " - " ^ msg
+             in
+             W.string (status ^ "  [y]apply [d]dest [Tab]dest [s]source [Esc]cancel"))
+         in
+         (* spacer pushes preview info to the far right *)
+         Ui.hcat [ tab_labels; Ui.resize ~sw:1 ~mw:10000 Ui.empty; preview_part ])
+        |> W.Box.box ~pad_w:1 ~pad_h:0
+      in
+      W.vbox [ tab_bar; f () ]
+      |>$ Ui.keyboard_area (function
+        | `ASCII key, _ ->
+          key
+          |> char_to_int
+          |> Option.map (fun i ->
+            if i >= 1 && i <= List.length tabs
+            then (
+              cur $= i - 1;
+              `Handled)
+            else `Unhandled)
+          |> Option.value ~default:`Unhandled
+        | _ ->
+          `Unhandled)
   ;;
 
   let mainUi () =
@@ -271,7 +354,8 @@ and$ focus = focus|>Focus.status in
        | `RunCmd cmd ->
          Jj_widgets.interactive_process ("jj" :: cmd)
        | `Main ->
-         W.keyboard_tabs [ ("Main", fun _ -> main_view ()); "Op log", log_view ])
+         keyboard_tabs_with_preview
+           [ ("Main", fun _ -> main_view ()); "Op log", log_view ])
     | (`CantStartProcess _ | `NotInRepo | `OtherError _) as other ->
       render_startup_error other
   ;;

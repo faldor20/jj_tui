@@ -380,10 +380,27 @@ module Make (Vars : Global_vars.Vars) = struct
                   Vars.ui_state.trigger_update $= ())
                 else (
                   Vars.set_rebase_preview_active true;
-                  Vars.set_rebase_preview_sources (Vars.get_active_revs ());
-                  let targets =
+                  let sources = Vars.get_active_revs () in
+                  Vars.set_rebase_preview_sources sources;
+                  (* Default targets = parents of source roots; this preserves the
+                     current tree shape rather than jumping to the hovered commit. *)
+                  let fallback_targets () =
                     let selected = Vars.get_selected_revs () in
-                    if List.length selected = 0 then [ Vars.get_hovered_rev () ] else selected
+                    if List.length selected = 0
+                    then [ Vars.get_hovered_rev () ]
+                    else selected
+                  in
+                  let targets =
+                    try
+                      let revset = Lwd.peek Vars.ui_state.revset in
+                      let max_commits = (Vars.config |> Lwd.peek).max_commits in
+                      let nodes, _ = get_graph_nodes ?revset max_commits in
+                      Render_jj_graph.default_preview_targets ~sources nodes
+                    with
+                    | _ ->
+                      (* If we cannot read the graph, keep preview usable instead of
+                         failing the mode toggle outright. *)
+                      fallback_targets ()
                   in
                   Vars.set_rebase_preview_targets targets;
                   Vars.set_rebase_preview_invalid None;

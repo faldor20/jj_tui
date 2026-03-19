@@ -1081,3 +1081,57 @@ let%expect_test "elided_parent_creates_termination_line" =
     Row 4: PadRow | node=child | graph=''
     |}]
 ;;
+
+let%expect_test "default_preview_targets_single_commit" =
+  (* c -> b -> a: select 'b'; default target should be 'c' (b's parent) *)
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let a = make_node ~parents:[ b ] "a" in
+  let targets = default_preview_targets ~sources:[ "b" ] [ a; b; c ] in
+  print_endline (String.concat "," targets);
+  [%expect {| c |}]
+;;
+
+let%expect_test "default_preview_targets_chain_selected" =
+  (* c -> b -> a: select both 'a' and 'b'; root of source set is 'b', whose
+     parent is 'c'; so default target = 'c'. *)
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let a = make_node ~parents:[ b ] "a" in
+  let targets = default_preview_targets ~sources:[ "a"; "b" ] [ a; b; c ] in
+  print_endline (String.concat "," targets);
+  [%expect {| c |}]
+;;
+
+let%expect_test "default_preview_targets_root_has_no_parents" =
+  (* 'c' has no parents; selecting it yields no default targets. *)
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let targets = default_preview_targets ~sources:[ "c" ] [ b; c ] in
+  print_endline (String.concat "," targets);
+  [%expect {|  |}]
+;;
+
+let%expect_test "default_preview_targets_multiple_roots" =
+  (* Two independent commits d and b are both selected; their parents are
+     e and c respectively (not in source set). *)
+  let e = make_node "e" in
+  let d = make_node ~parents:[ e ] "d" in
+  let c = make_node "c" in
+  let b = make_node ~parents:[ c ] "b" in
+  let a = make_node ~parents:[ d; b ] "a" in
+  let targets = default_preview_targets ~sources:[ "b"; "d" ] [ a; d; b; e; c ] in
+  print_endline (String.concat "," targets);
+  [%expect {| e,c |}]
+;;
+
+let%expect_test "default_preview_targets_preserve_parent_order" =
+  (* Preserve merge-parent order instead of sorting alphabetically so preview
+     starts from the current tree layout. *)
+  let z = make_node "z" in
+  let a = make_node "a" in
+  let merge = make_node ~parents:[ z; a ] "merge" in
+  let targets = default_preview_targets ~sources:[ "merge" ] [ merge; z; a ] in
+  print_endline (String.concat "," targets);
+  [%expect {| z,a |}]
+;;
