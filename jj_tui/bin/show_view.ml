@@ -53,7 +53,7 @@ module Make (Vars : Global_vars.Vars) = struct
     | File_preview (rev, file) ->
       let command =
         if file != ""
-        then [ "diff"; "--summary"; "-r"; rev; file ]
+        then Jj_cli.with_files [ "diff"; "--summary"; "-r"; rev ] [ file ]
         else [ "show"; "--summary"; "-r"; rev ]
       in
       let log = jj_no_log command in
@@ -72,7 +72,9 @@ module Make (Vars : Global_vars.Vars) = struct
   let render_detail = function
     | File_preview (rev, file) ->
       let command =
-        if file != "" then [ "diff"; "-r"; rev; file ] else [ "show"; "-r"; rev ]
+        if file != ""
+        then Jj_cli.with_files [ "diff"; "-r"; rev ] [ file ]
+        else [ "show"; "-r"; rev ]
       in
       let log = jj_no_log command in
       Control.yield ();

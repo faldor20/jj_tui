@@ -37,16 +37,17 @@ module Make (Vars : Global_vars.Vars) = struct
               ( "Revision to move file to"
               , fun rev ->
                   Cmd
-                    ([
-                       "squash"
-                     ; "-u"
-                     ; "--keep-emptied"
-                     ; "--from"
-                     ; get_hovered_rev ()
-                     ; "--into"
-                     ; rev
-                     ]
-                     @ Lwd.peek active_files) ))
+                    (Jj_cli.with_files
+                       [
+                         "squash"
+                       ; "-u"
+                       ; "--keep-emptied"
+                       ; "--from"
+                       ; get_hovered_rev ()
+                       ; "--into"
+                       ; rev
+                       ]
+                       (Lwd.peek active_files)) ))
       }
     ; {
         id = "move_to_child"
@@ -57,10 +58,9 @@ module Make (Vars : Global_vars.Vars) = struct
             Dynamic_r
               (fun rev ->
                 Cmd
-                  ([
-                     "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "+"
-                   ]
-                   @ Lwd.peek active_files)))
+                  (Jj_cli.with_files
+                     [ "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "+" ]
+                     (Lwd.peek active_files))))
       }
     ; {
         id = "move_to_parent"
@@ -71,10 +71,9 @@ module Make (Vars : Global_vars.Vars) = struct
             Dynamic_r
               (fun rev ->
                 Cmd
-                  ([
-                     "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "-"
-                   ]
-                   @ Lwd.peek active_files)))
+                  (Jj_cli.with_files
+                     [ "squash"; "-u"; "--keep-emptied"; "--from"; rev; "--into"; rev ^ "-" ]
+                     (Lwd.peek active_files))))
       }
     ; {
         id = "commit"
@@ -90,8 +89,9 @@ module Make (Vars : Global_vars.Vars) = struct
                       (* I need this to work with any commit. So i should split then describe instead*)
                       let rev = Vars.get_hovered_rev () in
                       jj
-                        ([ "split"; "-r"; rev; "-m"; message; "--insert-before"; "@" ]
-                         @ Lwd.peek active_files)
+                        (Jj_cli.with_files
+                           [ "split"; "-r"; rev; "-m"; message; "--insert-before"; "@" ]
+                           (Lwd.peek active_files))
                       |> ignore) ))
       }
     ; {
@@ -108,7 +108,7 @@ module Make (Vars : Global_vars.Vars) = struct
                    ^ (selected |> String.concat "\n")
                    ^ "\nin rev "
                    ^ rev)
-                  (Cmd ([ "restore"; "--to"; rev; "--from"; rev ^ "-" ] @ selected))))
+                  (Cmd (Jj_cli.with_files [ "restore"; "--to"; rev; "--from"; rev ^ "-" ] selected))))
       }
     ; {
         id = "absorb"
@@ -126,7 +126,7 @@ module Make (Vars : Global_vars.Vars) = struct
                    ^ (selected |> String.concat "\n")
                    ^ "\nin rev "
                    ^ rev)
-                  (Cmd ([ "absorb"; "--from"; rev ] @ selected))))
+                  (Cmd (Jj_cli.with_files [ "absorb"; "--from"; rev ] selected))))
       }
     ; {
         id = "absorb-into"
@@ -145,7 +145,7 @@ module Make (Vars : Global_vars.Vars) = struct
                          ^ (selected |> String.concat "\n")
                          ^ "\nin rev "
                          ^ rev)
-                        (Cmd ([ "absorb"; "--from"; rev; "--to"; dest ] @ selected))) ))
+                        (Cmd (Jj_cli.with_files [ "absorb"; "--from"; rev; "--to"; dest ] selected))) ))
       }
     ; {
         id = "undo"
