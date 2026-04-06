@@ -90,7 +90,7 @@ module Make (Vars : Global_vars.Vars) = struct
                       let rev = Vars.get_hovered_rev () in
                       jj
                         (Jj_cli.with_files
-                           [ "split"; "-r"; rev; "-m"; message; "--insert-before"; "@" ]
+                           [ "split"; "-r"; rev; "-m"; message; "--insert-before"; rev ]
                            (Lwd.peek active_files))
                       |> ignore) ))
       }
