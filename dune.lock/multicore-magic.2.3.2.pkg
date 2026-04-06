@@ -1,0 +1,19 @@
+(version 2.3.2)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (dune ocaml)))
+
+(source
+ (fetch
+  (url
+   https://github.com/ocaml-multicore/multicore-magic/releases/download/2.3.2/multicore-magic-2.3.2.tbz)
+  (checksum
+   sha256=8d8d70a823aae1ce0430380842aa881c4ac838d245caf27ed0ff25775087175f)))

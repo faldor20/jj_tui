@@ -1,0 +1,6 @@
+(lang dune 3.20)
+
+; Enable Dune package management for this workspace. The project-level pins in
+; dune-project point at the vendored forks so plain `dune build` can resolve the
+; same package set that the Nix build uses.
+(pkg enabled)

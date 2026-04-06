@@ -1,0 +1,19 @@
+(version 0.1.1)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (dune ocaml)))
+
+(source
+ (fetch
+  (url
+   https://github.com/ocaml-multicore/backoff/releases/download/0.1.1/backoff-0.1.1.tbz)
+  (checksum
+   sha256=00bea311b227b1bc0a55879da4dce38b1fd8447b4e4e2cf193a6953737ac9f03)))

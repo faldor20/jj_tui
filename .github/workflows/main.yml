@@ -1,34 +1,51 @@
-name: Builds, tests & co
+name: dune
 
 on:
   pull_request:
   push:
+  workflow_dispatch:
   schedule:
-    # Prime the caches every Monday
     - cron: 0 1 * * MON
 
 permissions: read-all
 
 jobs:
   build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-latest
-          - ubuntu-latest
-
-    runs-on: ${{ matrix.os }}
+        include:
+          # Keep the matrix explicit so CI tracks the architecture we care about,
+          # rather than whatever `*-latest` happens to point at next.
+          - name: linux-x86_64
+            runner: ubuntu-latest
+          - name: linux-aarch64
+            runner: ubuntu-24.04-arm
+          - name: macos-aarch64
+            runner: macos-14
+          - name: macos-x86_64
+            runner: macos-15-intel
 
     steps:
       - name: Checkout tree
         uses: actions/checkout@v4
 
-      - name: Set-up OCaml
-        uses: ocaml/setup-ocaml@v2
+      - name: Set up OCaml and Dune cache
+        uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: "5.1.1"
-  
-      - run: opam install . --deps-only --with-test
+          ocaml-compiler: "5"
+          opam-pin: false
+          dune-cache: true
 
-      - run: opam exec -- dune build
+      - name: Install Dune CLI
+        run: opam install dune
+
+      - name: Validate lock directory
+        run: opam exec -- dune pkg validate-lock-dir
+
+      - name: Build with Dune package management
+        run: opam exec -- dune build

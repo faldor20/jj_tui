@@ -1,0 +1,19 @@
+(version 0.6.0)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (dune ocaml backoff multicore-magic)))
+
+(source
+ (fetch
+  (url
+   https://github.com/ocaml-multicore/picos/releases/download/0.6.0/picos-0.6.0.tbz)
+  (checksum
+   sha256=3f5a08199cf65c2dae2f7d68f3877178f1da8eabf5376e15114e5a8958087dfa)))

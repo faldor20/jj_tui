@@ -1,0 +1,17 @@
+(version 1.14.0)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (dune ocaml)))
+
+(source
+ (fetch
+  (url https://github.com/ocaml/ocaml-re/archive/refs/tags/1.14.0.tar.gz)
+  (checksum md5=03f4a83100cb9229a796b85c698076e1)))

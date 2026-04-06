@@ -1,0 +1,19 @@
+(version 0.2.0)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (ocaml dune ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/ulrikstrid/logs-ppx/releases/download/v0.2.0/logs-ppx-0.2.0.tbz)
+  (checksum
+   sha256=053f043ef959d6dc079503eab482e91ac1509685d393c4b51f6991c210c0bfb1)))

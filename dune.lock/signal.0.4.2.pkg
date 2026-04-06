@@ -1,0 +1,17 @@
+(version 0.4.2)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (ocaml dune)))
+
+(source
+ (fetch
+  (url https://github.com/rizo/signal/archive/refs/tags/0.4.2.tar.gz)
+  (checksum md5=148304dae155143735be91fb978466ce)))

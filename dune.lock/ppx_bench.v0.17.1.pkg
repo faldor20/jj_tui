@@ -1,0 +1,14 @@
+(version v0.17.1)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml ppx_inline_test dune ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/ppx_bench/archive/refs/tags/v0.17.1.tar.gz)
+  (checksum md5=496d7d989656c95860cf2434e1d8e0e0)))

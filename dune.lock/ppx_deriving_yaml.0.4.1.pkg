@@ -1,0 +1,19 @@
+(version 0.4.1)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (dune yaml ocaml ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/patricoferris/ppx_deriving_yaml/releases/download/v0.4.1/ppx_deriving_yaml-0.4.1.tbz)
+  (checksum
+   sha256=dc2bef3043aaff7237589e97e44ca8a6268c8ec859a0430f9362b82f1d25752a)))

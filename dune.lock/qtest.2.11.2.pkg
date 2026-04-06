@@ -1,0 +1,14 @@
+(version 2.11.2)
+
+(build
+ (all_platforms
+  ((action (run dune build @install -j %{jobs} -p %{pkg-self:name})))))
+
+(depends
+ (all_platforms
+  (base-bytes ounit2 dune qcheck ocaml)))
+
+(source
+ (fetch
+  (url https://github.com/vincent-hugot/qtest/archive/v2.11.2.tar.gz)
+  (checksum md5=73b6f3f885cb8a404f491c6ab50aa373)))

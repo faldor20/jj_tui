@@ -1,0 +1,14 @@
+(version v0.17.1)
+
+(build
+ (all_platforms ((action (run dune build -p %{pkg-self:name} -j %{jobs})))))
+
+(depends
+ (all_platforms
+  (ocaml base ppxlib_jane sexplib0 dune ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/ppx_sexp_conv/archive/refs/tags/v0.17.1.tar.gz)
+  (checksum md5=acbe8a2727a29c8f2fa8da42046f5861)))

@@ -1,0 +1,19 @@
+(version 3.10.0)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs}))))))
+
+(depends
+ (all_platforms
+  (ocaml dune yojson ppx_deriving ppxlib)))
+
+(source
+ (fetch
+  (url
+   https://github.com/ocaml-ppx/ppx_deriving_yojson/releases/download/v3.10.0/ppx_deriving_yojson-3.10.0.tbz)
+  (checksum
+   sha256=ced3d265e4287f1f18b09df6446a24444fad52b2a3054cbcbe0c9494d0e89b3f)))

@@ -1,0 +1,19 @@
+(version 0.2)
+
+(build
+ (all_platforms
+  ((action
+    (progn
+     (when %{pkg-self:dev} (run dune subst))
+     (run dune build -p %{pkg-self:name} -j %{jobs} @install))))))
+
+(depends
+ (all_platforms
+  (ocaml dune)))
+
+(source
+ (fetch
+  (url
+   https://github.com/c-cube/thread-local-storage/releases/download/v0.2/thread-local-storage-0.2.tbz)
+  (checksum
+   sha256=a68e2b1ed07f9f993ffc76141e632ec4d103ffdab73869700cdc741ecd7e0349)))
