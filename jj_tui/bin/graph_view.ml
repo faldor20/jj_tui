@@ -18,76 +18,8 @@ module Make (Vars : Global_vars.Vars) = struct
 
   (* Use the library's render function for commit content *)
   let render_commit_content = Commit_render.render_commit_content
-
-  (** Group rows by their owning node. Each group is (node_row, continuation_rows).
-      Each NodeRow starts a new group containing it and all following non-NodeRows until
-      the next NodeRow. *)
-  let group_rows_by_node (rows : Render_jj_graph.graph_row_output list) :
-    (Render_jj_graph.graph_row_output * Render_jj_graph.graph_row_output list) list
-    =
-    let open Render_jj_graph in
-    let rec loop acc current_group = function
-      | [] ->
-        List.rev (match current_group with Some g -> g :: acc | None -> acc)
-      | row :: rest ->
-        (match row.row_type with
-         | NodeRow ->
-           let acc = match current_group with Some g -> g :: acc | None -> acc in
-           loop acc (Some (row, [])) rest
-         | _ ->
-           (match current_group with
-            | Some (node_row, conts) ->
-              loop acc (Some (node_row, conts @ [ row ])) rest
-            | None ->
-              (* Orphan row, shouldn't happen, but skip it *)
-              loop acc None rest))
-    in
-    loop [] None rows
-  ;;
-
-  (** Render a node group by distributing content lines across available rows.
-      Returns a list of (row, rendered_image) pairs. *)
-  let render_node_group
-        ((node_row, continuation_rows) :
-          Render_jj_graph.graph_row_output * Render_jj_graph.graph_row_output list)
-        ~(render_content : Render_jj_graph.node -> Notty.image list) :
-    (Render_jj_graph.graph_row_output * Notty.image) list
-    =
-    let open Notty in
-    let open Render_jj_graph in
-    let content_lines = render_content node_row.node in
-    let available_rows = node_row :: continuation_rows in
-    let result = ref [] in
-    (* Distribute content lines across available rows *)
-    List.iteri
-      (fun i row ->
-         let graph_img = row.graph_image in
-         let combined =
-           if i < List.length content_lines
-           then I.hcat [ graph_img; List.nth content_lines i ]
-           else graph_img
-         in
-         result := (row, combined) :: !result)
-      available_rows;
-    (* If content needs more lines than available, add synthetic continuation rows *)
-    if List.length content_lines > List.length available_rows
-    then (
-      let node_glyphs = [ "○"; "@"; "◌"; "◆"; "×" ] in
-      let synthetic_graph =
-        let chars = node_row.graph_chars in
-        let replaced = ref chars in
-        List.iter
-          (fun glyph ->
-             replaced := Str.global_replace (Str.regexp_string glyph) "│" !replaced)
-          node_glyphs;
-        I.string A.empty !replaced
-      in
-      for i = List.length available_rows to List.length content_lines - 1 do
-        let line_img = List.nth content_lines i in
-        result := (node_row, I.hcat [ synthetic_graph; line_img ]) :: !result
-      done);
-    List.rev !result
-  ;;
+  let group_rows_by_node = Graph_row_layout.group_rows_by_node
+  let render_node_group = Graph_row_layout.render_node_group
 
   let bookmark_select_prompt get_bookmark_list name func =
     Selection_prompt

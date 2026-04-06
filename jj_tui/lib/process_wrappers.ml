@@ -163,7 +163,7 @@ struct
   let native_graph_output ?revset limit =
     let args = [ "log"; "-T"; native_graph_template; "--limit"; string_of_int limit ] in
     let args = match revset with Some r -> args @ [ "-r"; r ] | None -> args in
-    jj_no_log args ~color:false
+    jj_no_log args
   ;;
 
   let line_before_marker line marker =
@@ -182,12 +182,11 @@ struct
       search 0
   ;;
 
-  let make_graph_row_output ~graph_chars ~row_type () =
-    let open Notty in
+  let make_graph_row_output ~graph_raw ~graph_chars ~row_type () =
     Render_jj_graph.
       {
         graph_chars
-      ; graph_image = I.string A.empty graph_chars
+      ; graph_image = AnsiReverse.colored_string graph_raw
       ; node = Render_jj_graph.make_elided_node ()
       ; row_type
       }
@@ -202,40 +201,41 @@ struct
       List.fold_left
         (fun (acc, current_group) line ->
            match line_before_marker line node_row_marker with
-           | Some graph_chars ->
+           | Some graph_raw ->
              let acc = flush_group current_group acc in
+             let graph_chars = remove_ansi graph_raw in
              let node_row =
-               make_graph_row_output ~graph_chars ~row_type:Render_jj_graph.NodeRow ()
+               make_graph_row_output
+                 ~graph_raw
+                 ~graph_chars
+                 ~row_type:Render_jj_graph.NodeRow
+                 ()
              in
              acc, Some { node_row; continuation_rows = [] }
            | None ->
-             let graph_chars = remove_ansi line in
-             if graph_chars = ""
+             let graph_raw =
+               match line_before_marker line info_row_marker with
+               | Some graph_raw ->
+                 graph_raw
+               | None ->
+                 line
+             in
+             let graph_chars = remove_ansi graph_raw in
+             if String.trim graph_chars = ""
              then acc, current_group
              else (
-               let row_type =
-                 match line_before_marker line info_row_marker with
-                 | Some _ ->
-                   Render_jj_graph.PadRow
-                 | None ->
-                   Render_jj_graph.classify_row_type graph_chars
-               in
-               let graph_chars =
-                 match line_before_marker line info_row_marker with
-                 | Some chars ->
-                   chars
-                 | None ->
-                   graph_chars
-               in
+               let row_type = Render_jj_graph.classify_row_type graph_chars in
                match current_group with
                | Some group ->
-                 let row = make_graph_row_output ~graph_chars ~row_type () in
+                 let row = make_graph_row_output ~graph_raw ~graph_chars ~row_type () in
                  ( acc
                  , Some
                      { group with continuation_rows = group.continuation_rows @ [ row ] }
                  )
                | None ->
-                 let node_row = make_graph_row_output ~graph_chars ~row_type () in
+                 let node_row =
+                   make_graph_row_output ~graph_raw ~graph_chars ~row_type ()
+                 in
                  acc, Some { node_row; continuation_rows = [] }))
         ([], None)
         lines
@@ -247,7 +247,7 @@ struct
     if List.length groups <> List.length nodes
     then None
     else (
-      let rows_rev =
+      let rows =
         List.fold_left2
           (fun acc group node ->
              let node_row : Render_jj_graph.graph_row_output =
@@ -258,12 +258,12 @@ struct
                  (fun (row : Render_jj_graph.graph_row_output) -> { row with node })
                  group.continuation_rows
              in
-             List.rev_append (List.rev (node_row :: continuation_rows)) acc)
+             acc @ (node_row :: continuation_rows))
           []
           groups
           nodes
       in
-      Some (List.rev rows_rev))
+      Some rows)
   ;;
 
   let get_graph_info node_template revset_arg limit =
