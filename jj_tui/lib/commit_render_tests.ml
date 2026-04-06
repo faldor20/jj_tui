@@ -217,6 +217,54 @@ let%expect_test "render_hidden_duplicate_commit" =
     |}]
 ;;
 
+let%expect_test "render_hidden_commit_uses_white_prefix_gray_rest" =
+  let node =
+    make_test_node
+      ~change_id_prefix:"upnslvuv"
+      ~change_id_rest:"/2"
+      ~commit_id_prefix:"4c63c987"
+      ~commit_id_rest:""
+      ~description:"make bookmarks render origin if needed"
+      ~bookmarks:[ "re-based@origin" ]
+      ~hidden:true
+      ()
+  in
+  let line1 = render_commit_content node |> List.hd in
+  line1
+  |> image_to_ansi_string
+  |> Parser.parse_ansi_escape_codes
+  |> Result.get_ok
+  |> List.iter (fun (attr, text) ->
+    if String.trim text <> ""
+    then (
+      AnsiReverse.Internal.print_attr attr;
+      Printf.printf "Text: %S\n" text));
+  [%expect
+    {|
+    attr:
+    \e[0m<\e[0;37;1mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: "upnslvuv"
+    attr:
+    \e[0m<\e[0;90mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: "/2"
+    attr:
+    \e[0m<\e[0;33mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " test@example.com"
+    attr:
+    \e[0m<\e[0;36mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " 2024-01-01"
+    attr:
+    \e[0m<\e[0;35mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " re-based@origin"
+    attr:
+    \e[0m<\e[0;34;1mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " 4c63c987"
+    attr:
+    \e[0m<\e[0;90mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " (hidden)"
+    |}]
+;;
+
 let%expect_test "render_divergent_commit" =
   let node =
     make_test_node
@@ -255,6 +303,54 @@ let%expect_test "render_conflict_and_divergent_commit" =
     {|
     lqzzqwqx/0 test@example.com 2024-01-01 main?? main@git 5ab39974 (conflict) (divergent)
     disable worker mode
+    |}]
+;;
+
+let%expect_test "render_conflict_commit_uses_white_prefix_gray_rest" =
+  let node =
+    make_test_node
+      ~change_id_prefix:"lqzzqwqx"
+      ~change_id_rest:"/0"
+      ~commit_id_prefix:"5ab39974"
+      ~commit_id_rest:""
+      ~description:"disable worker mode"
+      ~bookmarks:[ "main??"; "main@git" ]
+      ~conflict:true
+      ()
+  in
+  let line1 = render_commit_content node |> List.hd in
+  line1
+  |> image_to_ansi_string
+  |> Parser.parse_ansi_escape_codes
+  |> Result.get_ok
+  |> List.iter (fun (attr, text) ->
+    if String.trim text <> ""
+    then (
+      AnsiReverse.Internal.print_attr attr;
+      Printf.printf "Text: %S\n" text));
+  [%expect
+    {|
+    attr:
+    \e[0m<\e[0;37;1mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: "lqzzqwqx"
+    attr:
+    \e[0m<\e[0;90mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: "/0"
+    attr:
+    \e[0m<\e[0;33mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " test@example.com"
+    attr:
+    \e[0m<\e[0;36mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " 2024-01-01"
+    attr:
+    \e[0m<\e[0;35mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " main?? main@git"
+    attr:
+    \e[0m<\e[0;34;1mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " 5ab39974"
+    attr:
+    \e[0m<\e[0;31mATTR\e[0m\e[K\e[0m>\e[0m
+    Text: " (conflict)"
     |}]
 ;;
 

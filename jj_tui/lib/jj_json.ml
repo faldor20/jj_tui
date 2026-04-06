@@ -28,7 +28,9 @@ type jj_commit = {
   ; divergent : bool
   ; conflict : bool
   ; empty : bool
-  ; bookmarks : string list
+  ; local_bookmarks : string list
+  ; remote_bookmarks : string list
+  ; tags : string list
   ; author : jj_author
   ; change_id_prefix : string
   ; change_id_rest : string
@@ -51,20 +53,18 @@ let json_log_template =
   ++ ',"divergent":' ++ json(divergent)
   ++ ',"conflict":' ++ json(conflict)
   ++ ',"empty":' ++ json(empty)
-  ++ ',"bookmarks":['
-  ++ bookmarks
-       .map(|b|
-         json(
-           stringify(
-             if(
-               b.remote(),
-               b.name() ++ "@" ++ b.remote(),
-               if(b.tracked() && !b.synced(), b.name() ++ "*", b.name())
-             )
-           )
-         )
-       )
+  ++ ',"local_bookmarks":['
+  ++ local_bookmarks
+       .map(|b| json(stringify(if(!b.synced(), b.name() ++ "*", b.name()))))
        .join(",")
+  ++ ']'
+  ++ ',"remote_bookmarks":['
+  ++ remote_bookmarks
+       .map(|b| json(stringify(b.name() ++ "@" ++ b.remote())))
+       .join(",")
+  ++ ']'
+  ++ ',"tags":['
+  ++ tags.map(|t| json(t.name())).join(",")
   ++ ']'
   ++ ',"author":{"email":' ++ json(author.email().local()) ++ ',"timestamp":' ++ json(author.timestamp().local().format("%Y-%m-%d %H:%M:%S")) ++ '}'
   ++ ',"change_id_prefix":' ++ json(change_id.shortest(8).prefix())
@@ -122,6 +122,16 @@ let parse_jj_log_output (input : string) : (jj_commit list, string) result =
     2. Second pass: Process in reverse order, look up parents from Hashtbl, update nodes
 *)
 let commits_to_nodes (commits : jj_commit list) : Render_jj_graph.node list =
+  let display_refs (jj_commit : jj_commit) =
+    (* Local bookmarks occupy the visible commit row; otherwise keep the remote-only
+       label. Tags are appended after refs to match jj's short header output. *)
+    let primary_refs =
+      if jj_commit.local_bookmarks <> []
+      then jj_commit.local_bookmarks
+      else jj_commit.remote_bookmarks
+    in
+    primary_refs @ jj_commit.tags
+  in
   (* First pass: create all nodes without parents and populate hashtable *)
   let node_tbl : (string, Render_jj_graph.node) Hashtbl.t =
     Hashtbl.create (List.length commits)
@@ -138,7 +148,7 @@ let commits_to_nodes (commits : jj_commit list) : Render_jj_graph.node list =
       ; change_id = jj_commit.change_id
       ; commit_id = jj_commit.commit_id
       ; description = jj_commit.description
-      ; bookmarks = jj_commit.bookmarks
+      ; bookmarks = display_refs jj_commit
       ; author_email = jj_commit.author.email
       ; author_timestamp = jj_commit.author.timestamp
       ; empty = jj_commit.empty

@@ -32,6 +32,8 @@ let ansi_regex =
 let remove_ansi str = str |> Re.replace_string ~by:"" ansi_regex
 
 let count_ansi str = str |> Re.all ansi_regex |> List.length
+let node_row_marker = "@@NODE@@"
+let info_row_marker = "@@INFO@@"
 
 let find_selectable_from_graph limit str =
   (* Matches  a single revision in the format specificied by the graph template  *)
@@ -121,6 +123,11 @@ module Make (Process : sig
 struct
   open Process
 
+  type native_graph_group = {
+      node_row : Render_jj_graph.graph_row_output
+    ; continuation_rows : Render_jj_graph.graph_row_output list
+  }
+
   (* Currently hard-coded. Soon it'l be settable in config *)
   let base_graph_template =
     {|if(root,
@@ -144,6 +151,119 @@ struct
     {|"$$--START--$$"++"|"++change_id++"|"++commit_id++"|"++divergent++"|"++hidden++"|"++|}
     ^ node_template
     ^ {|++"$$--END--$$"++""|}
+  ;;
+
+  let native_graph_template =
+    Printf.sprintf
+      {|label(if(current_working_copy, "working_copy"), "%s") ++ "\n" ++ "%s"|}
+      node_row_marker
+      info_row_marker
+  ;;
+
+  let native_graph_output ?revset limit =
+    let args = [ "log"; "-T"; native_graph_template; "--limit"; string_of_int limit ] in
+    let args = match revset with Some r -> args @ [ "-r"; r ] | None -> args in
+    jj_no_log args ~color:false
+  ;;
+
+  let line_before_marker line marker =
+    let marker_len = String.length marker in
+    match String.index_opt line '@' with
+    | None ->
+      None
+    | Some _ ->
+      let rec search start =
+        if start + marker_len > String.length line
+        then None
+        else if String.sub line start marker_len = marker
+        then Some (String.sub line 0 start)
+        else search (start + 1)
+      in
+      search 0
+  ;;
+
+  let make_graph_row_output ~graph_chars ~row_type () =
+    let open Notty in
+    Render_jj_graph.
+      {
+        graph_chars
+      ; graph_image = I.string A.empty graph_chars
+      ; node = Render_jj_graph.make_elided_node ()
+      ; row_type
+      }
+  ;;
+
+  let parse_native_graph_groups output =
+    let lines = String.split_on_char '\n' output in
+    let flush_group current_group acc =
+      match current_group with Some g -> g :: acc | None -> acc
+    in
+    let groups_rev, current_group =
+      List.fold_left
+        (fun (acc, current_group) line ->
+           match line_before_marker line node_row_marker with
+           | Some graph_chars ->
+             let acc = flush_group current_group acc in
+             let node_row =
+               make_graph_row_output ~graph_chars ~row_type:Render_jj_graph.NodeRow ()
+             in
+             acc, Some { node_row; continuation_rows = [] }
+           | None ->
+             let graph_chars = remove_ansi line in
+             if graph_chars = ""
+             then acc, current_group
+             else (
+               let row_type =
+                 match line_before_marker line info_row_marker with
+                 | Some _ ->
+                   Render_jj_graph.PadRow
+                 | None ->
+                   Render_jj_graph.classify_row_type graph_chars
+               in
+               let graph_chars =
+                 match line_before_marker line info_row_marker with
+                 | Some chars ->
+                   chars
+                 | None ->
+                   graph_chars
+               in
+               match current_group with
+               | Some group ->
+                 let row = make_graph_row_output ~graph_chars ~row_type () in
+                 ( acc
+                 , Some
+                     { group with continuation_rows = group.continuation_rows @ [ row ] }
+                 )
+               | None ->
+                 let node_row = make_graph_row_output ~graph_chars ~row_type () in
+                 acc, Some { node_row; continuation_rows = [] }))
+        ([], None)
+        lines
+    in
+    List.rev (flush_group current_group groups_rev)
+  ;;
+
+  let attach_nodes_to_native_groups ~(nodes : Render_jj_graph.node list) groups =
+    if List.length groups <> List.length nodes
+    then None
+    else (
+      let rows_rev =
+        List.fold_left2
+          (fun acc group node ->
+             let node_row : Render_jj_graph.graph_row_output =
+               { group.node_row with node }
+             in
+             let continuation_rows =
+               List.map
+                 (fun (row : Render_jj_graph.graph_row_output) -> { row with node })
+                 group.continuation_rows
+             in
+             List.rev_append (List.rev (node_row :: continuation_rows)) acc)
+          []
+          groups
+          nodes
+      in
+      Some (List.rev rows_rev))
   ;;
 
   let get_graph_info node_template revset_arg limit =
@@ -201,6 +321,37 @@ struct
       |> Array.of_list
     in
     nodes, rev_ids
+  ;;
+
+  let get_native_graph_rows ?revset limit nodes =
+    let output = native_graph_output ?revset limit in
+    output |> parse_native_graph_groups |> attach_nodes_to_native_groups ~nodes
+  ;;
+
+  let get_graph_nodes_with_native_rows ?revset limit =
+    (* Keep native graph rows and JSON metadata in lockstep. If the parser loses
+       alignment, fall back to the synthetic renderer instead of showing broken rows. *)
+    Flock.join_after @@ fun _ ->
+    let commits_promise =
+      Flock.fork_as_promise @@ fun () -> get_graph_json ?revset limit
+    in
+    let native_promise =
+      Flock.fork_as_promise @@ fun () -> native_graph_output ?revset limit
+    in
+    let commits = Promise.await commits_promise in
+    let nodes = Jj_json.commits_to_nodes commits in
+    let rev_ids =
+      commits
+      |> List.map (fun (c : Jj_json.jj_commit) ->
+        if c.divergent || c.hidden then Duplicate c.commit_id else Unique c.change_id)
+      |> Array.of_list
+    in
+    let native_rows =
+      Promise.await native_promise
+      |> parse_native_graph_groups
+      |> attach_nodes_to_native_groups ~nodes
+    in
+    nodes, rev_ids, native_rows
   ;;
 end
 
@@ -333,4 +484,43 @@ let%expect_test "count_ansi" =
   let count = count_ansi str in
   count |> string_of_int |> print_endline;
   [%expect {|2|}]
+;;
+
+module Test_native_graph = Make (struct
+    let jj_no_log ?get_stderr:_ ?snapshot:_ ?color:_ _ = failwith "unused"
+  end)
+
+let%expect_test "parse_native_graph_groups_preserves_elision_continuity" =
+  let output =
+    {|◆  @@NODE@@
+│  @@INFO@@
+~  (elided revisions)
+│ ○  @@NODE@@
+├─╯  @@INFO@@
+~|}
+  in
+  let groups =
+    Test_native_graph.parse_native_graph_groups output
+    |> List.map (fun (group : Test_native_graph.native_graph_group) ->
+      group.node_row.Render_jj_graph.graph_chars
+      :: List.map
+           (fun (row : Render_jj_graph.graph_row_output) -> row.graph_chars)
+           group.continuation_rows)
+  in
+  List.iteri
+    (fun i rows ->
+       Printf.printf "Group %d\n" i;
+       List.iter (fun row -> Printf.printf "  %S\n" row) rows)
+    groups;
+  [%expect
+    {|
+    Group 0
+      "\226\151\134  "
+      "\226\148\130  "
+      "~  (elided revisions)"
+    Group 1
+      "\226\148\130 \226\151\139  "
+      "\226\148\156\226\148\128\226\149\175  "
+      "~"
+    |}]
 ;;

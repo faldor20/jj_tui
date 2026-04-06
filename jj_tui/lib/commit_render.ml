@@ -59,10 +59,9 @@ let render_commit_content (node : Render_jj_graph.node) : Notty.image list =
   let line1_parts = ref [] in
   (* Render change_id with prefix highlighting *)
   let change_id_prefix_attr, change_id_rest_attr =
-    if node.hidden
+    if node.hidden || node.conflict
     then
-      let duplicate_attr = fg white ++ st bold in
-      duplicate_attr, duplicate_attr
+      fg white ++ st bold, fg lightblack ++ bs
     else if node.divergent
     then fg red ++ st bold, fg red ++ bs
     else fg magenta ++ st bold, fg lightblack ++ bs

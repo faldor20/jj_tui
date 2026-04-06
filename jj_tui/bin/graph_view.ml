@@ -139,7 +139,9 @@ module Make (Vars : Global_vars.Vars) = struct
         |> Lwd.map2 (Lwd.get Vars.ui_state.revset) ~f:(fun revset _ ->
           try
             let max_commits = (Vars.config |> Lwd.peek).max_commits in
-            let nodes, rev_ids = get_graph_nodes ?revset max_commits in
+            let nodes, rev_ids, native_rows =
+              get_graph_nodes_with_native_rows ?revset max_commits
+            in
             let state =
               Render_jj_graph.{ depth = 0; columns = [||]; pending_joins = [] }
             in
@@ -181,10 +183,23 @@ module Make (Vars : Global_vars.Vars) = struct
               else rev_ids
             in
             let rendered_rows =
-              Render_jj_graph.render_nodes_structured
-                state
-                nodes
-                ~node_attr:Commit_render.graph_node_attr
+              if Vars.get_rebase_preview_active ()
+              then
+                Render_jj_graph.render_nodes_structured
+                  state
+                  nodes
+                  ~node_attr:Commit_render.graph_node_attr
+              else (
+                match native_rows with
+                | Some rows ->
+                  rows
+                | None ->
+                  [%log
+                    warn "Failed to align native jj graph rows; using synthetic renderer"];
+                  Render_jj_graph.render_nodes_structured
+                    state
+                    nodes
+                    ~node_attr:Commit_render.graph_node_attr)
             in
             error_var $= None;
             rendered_rows, rev_ids
