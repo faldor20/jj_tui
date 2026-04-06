@@ -45,7 +45,7 @@ jobs:
         run: opam install dune
 
       - name: Validate lock directory
-        run: opam exec -- dune pkg validate-lock-dir
+        run: opam exec -- dune pkg validate-lockdir
 
       - name: Build with Dune package management
         run: opam exec -- dune build

@@ -4,6 +4,7 @@
 
 ; Keep opam metadata generated from the same dependency source that Dune pkg
 ; consumes, so Nix, opam, and plain Dune builds all describe the same project.
+
 (generate_opam_files true)
 
 (source
@@ -19,6 +20,7 @@
 
 ; The repo vendors patched forks of these libraries. Pin them so Dune package
 ; management resolves the same sources the build already uses locally.
+
 (pin
  (url "./forks/notty")
  (package
@@ -51,9 +53,12 @@
 (package
  (name jj_tui)
  (synopsis "Terminal UI for the Jujutsu version control system")
- (description "A terminal UI for Jujutsu built in OCaml with Notty and Nottui.")
+ (description
+  "A terminal UI for Jujutsu built in OCaml with Notty and Nottui.")
  (depends
-  (ocaml (>= "5.1"))
+  (dune (>="3.20"))
+  (ocaml
+   (>= "5.1"))
   angstrom
   base
   bigstringaf
@@ -77,8 +82,11 @@
   uutf
   yaml
   yojson
-  (picos_std (= "0.6.0"))
-  (picos_io (= "0.6.0"))
-  (picos_mux (= "0.6.0")))
+  (picos_std
+   (= "0.6.0"))
+  (picos_io
+   (= "0.6.0"))
+  (picos_mux
+   (= "0.6.0")))
  (tags
   (topics "terminal" "tui" "jujutsu" "jj" "vcs")))

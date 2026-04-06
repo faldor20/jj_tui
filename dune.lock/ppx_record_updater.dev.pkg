@@ -9,7 +9,6 @@
 
 (source
  (fetch
-  (url
-   git+https://github.com/faldor20/ppx_record_updater.git#15a6ac0fa1a98e21e2b4b68b2eaee088186d5515)))
+  (url git+https://github.com/faldor20/ppx_record_updater.git)))
 
 (dev)
