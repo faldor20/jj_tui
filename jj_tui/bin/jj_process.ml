@@ -284,10 +284,10 @@ module Make (Vars : Global_vars.Vars) = struct
           "jj"
           (List.concat
              [
-               args
-             ; [ "--no-pager" ]
+               [ "--no-pager" ]
              ; (if snapshot then [] else [ "--ignore-working-copy" ])
              ; (if color then [ "--color"; "always" ] else [ "--color"; "never" ])
+             ; args
              ])
       with
       | Picos_std_structured.Control.Terminate as e ->
