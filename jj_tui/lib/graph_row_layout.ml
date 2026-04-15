@@ -155,10 +155,20 @@ let render_node_group
   let is_node_row ((row, _img) : Render_jj_graph.graph_row_output * Notty.image) =
     row == node_row
   in
-  match List.find_opt is_node_row rendered_rows with
-  | None ->
-    rendered_rows
-  | Some node_entry ->
-    let other_rows = List.filter (fun entry -> not (is_node_row entry)) rendered_rows in
+  (* Synthetic continuation lines reuse [node_row] so they inherit the same graph
+     metadata. Only move the first real node entry to the front; filtering every
+     [node_row] match would also discard those synthetic description rows. *)
+  let rec extract_first_node_row acc = function
+    | [] ->
+      None, List.rev acc
+    | entry :: rest when is_node_row entry ->
+      Some entry, List.rev_append acc rest
+    | entry :: rest ->
+      extract_first_node_row (entry :: acc) rest
+  in
+  match extract_first_node_row [] rendered_rows with
+  | None, other_rows ->
+    other_rows
+  | Some node_entry, other_rows ->
     node_entry :: other_rows
 ;;

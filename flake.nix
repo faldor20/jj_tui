@@ -4,7 +4,7 @@
   # Flake inputs
   inputs = {
 
-  nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs";
 
     ocaml-overlay = {
       url = "github:nix-ocaml/nix-overlays";
@@ -43,6 +43,9 @@
             let
               notty-mine = ocamlPackages.notty.overrideAttrs (old: {
                 src = ./forks/notty/.;
+                # The fork already carries our local compatibility changes, so
+                # nixpkgs' upstream notty patches can fail to apply against it.
+                patches = [ ];
               });
 
               ppx_record_updater_src = pkgs.fetchFromGitHub {
@@ -177,11 +180,11 @@
                     multicore-magic
                     thread-local-storage
                   ];
-                  propagatedBuildInputs = with ocamlPackages; [
-                    backoff
-                    multicore-magic
-                    thread-local-storage
-                  ];
+                propagatedBuildInputs = with ocamlPackages; [
+                  backoff
+                  multicore-magic
+                  thread-local-storage
+                ];
 
                 strictDeps = true;
               };
@@ -216,9 +219,12 @@
                 #   sha256 = "sha256-8QwDzRgffA4wnE9vWLpLfy9MdQ5Yc8wBF5jgRamGMfA=";
                 # };
 
-                buildInputs = with ocamlPackages; [ seq logs ];
+                buildInputs = with ocamlPackages; [
+                  seq
+                  logs
+                ];
                 propagatedBuildInputs = with ocamlPackages; [ logs ];
-            
+
                 strictDeps = false;
               };
               lwd_picos = ocamlPackages.buildDunePackage {
@@ -228,9 +234,17 @@
 
                 src = ./forks/lwd/.;
 
-                buildInputs = with ocamlPackages; [ seq lwd picos picos_std backoff multicore-magic thread-local-storage ];
+                buildInputs = with ocamlPackages; [
+                  seq
+                  lwd
+                  picos
+                  picos_std
+                  backoff
+                  multicore-magic
+                  thread-local-storage
+                ];
                 propagatedBuildInputs = with ocamlPackages; [
-                  
+
                   lwd
                 ];
 
@@ -271,12 +285,12 @@
 
                   strictDeps = true;
                 };
-                 nottui_picos=
+              nottui_picos =
                 let
-                    pname = "nottui_picos";
-                  in
-                 ocamlPackages.buildDunePackage {
-                    pname = "nottui_picos";
+                  pname = "nottui_picos";
+                in
+                ocamlPackages.buildDunePackage {
+                  pname = "nottui_picos";
                   version = "dev";
                   duneVersion = "3";
                   src = ./forks/nottui/.;
@@ -286,9 +300,9 @@
                     # lwd
                     lwd_picos
                     nottui
-                  picos
-                  picos_io
-                  picos_std
+                    picos
+                    picos_io
+                    picos_std
                     notty-mine
                     seq
                   ];

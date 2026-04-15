@@ -406,17 +406,24 @@ module I = struct
 
     let create () =
       let img, line, attr = ref empty, ref empty, ref [] in
-      let fmt = formatter_of_out_functions {
-          out_flush = (fun () ->
-            img := !img <-> !line; line := empty; attr := [])
-        ; out_newline = (fun () ->
-            img := !img <-> !line; line := void 0 1)
-        ; out_string = (fun s i n ->
-            line := !line <|> string (top_a attr) String.(sub0cp s i n))
-        (* Not entirely clear; either or both could be void: *)
-        ; out_spaces = (fun w -> line := !line <|> char (top_a attr) ' ' w 1)
-        ; out_indent = (fun w -> line := !line <|> char (top_a attr) ' ' w 1)
-      } in
+      (* Start from Format's current output-function record so newer OCaml
+         releases can add fields like [out_width] without breaking this vendored
+         formatter shim. We only override the hooks that Notty needs. *)
+      let out_functions =
+        {
+          (pp_get_formatter_out_functions std_formatter ()) with
+            out_flush = (fun () ->
+              img := !img <-> !line; line := empty; attr := [])
+          ; out_newline = (fun () ->
+              img := !img <-> !line; line := void 0 1)
+          ; out_string = (fun s i n ->
+              line := !line <|> string (top_a attr) String.(sub0cp s i n))
+          (* Not entirely clear; either or both could be void: *)
+          ; out_spaces = (fun w -> line := !line <|> char (top_a attr) ' ' w 1)
+          ; out_indent = (fun w -> line := !line <|> char (top_a attr) ' ' w 1)
+        }
+      in
+      let fmt = formatter_of_out_functions out_functions in
       pp_set_formatter_stag_functions fmt {
         (pp_get_formatter_stag_functions fmt ()) with
             mark_open_stag =

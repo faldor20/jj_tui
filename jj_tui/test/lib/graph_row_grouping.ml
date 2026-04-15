@@ -7,7 +7,7 @@ module Test_native_graph = Process_wrappers.Make (struct
 (** These tests exercise the shared row-layout implementation used by graph_view so
     the post-elision branch regression is locked down end-to-end. *)
 
-let test_node ?(description = "desc") commit_id =
+let test_node ?(description = "desc") ?(is_preview = false) commit_id =
   let open Render_jj_graph in
   {
     parents = []
@@ -25,7 +25,7 @@ let test_node ?(description = "desc") commit_id =
   ; hidden = false
   ; divergent = false
   ; conflict = false
-  ; is_preview = false
+  ; is_preview
   ; change_id_prefix = commit_id
   ; change_id_rest = ""
   ; commit_id_prefix = "deadbeef"
@@ -331,6 +331,7 @@ let%expect_test "rendering_repro_for_join_row_before_child_node" =
   [%expect
     {|
     "\226\151\134  " => "\226\151\134  top test@example.com 2024-01-01 deadbeef"
+    "\226\151\134  " => "\226\148\130  ensure commit actually puts the rev in the right place"
     "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  child test@example.com 2024-01-01 deadbeef"
     "\226\148\156\226\148\128\226\149\175  " => "\226\148\156\226\148\128\226\149\175  show conflicts correctly"
     "\226\148\130  " => "\226\148\130"
@@ -450,11 +451,36 @@ let%expect_test "rendering_repro_for_synthetic_terminating_branch_with_extra_ver
     "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  upnslvuv/2 test@example.com 2024-01-01 deadbeef"
     "\226\148\156\226\148\128\226\149\175  " => "\226\148\156\226\148\128\226\149\175  make bookmarks render origin if needed"
     "\226\148\130 \226\151\134  " => "\226\148\130 \226\151\134  lpztppmx test@example.com 2024-01-01 deadbeef"
+    "\226\148\130 \226\151\134  " => "\226\148\130 \226\148\130  fix elided revisions bug during rebase"
     "~  (elided revisions)" => "~  (elided revisions)"
     "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  vxkltmxw test@example.com 2024-01-01 deadbeef"
     "\226\148\130 \226\148\130  " => "\226\148\130 \226\148\130  (empty) (no description set)"
     "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  mwqvkttl test@example.com 2024-01-01 deadbeef"
     "\226\148\156\226\148\128\226\149\175  " => "\226\148\156\226\148\128\226\149\175  (empty) (no description set)"
+    |}]
+;;
+
+let%expect_test "preview_rows_keep_synthetic_description_line" =
+  let preview =
+    test_node
+      ~description:"preview target description"
+      ~is_preview:true
+      "preview:insert-before"
+  in
+  let group : Graph_row_layout.node_group =
+    {
+      pre_rows = []
+    ; node_row = test_row ~row_type:Render_jj_graph.NodeRow preview "│ ○  "
+    ; continuation_rows = []
+    }
+  in
+  Graph_row_layout.render_node_group group ~render_content:render_content_lines
+  |> List.iter (fun ((row : Render_jj_graph.graph_row_output), img) ->
+    Printf.printf "%S => %S\n" row.graph_chars (render_image_to_string img));
+  [%expect
+    {|
+    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  preview:insert-before test@example.com 2024-01-01 deadbeef"
+    "\226\148\130 \226\151\139  " => "\226\148\130 \226\148\130  preview target description"
     |}]
 ;;
 

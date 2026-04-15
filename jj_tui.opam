@@ -11,7 +11,7 @@ homepage: "https://github.com/faldor20/jj_tui"
 doc: "https://github.com/faldor20/jj_tui"
 bug-reports: "https://github.com/faldor20/jj_tui/issues"
 depends: [
-  "dune" {>= "3.20"}
+  "dune" {>= "3.20" & >= "3.20"}
   "ocaml" {>= "5.1"}
   "angstrom"
   "base"
