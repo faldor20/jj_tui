@@ -71,22 +71,27 @@ module Make (Vars : Global_vars.Vars) = struct
         |> Lwd.map2 (Lwd.get Vars.ui_state.revset) ~f:(fun revset _ ->
           try
             let max_commits = (Vars.config |> Lwd.peek).max_commits in
-            let nodes, rev_ids, native_rows =
-              get_graph_nodes_with_native_rows ?revset max_commits
-            in
+            (* The graph view now consumes the renderer's synthetic node model in
+               both normal and preview mode. Preview only rewrites that model; row
+               generation always goes through the same structured renderer. *)
+            let nodes, rev_ids = get_graph_nodes ?revset max_commits in
             let state =
               Render_jj_graph.{ depth = 0; columns = [||]; pending_joins = [] }
+            in
+            let preview_active = Vars.get_rebase_preview_active () in
+            let selectable_nodes =
+              nodes |> List.filter (fun node -> not (Render_jj_graph.is_elided node))
             in
             let node_id_map =
               List.map2
                 (fun node rev_id -> node.Render_jj_graph.commit_id, rev_id)
-                nodes
+                selectable_nodes
                 (Array.to_list rev_ids)
               |> List.to_seq
               |> Hashtbl.of_seq
             in
             let nodes, invalid =
-              if Vars.get_rebase_preview_active ()
+              if preview_active
               then (
                 let expanded_sources =
                   Render_jj_graph.expand_preview_sources
@@ -105,33 +110,21 @@ module Make (Vars : Global_vars.Vars) = struct
             let current_invalid = Lwd.peek Vars.ui_state.rebase_preview_invalid in
             if current_invalid <> invalid then Vars.set_rebase_preview_invalid invalid;
             let rev_ids =
-              if Vars.get_rebase_preview_active ()
+              if preview_active
               then
                 nodes
                 |> List.filter (fun node -> not node.Render_jj_graph.is_preview)
+                |> List.filter (fun node -> not (Render_jj_graph.is_elided node))
                 |> List.filter_map (fun node ->
                   Hashtbl.find_opt node_id_map node.Render_jj_graph.commit_id)
                 |> Array.of_list
               else rev_ids
             in
             let rendered_rows =
-              if Vars.get_rebase_preview_active ()
-              then
-                Render_jj_graph.render_nodes_structured
-                  state
-                  nodes
-                  ~node_attr:Commit_render.graph_node_attr
-              else (
-                match native_rows with
-                | Some rows ->
-                  rows
-                | None ->
-                  [%log
-                    warn "Failed to align native jj graph rows; using synthetic renderer"];
-                  Render_jj_graph.render_nodes_structured
-                    state
-                    nodes
-                    ~node_attr:Commit_render.graph_node_attr)
+              Render_jj_graph.render_nodes_structured
+                state
+                nodes
+                ~node_attr:Commit_render.graph_node_attr
             in
             error_var $= None;
             rendered_rows, rev_ids
@@ -157,7 +150,7 @@ module Make (Vars : Global_vars.Vars) = struct
           | [] ->
             []
           | (first_row, first_img) :: rest_rows ->
-            if first_row.node.is_preview
+            if first_row.node.is_preview || Render_jj_graph.is_elided first_row.node
             then
               List.map
                 (fun (_row, img) -> W.Lists.(Filler (img |> Ui.atom |> Lwd.pure)))

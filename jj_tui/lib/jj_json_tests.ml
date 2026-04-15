@@ -64,7 +64,7 @@ let%expect_test "commits_to_nodes_parent_linking" =
     Converted 2 nodes
     Node: parent, Parents: 0
     Node: child, Parents: 1
-    Parent reference correct: false
+    Parent reference correct: true
     |}]
 ;;
 
@@ -93,8 +93,8 @@ let%expect_test "parse_multiple_parents" =
   [%expect
     {|
     Merge node: merge, Parents: 2
-    First parent correct: false
-    Second parent correct: false
+    First parent correct: true
+    Second parent correct: true
     |}]
 ;;
 
@@ -217,24 +217,57 @@ let%expect_test "commits_to_nodes_missing_parent_creates_elided" =
   (match parse_jj_log_output input with
    | Ok commits ->
      let nodes = commits_to_nodes commits in
-     Printf.printf "Total nodes: %d\n" (List.length nodes);
-     let child_node = List.nth nodes 0 in
+      Printf.printf "Total nodes: %d\n" (List.length nodes);
+      let child_node = List.nth nodes 0 in
+      let elided_node = List.nth nodes 1 in
+      Printf.printf
+        "Child node: %s, Parents: %d\n"
+        child_node.commit_id
+        (List.length child_node.parents);
+      let parent = List.hd child_node.parents in
+      Printf.printf "Parent is elided: %b\n" (Render_jj_graph.is_elided parent);
+      Printf.printf "Parent commit_id: %s\n" parent.commit_id;
+      Printf.printf "Elided node emitted: %b\n" (Render_jj_graph.is_elided elided_node)
+    | Error msg ->
+      Printf.printf "Error: %s\n" msg);
+  [%expect
+    {|
+    Total nodes: 2
+    Child node: child, Parents: 1
+    Parent is elided: true
+    Parent commit_id: ~ELIDED~:child:missing_parent
+    Elided node emitted: true
+    |}]
+;;
+
+let%expect_test "select_visible_commit_ids_keeps_mutable_trunk_and_direct_parents" =
+  let input =
+    {|{"commit_id":"root","parents":[],"change_id":"r","description":"Root","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"r","change_id_rest":"","commit_id_prefix":"roo","commit_id_rest":"t"}
+{"commit_id":"trunk_parent","parents":["root"],"change_id":"tp","description":"Trunk parent","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"t","change_id_rest":"p","commit_id_prefix":"tru","commit_id_rest":"nk_parent"}
+{"commit_id":"trunk_head","parents":["trunk_parent"],"change_id":"th","description":"Trunk head","working_copy":false,"immutable":true,"trunk":true,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"t","change_id_rest":"h","commit_id_prefix":"tru","commit_id_rest":"nk_head"}
+{"commit_id":"mutable_parent","parents":["trunk_head"],"change_id":"mp","description":"Mutable parent","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"m","change_id_rest":"p","commit_id_prefix":"mut","commit_id_rest":"able_parent"}
+{"commit_id":"mutable_head","parents":["mutable_parent"],"change_id":"mh","description":"Mutable head","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-05"},"change_id_prefix":"m","change_id_rest":"h","commit_id_prefix":"mut","commit_id_rest":"able_head"}
+{"commit_id":"old_immutable","parents":["root"],"change_id":"oi","description":"Old immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-06"},"change_id_prefix":"o","change_id_rest":"i","commit_id_prefix":"old","commit_id_rest":"_immutable"}|}
+  in
+  (match parse_jj_log_output input with
+   | Ok commits ->
+     let visible_commit_ids = select_visible_commit_ids commits in
+     Printf.printf "Visible ids: [%s]\n" (String.concat ";" visible_commit_ids);
+     let filtered_visible_commit_ids =
+       select_visible_commit_ids
+         ~filter_commit_ids:[ "mutable_head"; "trunk_head"; "old_immutable" ]
+         commits
+     in
      Printf.printf
-       "Child node: %s, Parents: %d\n"
-       child_node.commit_id
-       (List.length child_node.parents);
-     let parent = List.hd child_node.parents in
-     Printf.printf "Parent is elided: %b\n" (Render_jj_graph.is_elided parent);
-     Printf.printf "Parent commit_id: %s\n" parent.commit_id
+       "Filtered visible ids: [%s]\n"
+       (String.concat ";" filtered_visible_commit_ids)
    | Error msg ->
      Printf.printf "Error: %s\n" msg);
   [%expect
     {|
-    Total nodes: 1
-    Child node: child, Parents: 1
-    Parent is elided: true
-    Parent commit_id: ~ELIDED~
-  |}]
+    Visible ids: [trunk_parent;trunk_head;mutable_parent;mutable_head]
+    Filtered visible ids: [trunk_head;mutable_head]
+    |}]
 ;;
 
 let%expect_test "commits_to_nodes_multiple_children_same_missing_parent" =
@@ -258,10 +291,10 @@ let%expect_test "commits_to_nodes_multiple_children_same_missing_parent" =
      Printf.printf "Error: %s\n" msg);
   [%expect
     {|
-    Total nodes: 2
-    Both parents are elided: true
-    Same parent object (physical equality): true
-  |}]
+    Total nodes: 4
+    Both parents are elided: false
+    Same parent object (physical equality): false
+    |}]
 ;;
 
 let%expect_test "commits_to_nodes_same_missing_parent_physical_equality" =
@@ -285,9 +318,9 @@ let%expect_test "commits_to_nodes_same_missing_parent_physical_equality" =
      Printf.printf "Error: %s\n" msg);
   [%expect
     {|
-    Converted 2 nodes
-    Both parents are elided: true
-    Same parent object (physical equality): true
+    Converted 4 nodes
+    Both parents are elided: false
+    Same parent object (physical equality): false
     |}]
 ;;
 

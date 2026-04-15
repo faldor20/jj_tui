@@ -214,7 +214,13 @@ let%expect_test "render_hidden_duplicate_commit" =
     {|
     upnslvuv/2 test@example.com 2024-01-01 re-based@origin 4c63c987 (hidden)
     make bookmarks render origin if needed
-    |}]
+  |}]
+;;
+
+let%expect_test "render_elided_node_as_single_description_line" =
+  let node = Render_jj_graph.make_elided_node ~id:(Render_jj_graph.elided_marker ^ ":child") () in
+  render_commit_content node |> List.iter (fun img -> print_endline (image_to_string img));
+  [%expect {|  (elided revisions) |}]
 ;;
 
 let%expect_test "render_hidden_commit_uses_white_prefix_gray_rest" =
@@ -418,5 +424,15 @@ let%expect_test "graph_node_attr_divergent_is_red_bold" =
     {|
     attr:
     \e[0m<\e[0;31;1mATTR\e[0m\e[K\e[0m>\e[0m
+    |}]
+;;
+
+let%expect_test "graph_node_attr_elided_is_lightblack" =
+  let node = Render_jj_graph.make_elided_node () in
+  node |> graph_node_attr |> AnsiReverse.Internal.print_attr;
+  [%expect
+    {|
+    attr:
+    \e[0m<\e[0;90mATTR\e[0m\e[K\e[0m>\e[0m
     |}]
 ;;

@@ -49,7 +49,7 @@ let%expect_test "apply_rebase_preview_insert_before" =
     {|
     ok
 
-    preview:preview:b
+    preview:c
     |}]
 ;;
 
@@ -82,7 +82,31 @@ let%expect_test "apply_rebase_preview_removes_sources" =
   in
   let ids = nodes |> List.map (fun n -> n.commit_id) |> String.concat "," in
   print_endline ids;
-  [%expect {| preview:preview:b,b,c |}]
+  [%expect {| preview:a,b,c |}]
+;;
+
+let%expect_test "apply_rebase_preview_multi_source_preserves_stable_graph_order" =
+  (* Preview ordering should come from the transformed graph's stable topological
+     order, not from ad hoc source sorting. This keeps multi-source previews in the
+     same relative order as the original graph when both nodes are moved together. *)
+  let root = make_node "root" in
+  let left = make_node ~parents:[ root ] "left" in
+  let right = make_node ~parents:[ root ] "right" in
+  let tip = make_node ~parents:[ left; right ] "tip" in
+  let nodes, invalid =
+    apply_rebase_preview
+      ~mode:`Add_after
+      ~sources:[ "left"; "right" ]
+      ~targets:[ "root" ]
+      [ tip; left; right; root ]
+  in
+  print_endline (Option.value invalid ~default:"ok");
+  nodes |> List.map (fun n -> n.commit_id) |> String.concat "," |> print_endline;
+  [%expect
+    {|
+    ok
+    tip,preview:left,preview:right,root
+    |}]
 ;;
 
 let%expect_test "apply_rebase_preview_invalid_cycle" =
@@ -1079,6 +1103,27 @@ let%expect_test "elided_parent_creates_termination_line" =
     Row 2: TermRow | node=child | graph='~'
     Row 3: PadRow | node=child | graph=''
     Row 4: PadRow | node=child | graph=''
+    |}]
+;;
+
+let%expect_test "visible_elided_node_renders_its_own_row_and_connector" =
+  let root = make_node "root" in
+  let elided = Render_jj_graph.make_elided_node ~id:(Render_jj_graph.elided_marker ^ ":child") ~parents:[ root ] () in
+  let child = make_node ~parents:[ elided ] "child" in
+  let state : state = { depth = 0; columns = [||]; pending_joins = [] } in
+  let rows = Render_jj_graph.render_nodes_structured state [ child; elided; root ] in
+  List.iter (fun row -> Printf.printf "%s|%s\n" row.node.commit_id row.graph_chars) rows;
+  print_endline "--";
+  Render_jj_graph.render_nodes_to_string state [ child; elided; root ] |> print_endline;
+  [%expect
+    {|
+    child|○
+    ~ELIDED~:child|~
+    root|○
+    --
+    ○
+    ~
+    ○
     |}]
 ;;
 

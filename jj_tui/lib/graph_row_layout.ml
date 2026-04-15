@@ -71,6 +71,38 @@ let is_branch_continuation_pad (row : Render_jj_graph.graph_row_output) =
   row.row_type = Render_jj_graph.PadRow && String.trim row.graph_chars = "│ │"
 ;;
 
+let strip_leading_graph_column (row : Render_jj_graph.graph_row_output) =
+  let open Render_jj_graph in
+  let prefix_width = Notty.I.width (Notty.I.string Notty.A.empty "│ ") in
+  let prefixes = [ "│ "; "╷ " ] in
+  match List.find_opt (fun prefix -> String.starts_with ~prefix row.graph_chars) prefixes with
+  | None ->
+    row
+  | Some prefix ->
+    let trimmed_chars =
+      String.sub row.graph_chars (String.length prefix) (String.length row.graph_chars - String.length prefix)
+    in
+    {
+      row with
+      graph_chars = trimmed_chars
+    ; graph_image = Notty.I.hcrop prefix_width 0 row.graph_image
+    }
+;;
+
+let normalize_elided_preview_node_row
+      ({ node_row; continuation_rows; _ } as group : node_group) : node_group
+  =
+  let open Render_jj_graph in
+  let has_elided_parent = List.exists is_elided node_row.node.parents in
+  let has_term_row = List.exists (fun row -> row.row_type = TermRow) continuation_rows in
+  (* The synthetic renderer can keep an extra leading continuation column on
+     nodes whose only visible ancestry is an elided parent. Native jj collapses
+     that column, so do the same here before we distribute commit content. *)
+  if has_elided_parent && has_term_row && has_leading_branch_node node_row
+  then { group with node_row = strip_leading_graph_column node_row }
+  else group
+;;
+
 let normalize_join_rows (groups : node_group list) : node_group list =
   let rec loop acc = function
     | ({ continuation_rows = prev_conts; _ } as prev_group)
@@ -102,10 +134,11 @@ let normalize_join_rows (groups : node_group list) : node_group list =
 let group_rows_by_node rows = rows |> group_rows_by_node_raw |> normalize_join_rows
 
 let render_node_group
-      ({ pre_rows; node_row; continuation_rows } : node_group)
+      (group : node_group)
       ~(render_content : Render_jj_graph.node -> Notty.image list) :
   (Render_jj_graph.graph_row_output * Notty.image) list
   =
+  let { pre_rows; node_row; continuation_rows } = normalize_elided_preview_node_row group in
   let content_lines = render_content node_row.node in
   let content_rows, trailing_graph_only_rows =
     let available_rows = node_row :: continuation_rows in

@@ -10,7 +10,12 @@
     string in [paths] to [base_args].  Empty strings are silently dropped so
     callers need not pre-filter placeholder values.  When all paths are empty
     the list is returned unchanged (no spurious [--] emitted). *)
-let with_files base_args paths =
-  match List.filter (fun p -> p <> "") paths with
+let with_files base_args (paths:string list) =
+  let paths =
+    paths |> List.filter (fun p -> p <> "") |>
+    List.map (Printf.sprintf "\"%s\"" )
+  in
+  match paths with
   | [] -> base_args
   | real_paths -> base_args @ [ "--" ] @ real_paths
+;;

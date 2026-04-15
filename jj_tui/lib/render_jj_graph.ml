@@ -61,19 +61,23 @@ type node = {
   ; commit_id_rest : string
 }
 
-(** Special marker for elided nodes *)
+(** Special marker for elided nodes. Visible elision rows and anonymous placeholder
+    parents both derive their ids from this prefix, which lets the renderer keep
+    them distinct while still recognizing them as elision markers. *)
 let elided_marker = "~ELIDED~"
 
+let is_elided_id id = String.starts_with ~prefix:elided_marker id
+
 (** Create a special node representing an elided section *)
-let make_elided_node () : node =
+let make_elided_node ?(id = elided_marker) ?(parents = []) () : node =
   {
-    parents = []
+    parents
   ; creation_time = Int64.zero
   ; working_copy = false
   ; immutable = false
   ; wip = false
-  ; change_id = elided_marker
-  ; commit_id = elided_marker
+  ; change_id = id
+  ; commit_id = id
   ; description = "(elided revisions)"
   ; bookmarks = []
   ; author_email = ""
@@ -91,45 +95,11 @@ let make_elided_node () : node =
 ;;
 
 (** Check if a node represents an elided section *)
-let is_elided (n : node) : bool = n.commit_id = elided_marker
+let is_elided (n : node) : bool = is_elided_id n.commit_id
 
 (* ============================================================================
    Preview Node Support
    ============================================================================ *)
-
-(** Create a preview node with a label.
-    Preview nodes are used to visualize where commits would land during
-    rebase/move operations. *)
-let make_preview_node ~label ?description ?target_commit_id () : node =
-  let description = Option.value description ~default:label in
-  {
-    parents = []
-  ; creation_time = Int64.zero
-  ; working_copy = false
-  ; immutable = false
-  ; wip = false
-  ; change_id = Printf.sprintf "preview:%s" label
-  ; commit_id =
-      (match target_commit_id with
-       | Some id ->
-         Printf.sprintf "preview:%s:%s" label id
-       | None ->
-         Printf.sprintf "preview:%s" label)
-  ; description
-  ; bookmarks = []
-  ; author_email = ""
-  ; author_timestamp = ""
-  ; empty = false
-  ; hidden = false
-  ; divergent = false
-  ; conflict = false
-  ; is_preview = true
-  ; change_id_prefix = ""
-  ; change_id_rest = ""
-  ; commit_id_prefix = ""
-  ; commit_id_rest = ""
-  }
-;;
 
 type preview_mode =
   [ `Insert_before
@@ -147,13 +117,26 @@ module StringSet = Set.Make (String)
 
 let node_matches_rev (n : node) rev = n.change_id = rev || n.commit_id = rev
 
+let dedupe_preserve_order items =
+  let seen = Hashtbl.create (List.length items) in
+  List.filter
+    (fun item ->
+       if Hashtbl.mem seen item
+       then false
+       else (
+         Hashtbl.add seen item ();
+         true))
+    items
+;;
+
 let resolve_revs (nodes : node list) (revs : string list) : string list =
-  revs
-  |> List.concat_map (fun rev ->
+  if revs = []
+  then []
+  else (
     nodes
-    |> List.filter (fun n -> node_matches_rev n rev)
-    |> List.map (fun n -> n.commit_id))
-  |> List.sort_uniq String.compare
+    |> List.filter (fun n -> List.exists (node_matches_rev n) revs)
+    |> List.map (fun n -> n.commit_id)
+    |> dedupe_preserve_order)
 ;;
 
 type resolved_revs = {
@@ -249,64 +232,6 @@ let make_preview_clone ~source_node ~preview_id ~description =
   }
 ;;
 
-let select_insertion_anchor
-      ~(mode : preview_mode)
-      ~(target_ids : string list)
-      ~(nodes_filtered : node list)
-  =
-  (* To keep graph order stable, pick the first/last selected target as the single
-     insertion anchor. Insert-after/add-after previews appear before the parent
-     (child-first ordering), while insert-before previews appear after. *)
-  let fallback = List.hd target_ids in
-  let first_target_id =
-    List.find_map
-      (fun n -> if List.mem n.commit_id target_ids then Some n.commit_id else None)
-      nodes_filtered
-    |> Option.value ~default:fallback
-  in
-  let last_target_id =
-    nodes_filtered
-    |> List.fold_left
-         (fun acc n -> if List.mem n.commit_id target_ids then Some n.commit_id else acc)
-         None
-    |> Option.value ~default:fallback
-  in
-  let preview_before =
-    match mode with `Insert_after | `Add_after -> true | _ -> false
-  in
-  let preview_after = match mode with `Insert_before -> true | _ -> false in
-  let insertion_target_id = if preview_after then last_target_id else first_target_id in
-  insertion_target_id, preview_before, preview_after
-;;
-
-let insert_preview_ids_once
-      ~(nodes_filtered : node list)
-      ~(insertion_target_id : string)
-      ~(preview_ids : string list)
-      ~(preview_before : bool)
-      ~(preview_after : bool)
-  =
-  (* Preserve topological log order: children appear before parents. *)
-  let inserted = ref false in
-  let ordered_ids_rev =
-    List.fold_left
-      (fun acc n ->
-         let id = n.commit_id in
-         if (not !inserted) && id = insertion_target_id
-         then (
-           inserted := true;
-           if preview_before
-           then id :: List.rev_append preview_ids acc
-           else if preview_after
-           then List.rev_append preview_ids (id :: acc)
-           else id :: acc)
-         else id :: acc)
-      []
-      nodes_filtered
-  in
-  List.rev ordered_ids_rev
-;;
-
 let build_parent_map (nodes : node list) =
   let map = Hashtbl.create (List.length nodes) in
   List.iter
@@ -328,24 +253,6 @@ let build_children_map parent_map =
          parent_ids)
     parent_map;
   children
-;;
-
-let build_filtered_maps ~(nodes : node list) ~(source_set : StringSet.t) =
-  let nodes_filtered =
-    nodes |> List.filter (fun n -> not (StringSet.mem n.commit_id source_set))
-  in
-  let parent_map = Hashtbl.create (List.length nodes_filtered) in
-  List.iter
-    (fun n ->
-       let parents =
-         n.parents
-         |> List.map (fun p -> p.commit_id)
-         |> List.filter (fun id -> not (StringSet.mem id source_set))
-       in
-       Hashtbl.replace parent_map n.commit_id parents)
-    nodes_filtered;
-  let children_map = build_children_map parent_map in
-  nodes_filtered, parent_map, children_map
 ;;
 
 let descendants_of ~children_map ~sources =
@@ -392,6 +299,330 @@ let build_ancestors parent_map =
       result
   in
   ancestors
+;;
+
+type graph_model = {
+    ordered_ids : string list
+  ; node_by_id : (string, node) Hashtbl.t
+  ; parent_map : (string, string list) Hashtbl.t
+  ; children_map : (string, string list) Hashtbl.t
+  ; order_index : (string, int) Hashtbl.t
+}
+
+type transformed_graph = {
+    node_ids : string list
+  ; base_nodes : (string, node) Hashtbl.t
+  ; parent_map : (string, string list) Hashtbl.t
+  ; order_index : (string, int) Hashtbl.t
+}
+
+type preview_shape = {
+    root_preview_ids : string list
+  ; head_preview_ids : string list
+}
+
+(** Build the canonical commit DAG once so preview transformation and row layout
+    both operate on the same topology. *)
+let build_graph_model (nodes : node list) : graph_model =
+  let ordered_ids = List.map (fun n -> n.commit_id) nodes in
+  let node_by_id = Hashtbl.create (List.length nodes) in
+  let order_index = Hashtbl.create (List.length nodes) in
+  List.iteri
+    (fun index node ->
+       Hashtbl.replace node_by_id node.commit_id node;
+       Hashtbl.replace order_index node.commit_id index)
+    nodes;
+  let parent_map = build_parent_map nodes in
+  let children_map = build_children_map parent_map in
+  { ordered_ids; node_by_id; parent_map; children_map; order_index }
+;;
+
+(** When a preview removes a selected source subtree from the visible graph, any
+    surviving descendants must reconnect to the first parents outside that source
+    set. This keeps the non-preview graph connected without relying on the old
+    single-source special case. *)
+let build_external_parent_frontier
+      ~(graph : graph_model)
+      ~(source_set : StringSet.t)
+      ~(source_ids : string list) =
+  let cache = Hashtbl.create (List.length source_ids) in
+  let rec external_parents source_id =
+    match Hashtbl.find_opt cache source_id with
+    | Some parent_ids ->
+      parent_ids
+    | None ->
+      let parent_ids =
+        Option.value (Hashtbl.find_opt graph.parent_map source_id) ~default:[]
+        |> List.concat_map (fun parent_id ->
+          if StringSet.mem parent_id source_set then external_parents parent_id else [ parent_id ])
+        |> dedupe_preserve_order
+      in
+      Hashtbl.replace cache source_id parent_ids;
+      parent_ids
+  in
+  List.iter (fun source_id -> ignore (external_parents source_id)) source_ids;
+  external_parents
+;;
+
+(** Remove selected sources from the visible graph while preserving the remaining
+    topology. This produces the preview-agnostic graph that later edits build on. *)
+let remove_sources_from_graph
+      ~(graph : graph_model)
+      ~(source_ids : string list)
+      ~(source_set : StringSet.t) : transformed_graph
+  =
+  let node_ids = graph.ordered_ids |> List.filter (fun id -> not (StringSet.mem id source_set)) in
+  let base_nodes = Hashtbl.create (List.length node_ids) in
+  let parent_map = Hashtbl.create (List.length node_ids) in
+  let order_index = Hashtbl.create (List.length node_ids + List.length source_ids) in
+  List.iter
+    (fun id ->
+       let node = Hashtbl.find graph.node_by_id id in
+       Hashtbl.replace base_nodes id node;
+       Hashtbl.replace order_index id (Hashtbl.find graph.order_index id);
+       let parent_ids =
+         Option.value (Hashtbl.find_opt graph.parent_map id) ~default:[]
+         |> List.filter (fun parent_id -> not (StringSet.mem parent_id source_set))
+       in
+       Hashtbl.replace parent_map id parent_ids)
+    node_ids;
+  let external_parents =
+    build_external_parent_frontier ~graph ~source_set ~source_ids
+  in
+  List.iter
+    (fun source_id ->
+       let replacement_parents = external_parents source_id in
+       let children = Option.value (Hashtbl.find_opt graph.children_map source_id) ~default:[] in
+       List.iter
+          (fun child_id ->
+             if Hashtbl.mem parent_map child_id
+             then (
+               let child_parents =
+                 Option.value (Hashtbl.find_opt parent_map child_id) ~default:[]
+               in
+               let updated_parents =
+                 child_parents
+                 |> List.concat_map (fun parent_id ->
+                   if parent_id = source_id then replacement_parents else [ parent_id ])
+                 |> List.filter (fun parent_id -> not (StringSet.mem parent_id source_set))
+                 |> dedupe_preserve_order
+               in
+               Hashtbl.replace parent_map child_id updated_parents))
+          children)
+    source_ids;
+  { node_ids; base_nodes; parent_map; order_index }
+;;
+
+(** Preview nodes mirror the moved source subgraph. Their internal parent edges
+    preserve the original source-set structure, while the outer edit later decides
+    how that cloned subgraph attaches to the rest of the graph. *)
+let add_preview_subgraph
+      ~(graph : graph_model)
+      ~(transformed : transformed_graph)
+      ~(source_ids : string list)
+      ~(source_set : StringSet.t) : transformed_graph * preview_shape
+  =
+  let preview_map = Hashtbl.create (List.length source_ids) in
+  List.iter
+    (fun source_id ->
+       let source_node = Hashtbl.find graph.node_by_id source_id in
+       let preview_id = preview_id_for ~label:"preview" ~source_id () in
+       let preview_node =
+         make_preview_clone
+           ~source_node
+           ~preview_id
+           ~description:("preview: " ^ source_node.description)
+       in
+       Hashtbl.replace transformed.base_nodes preview_id preview_node;
+       Hashtbl.replace transformed.parent_map preview_id [];
+       Hashtbl.replace transformed.order_index preview_id (Hashtbl.find graph.order_index source_id);
+       Hashtbl.replace preview_map source_id preview_id)
+    source_ids;
+  List.iter
+    (fun source_id ->
+       let preview_id = Hashtbl.find preview_map source_id in
+       let preview_parent_ids =
+         Option.value (Hashtbl.find_opt graph.parent_map source_id) ~default:[]
+         |> List.filter (fun parent_id -> StringSet.mem parent_id source_set)
+         |> List.filter_map (fun parent_id -> Hashtbl.find_opt preview_map parent_id)
+       in
+       Hashtbl.replace transformed.parent_map preview_id preview_parent_ids)
+    source_ids;
+  let root_ids =
+    source_ids
+    |> List.filter (fun source_id ->
+      Option.value (Hashtbl.find_opt graph.parent_map source_id) ~default:[]
+      |> List.exists (fun parent_id -> StringSet.mem parent_id source_set)
+      |> not)
+  in
+  let head_ids =
+    source_ids
+    |> List.filter (fun source_id ->
+      Option.value (Hashtbl.find_opt graph.children_map source_id) ~default:[]
+      |> List.exists (fun child_id -> StringSet.mem child_id source_set)
+      |> not)
+  in
+  let preview_ids = List.map (fun source_id -> Hashtbl.find preview_map source_id) source_ids in
+  let root_preview_ids =
+    List.map (fun source_id -> Hashtbl.find preview_map source_id) root_ids
+  in
+  let head_preview_ids =
+    List.map (fun source_id -> Hashtbl.find preview_map source_id) head_ids
+  in
+  ({ transformed with node_ids = transformed.node_ids @ preview_ids },
+   { root_preview_ids; head_preview_ids })
+;;
+
+(** Apply the outer rebase edit to the transformed graph. The row renderer never
+    reasons about preview semantics; it only consumes this already-edited DAG. *)
+let apply_preview_edit
+      ~(mode : preview_mode)
+      ~(target_ids : string list)
+      ~(preview_shape : preview_shape)
+      ~(transformed : transformed_graph) : transformed_graph
+  =
+  let target_parent_union =
+    target_ids
+    |> List.concat_map (fun target_id ->
+      Option.value (Hashtbl.find_opt transformed.parent_map target_id) ~default:[])
+    |> dedupe_preserve_order
+  in
+  let children_before_attachment = build_children_map transformed.parent_map in
+  (match mode with
+   | `Insert_before ->
+     List.iter
+       (fun preview_id ->
+          Hashtbl.replace transformed.parent_map preview_id target_parent_union)
+       preview_shape.root_preview_ids;
+     List.iter
+       (fun target_id ->
+          if Hashtbl.mem transformed.parent_map target_id
+          then Hashtbl.replace transformed.parent_map target_id preview_shape.head_preview_ids)
+       target_ids
+   | `Insert_after ->
+     List.iter
+       (fun preview_id -> Hashtbl.replace transformed.parent_map preview_id target_ids)
+       preview_shape.root_preview_ids;
+     List.iter
+       (fun target_id ->
+          let children =
+            Option.value (Hashtbl.find_opt children_before_attachment target_id) ~default:[]
+          in
+          List.iter
+            (fun child_id ->
+               if Hashtbl.mem transformed.parent_map child_id
+               then (
+                 let child_parents =
+                   Option.value (Hashtbl.find_opt transformed.parent_map child_id) ~default:[]
+                 in
+                 let updated_parents =
+                   List.filter (fun parent_id -> parent_id <> target_id) child_parents
+                   @ preview_shape.head_preview_ids
+                   |> dedupe_preserve_order
+                 in
+                 Hashtbl.replace transformed.parent_map child_id updated_parents))
+            children)
+       target_ids
+   | `Add_after ->
+     List.iter
+       (fun preview_id -> Hashtbl.replace transformed.parent_map preview_id target_ids)
+       preview_shape.root_preview_ids);
+  transformed
+;;
+
+(** Derive a child-first topological order directly from the transformed graph.
+    Original graph order is only used as a stable tie-break when several nodes are
+    simultaneously valid next rows. *)
+let stable_topological_order (graph : transformed_graph) : string list =
+  let children_map = build_children_map graph.parent_map in
+  let node_set = Hashtbl.create (List.length graph.node_ids) in
+  let remaining_children = Hashtbl.create (List.length graph.node_ids) in
+  List.iter (fun id -> Hashtbl.replace node_set id ()) graph.node_ids;
+  List.iter
+    (fun id ->
+       let child_count =
+         Option.value (Hashtbl.find_opt children_map id) ~default:[]
+         |> List.fold_left
+              (fun acc child_id -> if Hashtbl.mem node_set child_id then acc + 1 else acc)
+              0
+       in
+       Hashtbl.replace remaining_children id child_count)
+    graph.node_ids;
+  let compare_ids left right =
+    let left_index = Option.value (Hashtbl.find_opt graph.order_index left) ~default:max_int in
+    let right_index = Option.value (Hashtbl.find_opt graph.order_index right) ~default:max_int in
+    match Int.compare left_index right_index with
+    | 0 ->
+      String.compare left right
+    | order ->
+      order
+  in
+  let ready =
+    ref
+      (graph.node_ids
+       |> List.filter (fun id -> Hashtbl.find remaining_children id = 0)
+       |> List.sort compare_ids)
+  in
+  let emitted = Hashtbl.create (List.length graph.node_ids) in
+  let ordered_rev = ref [] in
+  while !ready <> [] do
+    let next_id = List.hd !ready in
+    ready := List.tl !ready;
+    if not (Hashtbl.mem emitted next_id)
+    then (
+      Hashtbl.replace emitted next_id ();
+      ordered_rev := next_id :: !ordered_rev;
+      Option.value (Hashtbl.find_opt graph.parent_map next_id) ~default:[]
+      |> List.iter (fun parent_id ->
+        if Hashtbl.mem remaining_children parent_id
+        then (
+          let next_count = Hashtbl.find remaining_children parent_id - 1 in
+          Hashtbl.replace remaining_children parent_id next_count;
+          if next_count = 0
+          then ready := List.sort compare_ids (parent_id :: !ready))))
+  done;
+  let ordered_ids = List.rev !ordered_rev in
+  if List.length ordered_ids = List.length graph.node_ids
+  then ordered_ids
+  else (
+    let missing_ids =
+      graph.node_ids
+      |> List.filter (fun id -> not (Hashtbl.mem emitted id))
+      |> List.sort compare_ids
+    in
+    ordered_ids @ missing_ids)
+;;
+
+let materialize_transformed_graph (graph : transformed_graph) : node list =
+  (* Keep anonymous elided parents available as node objects so child rows can still
+     render termination markers, while visible elided rows are emitted separately
+     through [graph.node_ids]. *)
+  Hashtbl.iter
+    (fun _ parent_ids ->
+       List.iter
+         (fun parent_id ->
+            if is_elided_id parent_id && not (Hashtbl.mem graph.base_nodes parent_id)
+            then Hashtbl.replace graph.base_nodes parent_id (make_elided_node ~id:parent_id ()))
+         parent_ids)
+    graph.parent_map;
+  let ordered_ids = stable_topological_order graph in
+  let final_nodes = Hashtbl.create (List.length ordered_ids) in
+  let rec build_node id =
+    match Hashtbl.find_opt final_nodes id with
+    | Some node ->
+      node
+    | None ->
+      let base_node = Hashtbl.find graph.base_nodes id in
+      let parents =
+        Option.value (Hashtbl.find_opt graph.parent_map id) ~default:[]
+        |> List.filter (fun parent_id -> Hashtbl.mem graph.base_nodes parent_id)
+        |> List.map build_node
+      in
+      let node = { base_node with parents } in
+      Hashtbl.replace final_nodes id node;
+      node
+  in
+  List.map build_node ordered_ids
 ;;
 
 (** [expand_preview_sources ~mode ~sources ~targets nodes]
@@ -458,159 +689,6 @@ let expand_preview_sources
     |> List.map (fun n -> n.commit_id))
 ;;
 
-let preview_description sources =
-  match sources with
-  | [ rev ] ->
-    Printf.sprintf "preview: %s" rev
-  | _ ->
-    Printf.sprintf "preview: %d commits" (List.length sources)
-;;
-
-let apply_rebase_preview_multi
-      ~(mode : preview_mode)
-      ~(sources : string list)
-      ~(targets : string list)
-      (nodes : node list) : node list * string option
-  =
-  let parent_map_all = build_parent_map nodes in
-  let children_map_all = build_children_map parent_map_all in
-  let ancestors_of = build_ancestors parent_map_all in
-  let { source_ids; target_ids; source_set } =
-    resolve_sources_targets ~nodes ~sources ~targets
-  in
-  match validate_preview_cycles ~mode ~ancestors_of ~source_ids ~target_ids with
-  | Some msg ->
-    nodes, Some msg
-  | None ->
-    let nodes_filtered, parent_map, children_map =
-      build_filtered_maps ~nodes ~source_set
-    in
-    let base_nodes = Hashtbl.create (List.length nodes_filtered) in
-    List.iter (fun n -> Hashtbl.replace base_nodes n.commit_id n) nodes_filtered;
-    let heads =
-      source_ids
-      |> List.filter (fun id ->
-        let children = Option.value (Hashtbl.find_opt children_map_all id) ~default:[] in
-        not (List.exists (fun child -> StringSet.mem child source_set) children))
-    in
-    let source_order =
-      nodes
-      |> List.filter (fun n -> StringSet.mem n.commit_id source_set)
-      |> List.map (fun n -> n.commit_id)
-    in
-    let preview_map = Hashtbl.create (List.length source_ids) in
-    List.iter
-      (fun source_id ->
-         let preview_id = preview_id_for ~label:"preview" ~source_id () in
-         let source_node = List.find (fun n -> n.commit_id = source_id) nodes in
-         let preview_node =
-           make_preview_clone
-             ~source_node
-             ~preview_id
-             ~description:("preview: " ^ source_node.description)
-         in
-         Hashtbl.replace base_nodes preview_id preview_node;
-         Hashtbl.replace preview_map source_id preview_id)
-      source_ids;
-    let preview_parent_ids source_id =
-      let source_node = List.find (fun n -> n.commit_id = source_id) nodes in
-      source_node.parents
-      |> List.map (fun p -> p.commit_id)
-      |> List.filter (fun id -> StringSet.mem id source_set)
-      |> List.filter_map (fun id -> Hashtbl.find_opt preview_map id)
-    in
-    List.iter
-      (fun source_id ->
-         let preview_id = Hashtbl.find preview_map source_id in
-         let parent_ids = preview_parent_ids source_id in
-         Hashtbl.replace parent_map preview_id parent_ids)
-      source_ids;
-    let root_ids =
-      source_ids
-      |> List.filter (fun id ->
-        let source_node = List.find (fun n -> n.commit_id = id) nodes in
-        not
-          (List.exists
-             (fun p -> StringSet.mem p.commit_id source_set)
-             source_node.parents))
-    in
-    let root_preview_ids = root_ids |> List.map (fun id -> Hashtbl.find preview_map id) in
-    let head_preview_ids = heads |> List.map (fun id -> Hashtbl.find preview_map id) in
-    let target_parent_union =
-      target_ids
-      |> List.concat_map (fun target_id ->
-        Option.value (Hashtbl.find_opt parent_map target_id) ~default:[])
-      |> List.sort_uniq String.compare
-    in
-    (match mode with
-     | `Insert_before ->
-       List.iter
-         (fun preview_id -> Hashtbl.replace parent_map preview_id target_parent_union)
-         root_preview_ids;
-       List.iter
-         (fun target_id -> Hashtbl.replace parent_map target_id head_preview_ids)
-         target_ids
-     | `Insert_after ->
-       List.iter
-         (fun preview_id -> Hashtbl.replace parent_map preview_id target_ids)
-         root_preview_ids;
-       List.iter
-         (fun target_id ->
-            let children =
-              Option.value (Hashtbl.find_opt children_map target_id) ~default:[]
-            in
-            List.iter
-              (fun child_id ->
-                 let child_parents =
-                   Option.value (Hashtbl.find_opt parent_map child_id) ~default:[]
-                 in
-                 let without_target =
-                   List.filter (fun id -> id <> target_id) child_parents
-                 in
-                 Hashtbl.replace parent_map child_id (without_target @ head_preview_ids))
-              children)
-         target_ids
-     | `Add_after ->
-       List.iter
-         (fun preview_id -> Hashtbl.replace parent_map preview_id target_ids)
-         root_preview_ids);
-    let insertion_target_id, preview_before, preview_after =
-      select_insertion_anchor ~mode ~target_ids ~nodes_filtered
-    in
-    let preview_ids =
-      source_order |> List.map (fun source_id -> Hashtbl.find preview_map source_id)
-    in
-    let ordered_ids =
-      insert_preview_ids_once
-        ~nodes_filtered
-        ~insertion_target_id
-        ~preview_ids
-        ~preview_before
-        ~preview_after
-    in
-    if not (Hashtbl.mem base_nodes elided_marker)
-    then Hashtbl.replace base_nodes elided_marker (make_elided_node ());
-    let final_nodes = Hashtbl.create (List.length ordered_ids) in
-    let rec build_node id =
-      match Hashtbl.find_opt final_nodes id with
-      | Some node ->
-        node
-      | None ->
-        let base = Hashtbl.find base_nodes id in
-        let parent_ids =
-          Option.value (Hashtbl.find_opt parent_map id) ~default:[]
-          |> List.filter (fun parent_id ->
-            Hashtbl.mem base_nodes parent_id || parent_id = elided_marker)
-        in
-        let parents = List.map build_node parent_ids in
-        let node = { base with parents } in
-        Hashtbl.replace final_nodes id node;
-        node
-    in
-    let nodes = List.map build_node ordered_ids in
-    nodes, None
-;;
-
 let apply_rebase_preview
       ~(mode : preview_mode)
       ~(sources : string list)
@@ -620,244 +698,35 @@ let apply_rebase_preview
   if sources = [] || targets = []
   then nodes, None
   else (
+    let graph = build_graph_model nodes in
     let { source_ids; target_ids; source_set } =
       resolve_sources_targets ~nodes ~sources ~targets
     in
     if source_ids = [] || target_ids = []
     then nodes, None
-    else if List.length source_ids > 1
-    then apply_rebase_preview_multi ~mode ~sources ~targets nodes
     else (
-      let parent_map_all = build_parent_map nodes in
-      let children_map_all = build_children_map parent_map_all in
-      let parent_map_validation = Hashtbl.copy parent_map_all in
-      List.iter
-        (fun source_id -> Hashtbl.remove parent_map_validation source_id)
-        source_ids;
-      Hashtbl.iter
-        (fun child_id parent_ids ->
-           let filtered =
-             List.filter (fun id -> not (StringSet.mem id source_set)) parent_ids
-           in
-           Hashtbl.replace parent_map_validation child_id filtered)
-        parent_map_validation;
-      let ancestors_of = build_ancestors parent_map_validation in
-      let nodes_filtered, parent_map, children_map =
-        build_filtered_maps ~nodes ~source_set
+      let source_order =
+        graph.ordered_ids |> List.filter (fun id -> StringSet.mem id source_set)
       in
-      let () =
-        let dedupe_preserve_order items =
-          let seen = Hashtbl.create (List.length items) in
-          List.filter
-            (fun item ->
-               if Hashtbl.mem seen item
-               then false
-               else (
-                 Hashtbl.add seen item ();
-                 true))
-            items
-        in
-        List.iter
-          (fun source_id ->
-             let source_parents =
-               Option.value (Hashtbl.find_opt parent_map_all source_id) ~default:[]
-               |> List.filter (fun id -> not (StringSet.mem id source_set))
-             in
-             let children =
-               Option.value (Hashtbl.find_opt children_map_all source_id) ~default:[]
-             in
-             List.iter
-               (fun child_id ->
-                  if Hashtbl.mem parent_map child_id
-                  then (
-                    let child_parents =
-                      Option.value (Hashtbl.find_opt parent_map_all child_id) ~default:[]
-                    in
-                    let updated =
-                      child_parents
-                      |> List.concat_map (fun parent_id ->
-                        if parent_id = source_id then source_parents else [ parent_id ])
-                      |> List.filter (fun id -> not (StringSet.mem id source_set))
-                      |> dedupe_preserve_order
-                    in
-                    Hashtbl.replace parent_map child_id updated))
-               children)
-          source_ids
+      let transformed =
+        remove_sources_from_graph ~graph ~source_ids:source_order ~source_set
       in
-      let preview_by_target = Hashtbl.create (List.length target_ids) in
-      let base_nodes =
-        Hashtbl.create (List.length nodes_filtered + List.length target_ids)
-      in
-      List.iter (fun n -> Hashtbl.replace base_nodes n.commit_id n) nodes_filtered;
+      let ancestors_of = build_ancestors transformed.parent_map in
       match validate_preview_cycles ~mode ~ancestors_of ~source_ids ~target_ids with
       | Some msg ->
-        nodes_filtered, Some msg
+        nodes, Some msg
       | None ->
-        let () =
-          if List.length target_ids > 1
-          then (
-            let preview_id = "preview:multi" in
-            let description = preview_description sources in
-            let preview_node = make_preview_node ~label:"preview" ~description () in
-            Hashtbl.replace base_nodes preview_id preview_node;
-            let target_parent_union =
-              target_ids
-              |> List.concat_map (fun target_id ->
-                Option.value (Hashtbl.find_opt parent_map target_id) ~default:[])
-              |> List.sort_uniq String.compare
-            in
-            (match mode with
-             | `Insert_before ->
-               Hashtbl.replace parent_map preview_id target_parent_union;
-               List.iter
-                 (fun target_id -> Hashtbl.replace parent_map target_id [ preview_id ])
-                 target_ids
-             | `Insert_after ->
-               Hashtbl.replace parent_map preview_id target_ids;
-               List.iter
-                 (fun target_id ->
-                    let children =
-                      Option.value (Hashtbl.find_opt children_map target_id) ~default:[]
-                    in
-                    List.iter
-                      (fun child_id ->
-                         let child_parents =
-                           Option.value (Hashtbl.find_opt parent_map child_id) ~default:[]
-                         in
-                         let without_target =
-                           List.filter (fun id -> id <> target_id) child_parents
-                         in
-                         Hashtbl.replace
-                           parent_map
-                           child_id
-                           (without_target @ [ preview_id ]))
-                      children)
-                 target_ids
-             | `Add_after ->
-               Hashtbl.replace parent_map preview_id target_ids);
-            let insertion_target_id, _, _ =
-              select_insertion_anchor ~mode ~target_ids ~nodes_filtered
-            in
-            Hashtbl.replace preview_by_target insertion_target_id preview_id)
-          else (
-            let add_preview_for_target target_id =
-              if not (Hashtbl.mem parent_map target_id)
-              then ()
-              else (
-                let preview_id = preview_id_for ~label:"preview" ~target_id () in
-                if not (Hashtbl.mem preview_by_target target_id)
-                then (
-                  let label = "preview" in
-                  let description = preview_description sources in
-                  let preview_node =
-                    make_preview_node ~label ~description ~target_commit_id:target_id ()
-                  in
-                  Hashtbl.replace base_nodes preview_id preview_node;
-                  Hashtbl.replace preview_by_target target_id preview_id;
-                  match mode with
-                  | `Insert_before ->
-                    let parents =
-                      Option.value (Hashtbl.find_opt parent_map target_id) ~default:[]
-                    in
-                    Hashtbl.replace parent_map preview_id parents;
-                    Hashtbl.replace parent_map target_id [ preview_id ]
-                  | `Insert_after ->
-                    Hashtbl.replace parent_map preview_id [ target_id ];
-                    let children =
-                      Option.value (Hashtbl.find_opt children_map target_id) ~default:[]
-                    in
-                    List.iter
-                      (fun child_id ->
-                         let child_parents =
-                           Option.value (Hashtbl.find_opt parent_map child_id) ~default:[]
-                         in
-                         let updated =
-                           List.map
-                             (fun parent_id ->
-                                if parent_id = target_id then preview_id else parent_id)
-                             child_parents
-                         in
-                         Hashtbl.replace parent_map child_id updated)
-                      children
-                  | `Add_after ->
-                    Hashtbl.replace parent_map preview_id [ target_id ]))
-            in
-            List.iter add_preview_for_target target_ids)
+        let transformed, preview_shape =
+          add_preview_subgraph
+            ~graph
+            ~transformed
+            ~source_ids:source_order
+            ~source_set
         in
-        (* Order must follow topological log order: children appear before parents. *)
-        let insertion_target_id, preview_before, preview_after =
-          select_insertion_anchor ~mode ~target_ids ~nodes_filtered
+        let transformed =
+          apply_preview_edit ~mode ~target_ids ~preview_shape ~transformed
         in
-        let preview_ids =
-          match Hashtbl.find_opt preview_by_target insertion_target_id with
-          | Some preview_id ->
-            [ preview_id ]
-          | None ->
-            []
-        in
-        let ordered_ids =
-          insert_preview_ids_once
-            ~nodes_filtered
-            ~insertion_target_id
-            ~preview_ids
-            ~preview_before
-            ~preview_after
-        in
-        if not (Hashtbl.mem base_nodes elided_marker)
-        then Hashtbl.replace base_nodes elided_marker (make_elided_node ());
-        let final_nodes = Hashtbl.create (List.length ordered_ids) in
-        let rec build_node id =
-          match Hashtbl.find_opt final_nodes id with
-          | Some node ->
-            node
-          | None ->
-            let base = Hashtbl.find base_nodes id in
-            let parent_ids =
-              Option.value (Hashtbl.find_opt parent_map id) ~default:[]
-              |> List.filter (fun parent_id ->
-                Hashtbl.mem base_nodes parent_id || parent_id = elided_marker)
-            in
-            let parents = List.map build_node parent_ids in
-            let node = { base with parents } in
-            Hashtbl.replace final_nodes id node;
-            node
-        in
-        let nodes = List.map build_node ordered_ids in
-        nodes, None))
-;;
-
-(** Insert a preview node after the specified commit.
-    The preview node will be inserted as a child of the target commit. *)
-let insert_preview_after ~nodes ~after_commit_id ~preview : node list =
-  let rec insert acc = function
-    | [] ->
-      List.rev acc
-    | node :: rest when node.commit_id = after_commit_id ->
-      (* Found the target node - insert preview after it *)
-      let preview_with_parent = { preview with parents = [ node ] } in
-      List.rev_append acc (node :: preview_with_parent :: rest)
-    | node :: rest ->
-      insert (node :: acc) rest
-  in
-  insert [] nodes
-;;
-
-(** Insert a preview node before the specified commit.
-    The preview node will be inserted as a parent of the target commit,
-    and will inherit the target's parents. *)
-let insert_preview_before ~nodes ~before_commit_id ~preview : node list =
-  let rec insert acc = function
-    | [] ->
-      List.rev acc
-    | node :: rest when node.commit_id = before_commit_id ->
-      (* Found the target node - insert preview before it *)
-      let preview_with_parents = { preview with parents = node.parents } in
-      let node_with_preview_parent = { node with parents = [ preview_with_parents ] } in
-      List.rev_append acc (preview_with_parents :: node_with_preview_parent :: rest)
-    | node :: rest ->
-      insert (node :: acc) rest
-  in
-  insert [] nodes
+        materialize_transformed_graph transformed, None))
 ;;
 
 (** Row type classification for structured output *)
@@ -1126,10 +995,18 @@ let bounds_horizontal_line bounds index =
    GraphRowRenderer.next_row - core algorithm
    ============================================================================ *)
 
-let next_row ~(columns : column array ref) (n : node) : graph_row =
+let next_row ~(columns : column array ref) ~(visible_node_ids : (string, unit) Hashtbl.t) (n : node)
+  : graph_row =
+  let visible_elided = is_elided n && Hashtbl.mem visible_node_ids n.commit_id in
   let parents =
-    n.parents |> List.map (fun p -> if is_elided p then A_Anonymous else A_Parent p)
-    (* Elided parents are treated as anonymous to trigger termination lines *)
+    n.parents
+    |> List.map (fun p ->
+      if is_elided p && not (Hashtbl.mem visible_node_ids p.commit_id)
+      then A_Anonymous
+      else A_Parent p)
+    (* Visible elided nodes behave like normal graph nodes so they can sit between
+       a commit and its parent. Only elided placeholders that are absent from the
+       rendered node order collapse into anonymous termination lines. *)
   in
   (* Find a column for this node *)
   let column =
@@ -1311,7 +1188,9 @@ let next_row ~(columns : column array ref) (n : node) : graph_row =
   columns := columns_reset !columns;
   (* Compute glyph for this node *)
   let glyph =
-    if n.working_copy
+    if is_elided n
+    then P.term
+    else if n.working_copy
     then P.Node.working_copy
     else if n.conflict
     then P.Node.conflict
@@ -1328,7 +1207,12 @@ let next_row ~(columns : column array ref) (n : node) : graph_row =
   ; merge
   ; node_line
   ; link_line = (if !need_link_line then Some link_line else None)
-  ; term_line = (if !need_term_line then Some term_line else None)
+  ; term_line =
+      (if visible_elided
+       then None
+       else if !need_term_line
+       then Some term_line
+       else None)
   ; pad_lines
   }
 ;;
@@ -1520,7 +1404,10 @@ let render_row_to_string (row : graph_row) ~extra_pad_line_ref : string =
        Buffer.add_string pad_buf glyphs.(glyph_idx))
     row.pad_lines;
   let base_pad_line = Buffer.contents pad_buf in
-  if !need_extra_pad then extra_pad_line_ref := Some base_pad_line;
+  (* Visible elided nodes are a one-line summary row. Keeping the old pad line
+     below them only adds an empty-looking spacer in the UI. *)
+  if !need_extra_pad
+  then extra_pad_line_ref := Some base_pad_line;
   Buffer.contents buf
 ;;
 
@@ -1532,11 +1419,13 @@ let render_nodes_to_string ?(info_rows = fun _ -> 0) (_state : state) (nodes : n
   : string
   =
   let columns = ref [||] in
+  let visible_node_ids = Hashtbl.create (List.length nodes) in
+  List.iter (fun node -> Hashtbl.replace visible_node_ids node.commit_id ()) nodes;
   let extra_pad_line_ref = ref None in
   let buf = Buffer.create 256 in
   List.iter
     (fun n ->
-       let row = next_row ~columns n in
+       let row = next_row ~columns ~visible_node_ids n in
        let row_str = render_row_to_string row ~extra_pad_line_ref in
        Buffer.add_string buf row_str;
        let extra_rows = info_rows n in
@@ -1608,6 +1497,10 @@ let trim_graph_image ~graph_chars (img : Notty.image) : Notty.image =
   if width > trimmed_width then I.hcrop 0 (width - trimmed_width) img else img
 ;;
 
+let node_row_type (node : node) graph_chars =
+  if is_elided node then NodeRow else classify_row_type graph_chars
+;;
+
 (** Render nodes to structured output for UI integration *)
 let render_nodes_structured
       ?(info_lines = fun _ -> 0)
@@ -1616,24 +1509,26 @@ let render_nodes_structured
       (nodes : node list) : graph_row_output list
   =
   let columns = ref [||] in
+  let visible_node_ids = Hashtbl.create (List.length nodes) in
+  List.iter (fun node -> Hashtbl.replace visible_node_ids node.commit_id ()) nodes;
   let extra_pad_line_ref = ref None in
   let result = ref [] in
   List.iter
     (fun n ->
-       let row = next_row ~columns n in
-       (match !extra_pad_line_ref with
-        | Some (s, img) ->
-          let trimmed = String.trim s in
+       let row = next_row ~columns ~visible_node_ids n in
+        (match !extra_pad_line_ref with
+         | Some (s, img) ->
+           let trimmed = String.trim s in
           let trimmed_img = trim_graph_image ~graph_chars:trimmed img in
           result
-          := {
-               graph_chars = trimmed
-             ; graph_image = trimmed_img
-             ; node = n
-             ; row_type = classify_row_type trimmed
-             }
-             :: !result;
-          extra_pad_line_ref := None
+           := {
+                graph_chars = trimmed
+              ; graph_image = trimmed_img
+              ; node = n
+              ; row_type = classify_row_type trimmed
+              }
+              :: !result;
+           extra_pad_line_ref := None
         | None ->
           ());
        let node_buf = Buffer.create 64 in
@@ -1663,14 +1558,14 @@ let render_nodes_structured
        let node_str = Buffer.contents node_buf |> String.trim in
        let node_img = !node_images |> List.rev |> Notty.I.hcat in
        let node_img = trim_graph_image ~graph_chars:node_str node_img in
-       result
-       := {
-            graph_chars = node_str
-          ; graph_image = node_img
-          ; node = n
-          ; row_type = classify_row_type node_str
-          }
-          :: !result;
+        result
+        := {
+             graph_chars = node_str
+           ; graph_image = node_img
+           ; node = n
+           ; row_type = node_row_type n node_str
+           }
+           :: !result;
        (match row.link_line with
         | Some link_row ->
           let link_buf = Buffer.create 64 in
@@ -1754,18 +1649,21 @@ let render_nodes_structured
           need_extra_pad := true
         | None ->
           ());
-       let pad_buf = Buffer.create 64 in
-       let pad_images = ref [] in
-       Array.iter
-         (fun entry ->
+        let pad_buf = Buffer.create 64 in
+        let pad_images = ref [] in
+        Array.iter
+          (fun entry ->
             let glyph_idx = pad_line_to_glyph entry in
-            Buffer.add_string pad_buf glyphs.(glyph_idx);
-            pad_images := Notty.I.string Notty.A.empty glyphs.(glyph_idx) :: !pad_images)
-         row.pad_lines;
-       let base_pad_line = Buffer.contents pad_buf in
-       let base_pad_img = !pad_images |> List.rev |> Notty.I.hcat in
-       if !need_extra_pad then extra_pad_line_ref := Some (base_pad_line, base_pad_img);
-       let extra_rows = info_lines n in
+             Buffer.add_string pad_buf glyphs.(glyph_idx);
+             pad_images := Notty.I.string Notty.A.empty glyphs.(glyph_idx) :: !pad_images)
+          row.pad_lines;
+        let base_pad_line = Buffer.contents pad_buf in
+        let base_pad_img = !pad_images |> List.rev |> Notty.I.hcat in
+        (* Visible elided nodes intentionally stay on a single line. Emitting the
+           following pad row would produce a blank spacer under `~ (elided revisions)`. *)
+        if !need_extra_pad
+        then extra_pad_line_ref := Some (base_pad_line, base_pad_img);
+        let extra_rows = info_lines n in
        for _ = 1 to extra_rows do
          let info_pad_buf = Buffer.create 64 in
          let info_pad_images = ref [] in

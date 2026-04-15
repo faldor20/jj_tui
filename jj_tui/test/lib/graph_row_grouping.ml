@@ -535,28 +535,28 @@ let%expect_test "parsed_rendering_repro_for_extra_trailing_vertical_after_elisio
       Printf.printf "%S => %S\n" row.graph_chars (render_image_to_string img)));
   [%expect
     {|
-    "\226\151\134  " => "\226\151\134  lpztppmx test@example.com 2024-01-01 deadbeef"
-    "\226\148\130  " => "\226\148\130  fix elided revisions bug during rebase"
+    "\226\151\134" => "\226\151\134lpztppmx test@example.com 2024-01-01 deadbeef"
+    "\226\148\130" => "\226\148\130fix elided revisions bug during rebase"
     "~  (elided revisions)" => "~  (elided revisions)"
-    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  vxkltmxw test@example.com 2024-01-01 deadbeef"
-    "\226\148\130 \226\148\130  " => "\226\148\130 \226\148\130  (empty) (no description set)"
-    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  mwqvkttl test@example.com 2024-01-01 deadbeef"
-    "\226\148\156\226\148\128\226\149\175  " => "\226\148\156\226\148\128\226\149\175  (empty) (no description set)"
-    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  qqsnmuzr/2 test@example.com 2024-01-01 deadbeef"
-    "\226\148\156\226\148\128\226\149\175  " => "\226\148\156\226\148\128\226\149\175  fix preview mode bugs (I think this broke the update loop somehow)"
-    "\226\151\134  " => "\226\151\134  tkozwuzw test@example.com 2024-01-01 deadbeef"
-    "\226\148\130  " => "\226\148\130  enable preview mode (5.2 codex)"
+    "\226\148\130 \226\151\139" => "\226\148\130 \226\151\139vxkltmxw test@example.com 2024-01-01 deadbeef"
+    "\226\148\130 \226\148\130" => "\226\148\130 \226\148\130(empty) (no description set)"
+    "\226\148\130 \226\151\139" => "\226\148\130 \226\151\139mwqvkttl test@example.com 2024-01-01 deadbeef"
+    "\226\148\156\226\148\128\226\149\175" => "\226\148\156\226\148\128\226\149\175(empty) (no description set)"
+    "\226\148\130 \226\151\139" => "\226\148\130 \226\151\139qqsnmuzr/2 test@example.com 2024-01-01 deadbeef"
+    "\226\148\156\226\148\128\226\149\175" => "\226\148\156\226\148\128\226\149\175fix preview mode bugs (I think this broke the update loop somehow)"
+    "\226\151\134" => "\226\151\134tkozwuzw test@example.com 2024-01-01 deadbeef"
+    "\226\148\130" => "\226\148\130enable preview mode (5.2 codex)"
     "~  (elided revisions)" => "~  (elided revisions)"
-    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  nkwwwlnw test@example.com 2024-01-01 deadbeef"
-    "\226\148\130 \226\148\130  " => "\226\148\130 \226\148\130  rewrite"
-    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  voywlxnk test@example.com 2024-01-01 deadbeef"
-    "\226\148\130 \226\148\130  " => "\226\148\130 \226\148\130  (no description set)"
-    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  wrrtuusr test@example.com 2024-01-01 deadbeef"
-    "\226\148\130 \226\148\130  " => "\226\148\130 \226\148\130  (no description set)"
-    "\226\148\130 \226\151\139  " => "\226\148\130 \226\151\139  vvnqynuv test@example.com 2024-01-01 deadbeef"
-    "\226\148\156\226\148\128\226\149\175  " => "\226\148\156\226\148\128\226\149\175  (no description set)"
-    "\226\151\134  " => "\226\151\134  noszsqtm test@example.com 2024-01-01 deadbeef"
-    "\226\148\130  " => "\226\148\130  remove aarch64 linux because it doesn't seem to work"
+    "\226\148\130 \226\151\139" => "\226\148\130 \226\151\139nkwwwlnw test@example.com 2024-01-01 deadbeef"
+    "\226\148\130 \226\148\130" => "\226\148\130 \226\148\130rewrite"
+    "\226\148\130 \226\151\139" => "\226\148\130 \226\151\139voywlxnk test@example.com 2024-01-01 deadbeef"
+    "\226\148\130 \226\148\130" => "\226\148\130 \226\148\130(no description set)"
+    "\226\148\130 \226\151\139" => "\226\148\130 \226\151\139wrrtuusr test@example.com 2024-01-01 deadbeef"
+    "\226\148\130 \226\148\130" => "\226\148\130 \226\148\130(no description set)"
+    "\226\148\130 \226\151\139" => "\226\148\130 \226\151\139vvnqynuv test@example.com 2024-01-01 deadbeef"
+    "\226\148\156\226\148\128\226\149\175" => "\226\148\156\226\148\128\226\149\175(no description set)"
+    "\226\151\134" => "\226\151\134noszsqtm test@example.com 2024-01-01 deadbeef"
+    "\226\148\130" => "\226\148\130remove aarch64 linux because it doesn't seem to work"
     "~" => "~"
     |}]
 ;;
@@ -569,37 +569,37 @@ let%expect_test "parsed_grouping_repro_for_extra_trailing_vertical_after_elision
   [%expect
     {|
     Group 0 node=lpztppmx
-      head="\226\151\134  "
-      cont="\226\148\130  "
+      head="\226\151\134"
+      cont="\226\148\130"
       cont="~  (elided revisions)"
     Group 1 node=vxkltmxw
-      head="\226\148\130 \226\151\139  "
-      cont="\226\148\130 \226\148\130  "
+      head="\226\148\130 \226\151\139"
+      cont="\226\148\130 \226\148\130"
     Group 2 node=mwqvkttl
-      head="\226\148\130 \226\151\139  "
-      cont="\226\148\156\226\148\128\226\149\175  "
+      head="\226\148\130 \226\151\139"
+      cont="\226\148\156\226\148\128\226\149\175"
     Group 3 node=qqsnmuzr/2
-      head="\226\148\130 \226\151\139  "
-      cont="\226\148\156\226\148\128\226\149\175  "
+      head="\226\148\130 \226\151\139"
+      cont="\226\148\156\226\148\128\226\149\175"
     Group 4 node=tkozwuzw
-      head="\226\151\134  "
-      cont="\226\148\130  "
+      head="\226\151\134"
+      cont="\226\148\130"
       cont="~  (elided revisions)"
     Group 5 node=nkwwwlnw
-      head="\226\148\130 \226\151\139  "
-      cont="\226\148\130 \226\148\130  "
+      head="\226\148\130 \226\151\139"
+      cont="\226\148\130 \226\148\130"
     Group 6 node=voywlxnk
-      head="\226\148\130 \226\151\139  "
-      cont="\226\148\130 \226\148\130  "
+      head="\226\148\130 \226\151\139"
+      cont="\226\148\130 \226\148\130"
     Group 7 node=wrrtuusr
-      head="\226\148\130 \226\151\139  "
-      cont="\226\148\130 \226\148\130  "
+      head="\226\148\130 \226\151\139"
+      cont="\226\148\130 \226\148\130"
     Group 8 node=vvnqynuv
-      head="\226\148\130 \226\151\139  "
-      cont="\226\148\156\226\148\128\226\149\175  "
+      head="\226\148\130 \226\151\139"
+      cont="\226\148\156\226\148\128\226\149\175"
     Group 9 node=noszsqtm
-      head="\226\151\134  "
-      cont="\226\148\130  "
+      head="\226\151\134"
+      cont="\226\148\130"
       cont="~"
     |}]
 ;;

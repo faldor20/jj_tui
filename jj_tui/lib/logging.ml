@@ -121,29 +121,35 @@ module Internal = struct
         try
           match os with
           | Some "linux" ->
-            Sys.getenv_opt "XDG_STATE_HOME"
+            (Sys.getenv_opt "XDG_STATE_HOME")|>Option.to_result
           | Some "macos" ->
             let pwd = Unix.getpwuid (Unix.getuid ()) in
-            Some (pwd.pw_dir ^ "/Library/Logs")
-          | _ ->
-            None
+            Ok (pwd.pw_dir ^ "/Library/Logs")
+          | Some x ->
+            Err ("unknown os type: " ^ x)
+          | None ->
+            Err "no os type: "
         with
-        | _ ->
-          None
+        | e ->
+          Err
+            (Printf.sprintf
+               "Logging couldn't be initialized. Exn: %s"
+               (Printexc.to_string e))
       in
       let state_home =
         Option.bind state_home (fun x ->
-          if Sys.file_exists x && Sys.is_directory x then Some x else None)
+          if Sys.file_exists x && Sys.is_directory x then Ok x else Err)
       in
       match state_home with
-      | None ->
+      | Err _ ->
         Unix.mkdir "~/.jj_tui" 0o755;
-        Some "~/.jj_tui"
+        Ok "~/.jj_tui"
       | a ->
         a
     with
-    | _ ->
-      None
+    | e ->
+      Err
+        (Printf.sprintf "Logging couldn't be initialized. Exn: %s" (Printexc.to_string e))
   ;;
 
   let init_logging () =
@@ -189,7 +195,9 @@ module Internal = struct
         cleanup_logs log_dir;
         [%log debug "Old logs cleaned up"]
       | None ->
-        Printf.eprintf "Logging couldn't be initialized"
+        Printf.eprintf
+          "Logging couldn't be initialized because we don't know where to put the log \
+           files"
     with
     | e ->
       Printf.eprintf "Logging couldn't be initialized. Exn: %s" (Printexc.to_string e)

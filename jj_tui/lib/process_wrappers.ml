@@ -183,10 +183,18 @@ struct
   ;;
 
   let make_graph_row_output ~graph_raw ~graph_chars ~row_type () =
+    (* Native jj rows can include trailing padding before the metadata marker.
+       Crop the rendered image back to the visible graph prefix so native and
+       synthetic renderers attach commit content with identical spacing. *)
+    let graph_image =
+      graph_raw
+      |> AnsiReverse.colored_string
+      |> Render_jj_graph.trim_graph_image ~graph_chars:(String.trim graph_chars)
+    in
     Render_jj_graph.
       {
-        graph_chars
-      ; graph_image = AnsiReverse.colored_string graph_raw
+        graph_chars = String.trim graph_chars
+      ; graph_image
       ; node = Render_jj_graph.make_elided_node ()
       ; row_type
       }
@@ -295,8 +303,8 @@ struct
   ;;
 
   (** Fetch graph data as JSON and parse into commits.
-      Uses graph output (not --no-graph) because the graph ensures nodes are
-      in the correct topological order for rendering. *)
+      Uses graph output (not --no-graph) because the graph order is the
+      canonical input for the synthetic row renderer. *)
   let get_graph_json ?revset limit =
     let args =
       [ "log"; "-T"; Jj_json.json_log_template; "--limit"; string_of_int limit ]
@@ -310,14 +318,34 @@ struct
       failwith (Printf.sprintf "Failed to parse jj log JSON: %s" msg)
   ;;
 
-  (** Fetch and convert to renderer nodes *)
+  (** Fetch the canonical graph model consumed by the UI renderer.
+      The default graph view keeps elision enabled by fetching `all()` and then
+      collapsing hidden ancestry locally. An explicit user revset is treated as a
+      precise request, so we render that revset as-is without local elision. *)
   let get_graph_nodes ?revset limit =
-    let commits = get_graph_json ?revset limit in
-    let nodes = Jj_json.commits_to_nodes commits in
+    let selectable_commits, nodes =
+      match revset with
+      | Some revset ->
+        let commits = get_graph_json ~revset limit in
+        commits, Jj_json.commits_to_nodes ~collapse_hidden_ancestry:false commits
+      | None ->
+        (* Default view: fetch the full visible graph topology, then locally decide
+           which commits remain visible and where elision rows must be inserted. *)
+        let commits = get_graph_json ~revset:"all()" limit in
+        let visible_commit_ids = Jj_json.select_visible_commit_ids commits in
+        let nodes = Jj_json.commits_to_nodes ~visible_commit_ids commits in
+        let visible_commit_id_set =
+          visible_commit_ids |> List.to_seq |> Seq.map (fun id -> id, ()) |> Hashtbl.of_seq
+        in
+        ( commits
+          |> List.filter (fun (commit : Jj_json.jj_commit) ->
+            Hashtbl.mem visible_commit_id_set commit.commit_id)
+        , nodes )
+    in
     let rev_ids =
-      commits
+      selectable_commits
       |> List.map (fun (c : Jj_json.jj_commit) ->
-        if c.divergent || c.hidden then Duplicate c.commit_id else Unique c.change_id)
+         if c.divergent || c.hidden then Duplicate c.commit_id else Unique c.change_id)
       |> Array.of_list
     in
     nodes, rev_ids
@@ -326,32 +354,6 @@ struct
   let get_native_graph_rows ?revset limit nodes =
     let output = native_graph_output ?revset limit in
     output |> parse_native_graph_groups |> attach_nodes_to_native_groups ~nodes
-  ;;
-
-  let get_graph_nodes_with_native_rows ?revset limit =
-    (* Keep native graph rows and JSON metadata in lockstep. If the parser loses
-       alignment, fall back to the synthetic renderer instead of showing broken rows. *)
-    Flock.join_after @@ fun _ ->
-    let commits_promise =
-      Flock.fork_as_promise @@ fun () -> get_graph_json ?revset limit
-    in
-    let native_promise =
-      Flock.fork_as_promise @@ fun () -> native_graph_output ?revset limit
-    in
-    let commits = Promise.await commits_promise in
-    let nodes = Jj_json.commits_to_nodes commits in
-    let rev_ids =
-      commits
-      |> List.map (fun (c : Jj_json.jj_commit) ->
-        if c.divergent || c.hidden then Duplicate c.commit_id else Unique c.change_id)
-      |> Array.of_list
-    in
-    let native_rows =
-      Promise.await native_promise
-      |> parse_native_graph_groups
-      |> attach_nodes_to_native_groups ~nodes
-    in
-    nodes, rev_ids, native_rows
   ;;
 end
 
@@ -490,6 +492,49 @@ module Test_native_graph = Make (struct
     let jj_no_log ?get_stderr:_ ?snapshot:_ ?color:_ _ = failwith "unused"
   end)
 
+module Test_graph_nodes = Make (struct
+    let jj_no_log ?get_stderr:_ ?snapshot:_ ?color:_ args =
+      match args with
+      | [ "log"; "-T"; _template; "--limit"; _limit; "-r"; "all()" ] ->
+        {|{"commit_id":"trunk","parents":["old"],"change_id":"t","description":"Trunk","working_copy":false,"immutable":true,"trunk":true,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"t","change_id_rest":"","commit_id_prefix":"tru","commit_id_rest":"nk"}
+{"commit_id":"old","parents":[],"change_id":"o","description":"Old immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"o","change_id_rest":"","commit_id_prefix":"old","commit_id_rest":""}
+{"commit_id":"feature","parents":["trunk"],"change_id":"f","description":"Feature","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"f","change_id_rest":"","commit_id_prefix":"fea","commit_id_rest":"ture"}|}
+      | [ "log"; "-T"; _template; "--limit"; _limit; "-r"; "feature|old" ] ->
+        {|{"commit_id":"feature","parents":["trunk"],"change_id":"f","description":"Feature","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"f","change_id_rest":"","commit_id_prefix":"fea","commit_id_rest":"ture"}
+{"commit_id":"old","parents":[],"change_id":"o","description":"Old immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"o","change_id_rest":"","commit_id_prefix":"old","commit_id_rest":""}|}
+      | _ ->
+        failwith (Printf.sprintf "Unexpected jj invocation: %s" (String.concat " " args))
+    ;;
+  end)
+
+let%expect_test "get_graph_nodes_default_view_elides_old_immutable_ancestry" =
+  let nodes, rev_ids = Test_graph_nodes.get_graph_nodes 20 in
+  let rev_id_to_string = function Unique id -> id | Duplicate id -> id in
+  Printf.printf "Nodes: [%s]\n" (String.concat ";" (List.map (fun n -> n.Render_jj_graph.commit_id) nodes));
+  Printf.printf
+    "Rev ids: [%s]\n"
+    (rev_ids |> Array.to_list |> List.map rev_id_to_string |> String.concat ";");
+  [%expect
+    {|
+    Nodes: [trunk;old;feature]
+    Rev ids: [t;o;f]
+    |}]
+;;
+
+let%expect_test "get_graph_nodes_custom_revset_disables_local_elision" =
+  let nodes, rev_ids = Test_graph_nodes.get_graph_nodes ~revset:"feature|old" 20 in
+  let rev_id_to_string = function Unique id -> id | Duplicate id -> id in
+  Printf.printf "Nodes: [%s]\n" (String.concat ";" (List.map (fun n -> n.Render_jj_graph.commit_id) nodes));
+  Printf.printf
+    "Rev ids: [%s]\n"
+    (rev_ids |> Array.to_list |> List.map rev_id_to_string |> String.concat ";");
+  [%expect
+    {|
+    Nodes: [feature;old]
+    Rev ids: [f;o]
+    |}]
+;;
+
 let%expect_test "parse_native_graph_groups_preserves_elision_continuity" =
   let output =
     {|◆  @@NODE@@
@@ -515,12 +560,30 @@ let%expect_test "parse_native_graph_groups_preserves_elision_continuity" =
   [%expect
     {|
     Group 0
-      "\226\151\134  "
-      "\226\148\130  "
+      "\226\151\134"
+      "\226\148\130"
       "~  (elided revisions)"
     Group 1
-      "\226\148\130 \226\151\139  "
-      "\226\148\156\226\148\128\226\149\175  "
+      "\226\148\130 \226\151\139"
+      "\226\148\156\226\148\128\226\149\175"
       "~"
     |}]
+;;
+
+let%expect_test "native_graph_rows_trim_marker_spacing" =
+  let output =
+    {|│ ○  @@NODE@@
+│ │  @@INFO@@
+~|}
+  in
+  let groups = Test_native_graph.parse_native_graph_groups output in
+  groups
+  |> List.iter (fun (group : Test_native_graph.native_graph_group) ->
+    let row = group.node_row in
+    Printf.printf
+      "chars=%S chars_width=%d image_width=%d\n"
+      row.Render_jj_graph.graph_chars
+      (Notty.I.width (Notty.I.string Notty.A.empty row.Render_jj_graph.graph_chars))
+      (Notty.I.width row.Render_jj_graph.graph_image));
+  [%expect {| chars="\226\148\130 \226\151\139" chars_width=3 image_width=3 |}]
 ;;
