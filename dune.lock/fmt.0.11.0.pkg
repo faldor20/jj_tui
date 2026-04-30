@@ -12,7 +12,7 @@
      --with-base-unix
      %{pkg:base-unix:installed}
      --with-cmdliner
-     %{pkg:cmdliner:installed})))))
+     false)))))
 
 (depends
  (all_platforms

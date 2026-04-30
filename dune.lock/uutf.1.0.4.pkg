@@ -10,7 +10,7 @@
      --dev-pkg
      %{pkg-self:dev}
      --with-cmdliner
-     %{pkg:cmdliner:installed})))))
+     false)))))
 
 (depends
  (all_platforms

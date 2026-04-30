@@ -11,4 +11,5 @@
  (fetch
   (url
    https://github.com/janestreet/ppxlib_jane/archive/refs/tags/v0.17.4.tar.gz)
-  (checksum md5=d572c6d6c3b4da9e480c65ba85d3c50a)))
+  (checksum
+   sha512=e2931de633d9dcce2ca121e1cf117e159af4ccc52a7e420c328021da0145b6b90194e4545f97afe9cd032c04c6bc2563faa2d852ad45b041b014c688153799d6)))

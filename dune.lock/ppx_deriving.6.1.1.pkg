@@ -15,4 +15,5 @@
  (fetch
   (url
    https://github.com/ocaml-ppx/ppx_deriving/releases/download/v6.1.1/ppx_deriving-6.1.1.tar.gz)
-  (checksum md5=3208e6028fbb5a417f751d3529eae031)))
+  (checksum
+   sha512=9d64fd1a7c908e70ac11164db6732d69e74eac28c29ba6d76d40711554615c0af5a8c491eb6f05181b99294b50fc2c50b454b6d75d022db9d33133188d071102)))

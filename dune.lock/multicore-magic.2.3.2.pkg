@@ -16,4 +16,4 @@
   (url
    https://github.com/ocaml-multicore/multicore-magic/releases/download/2.3.2/multicore-magic-2.3.2.tbz)
   (checksum
-   sha256=8d8d70a823aae1ce0430380842aa881c4ac838d245caf27ed0ff25775087175f)))
+   sha512=9379322c92fcdf28d285c6671dae634ad5b87e086572b00485cbfcd8e3046c130db63c749190168ebc7e12f3739ae2f7ba7bb6227fd1d8fb055a29f84b6e379f)))

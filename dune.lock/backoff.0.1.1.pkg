@@ -16,4 +16,4 @@
   (url
    https://github.com/ocaml-multicore/backoff/releases/download/0.1.1/backoff-0.1.1.tbz)
   (checksum
-   sha256=00bea311b227b1bc0a55879da4dce38b1fd8447b4e4e2cf193a6953737ac9f03)))
+   sha512=c9c06632c49598831b600eba63a2070fc406c7554a0c8f60807d243b7cd3d996a8bfc9c4d90428c5b1765a2b61ddc26403dc9cdb2b8a6686249f1fdafcec81cb)))

@@ -11,4 +11,5 @@
  (fetch
   (url
    https://github.com/janestreet/ppx_expect/archive/refs/tags/v0.17.3.tar.gz)
-  (checksum md5=a7daa59114638fd80f52b6adbb0db7ed)))
+  (checksum
+   sha512=d26364f2c7c0a3d83e5ecc144f77875a00887853c72c03e0122d658acb4d1cb4c6d77fabc1222d775663db74f0345be2a33518dffac9feef57ece5e9e40dc709)))

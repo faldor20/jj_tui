@@ -16,4 +16,4 @@
   (url
    https://github.com/ocaml-community/yojson/releases/download/3.0.0/yojson-3.0.0.tbz)
   (checksum
-   sha256=99414da7609b92a02474ef4b49ecda15edc8cbba5229341b124e7e4695c39610)))
+   sha512=896d0ea829a36ccadba6628800369c1a3ab9e7c64dbda8b76331889c9db481cd64e137f467481ae80a8dd5fca45d748bfa71f58641806cc1bb1a007f8291789f)))

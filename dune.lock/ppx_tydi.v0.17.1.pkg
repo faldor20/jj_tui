@@ -11,4 +11,5 @@
  (fetch
   (url
    https://github.com/janestreet/ppx_tydi/archive/refs/tags/v0.17.1.tar.gz)
-  (checksum md5=6adffe5f073bc33bbbdbf3c39fe36959)))
+  (checksum
+   sha512=f4af5b32a537cb72ffc6a331f73e90eb650e6116ca130d785eda78fb9de5764a1d990ff6929fd6fb695bfeb35d2685f4b35c344125208733b08953ca13410cc5)))

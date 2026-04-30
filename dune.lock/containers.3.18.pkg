@@ -12,4 +12,4 @@
   (url
    https://github.com/c-cube/ocaml-containers/releases/download/v3.18/containers-3.18.tbz)
   (checksum
-   sha256=52eeff91ce42b52305e6aaa8a58b88ce8f0a5a984199e59ca7e2fd9ebabe61d7)))
+   sha512=dc7337e6cbc9850542c7c9228d3bcb4e4add57a55e2a2992f21fb4761b3e10a68ef1d57ca37a7f5b303fc875fe3df5ecb69dbf2930bfcd1561ce03f7ae83e24b)))

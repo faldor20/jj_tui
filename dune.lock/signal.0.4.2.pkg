@@ -14,4 +14,5 @@
 (source
  (fetch
   (url https://github.com/rizo/signal/archive/refs/tags/0.4.2.tar.gz)
-  (checksum md5=148304dae155143735be91fb978466ce)))
+  (checksum
+   sha512=8130b18dd73975b718c684a588d041d6a9d5ec7e2b23deb179d90e93d9c49b70ce4af1134c353052de7e8669984f855327c74f90ec64cac4d398c6802fa9594d)))

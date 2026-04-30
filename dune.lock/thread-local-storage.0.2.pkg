@@ -16,4 +16,4 @@
   (url
    https://github.com/c-cube/thread-local-storage/releases/download/v0.2/thread-local-storage-0.2.tbz)
   (checksum
-   sha256=a68e2b1ed07f9f993ffc76141e632ec4d103ffdab73869700cdc741ecd7e0349)))
+   sha512=9db66bbb1e179a3999406a0ee0b9461cc45d87468a11713d3f23a452a4f3bd79501a9af273a3e76f501710be2020581801b68f659c47eff1488fbe7a359f98dc)))

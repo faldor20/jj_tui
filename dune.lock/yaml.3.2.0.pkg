@@ -16,4 +16,4 @@
   (url
    https://github.com/avsm/ocaml-yaml/releases/download/v3.2.0/yaml-3.2.0.tbz)
   (checksum
-   sha256=c50d2aca28b9f966792b71e1603351e5d24eda4dfd3e4453fbd50366a3a08227)))
+   sha512=e87ae73f3e376800a09e4359d5c7090ef5107807f540b51fbdee9017bcbacb2414ec12255b37caead115ea1562303436cac2c91c60814c2ba44bdd3d677fc0d1)))

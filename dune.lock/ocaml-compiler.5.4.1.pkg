@@ -10,7 +10,10 @@
 
 (build
  (choice
-  ((((arch x86_64) (os linux)))
+  ((((arch x86_64)
+     (os linux))
+    ((arch arm64)
+     (os linux)))
    ((action
      (withenv
       ((= MSYS2_ARG_CONV_EXCL *)
@@ -19,125 +22,36 @@
       (progn
        (run
         ./configure
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-w64-mingw32)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-w64-mingw32)
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
         --prefix=%{prefix}
         --docdir=%{doc}/ocaml
-        (when
-         (catch_undefined_var %{pkg:system-msvc:installed} false)
-         --with-winpthreads-msvc=%{pkg:winpthreads:share})
+        (when false "")
         -C
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-afl:installed} false)
-         --with-afl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-bytecode-only:installed}
-          false)
-         --disable-native-compiler)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-flat-float-array:installed}
-          false)
-         --disable-flat-float-array)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-flambda:installed} false)
-         --enable-flambda)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-fp:installed} false)
-         --enable-frame-pointers)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-compression:installed}
-          false)
-         --without-zstd)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-tsan:installed} false)
-         --enable-tsan)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         CC=musl-gcc)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-musl:installed} true)
-          false)
-         CFLAGS=-Os)
-        (when
-         (catch_undefined_var
-          (or_absorb_undefined_var
-           %{pkg:ocaml-option-leak-sanitizer:installed}
-           (and_absorb_undefined_var
-            %{pkg:ocaml-option-address-sanitizer:installed}
-            true))
-          false)
-         LDFLAGS=-Wl,--no-as-needed,-ldl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-leak-sanitizer:installed}
-          false)
-         "CC=gcc -ldl -fsanitize=leak -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-address-sanitizer:installed}
-           true)
-          false)
-         "CC=gcc -ldl -fsanitize=address -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         "CC=gcc -m32")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         "ASPP=musl-gcc -c")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         --host=i386-linux)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-static:installed} false)
-         LIBS=-static)
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
         --disable-warn-error)
        (run %{make} -j%{jobs}))))))
-  ((((arch arm64) (os linux)))
+  ((((arch x86_64)
+     (os macos))
+    ((arch arm64)
+     (os macos)))
    ((action
      (withenv
       ((= MSYS2_ARG_CONV_EXCL *)
@@ -146,398 +60,32 @@
       (progn
        (run
         ./configure
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-w64-mingw32)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-w64-mingw32)
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
         --prefix=%{prefix}
         --docdir=%{doc}/ocaml
-        (when
-         (catch_undefined_var %{pkg:system-msvc:installed} false)
-         --with-winpthreads-msvc=%{pkg:winpthreads:share})
+        (when false "")
         -C
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-afl:installed} false)
-         --with-afl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-bytecode-only:installed}
-          false)
-         --disable-native-compiler)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-flat-float-array:installed}
-          false)
-         --disable-flat-float-array)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-flambda:installed} false)
-         --enable-flambda)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-fp:installed} false)
-         --enable-frame-pointers)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-compression:installed}
-          false)
-         --without-zstd)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-tsan:installed} false)
-         --enable-tsan)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         CC=musl-gcc)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-musl:installed} true)
-          false)
-         "CFLAGS=-Os -mno-outline-atomics")
-        (when
-         (catch_undefined_var
-          (or_absorb_undefined_var
-           %{pkg:ocaml-option-leak-sanitizer:installed}
-           (and_absorb_undefined_var
-            %{pkg:ocaml-option-address-sanitizer:installed}
-            true))
-          false)
-         LDFLAGS=-Wl,--no-as-needed,-ldl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-leak-sanitizer:installed}
-          false)
-         "CC=gcc -ldl -fsanitize=leak -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-address-sanitizer:installed}
-           true)
-          false)
-         "CC=gcc -ldl -fsanitize=address -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         "CC=gcc -m32")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         "ASPP=musl-gcc -c")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         --host=i386-linux)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-static:installed} false)
-         LIBS=-static)
-        --disable-warn-error)
-       (run %{make} -j%{jobs}))))))
-  ((((arch x86_64) (os macos)))
-   ((action
-     (withenv
-      ((= MSYS2_ARG_CONV_EXCL *)
-       (= LSAN_OPTIONS detect_leaks=0,exitcode=0)
-       (= ASAN_OPTIONS detect_leaks=0,exitcode=0))
-      (progn
-       (run
-        ./configure
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-w64-mingw32)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-w64-mingw32)
-        --prefix=%{prefix}
-        --docdir=%{doc}/ocaml
-        (when
-         (catch_undefined_var %{pkg:system-msvc:installed} false)
-         --with-winpthreads-msvc=%{pkg:winpthreads:share})
-        -C
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-afl:installed} false)
-         --with-afl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-bytecode-only:installed}
-          false)
-         --disable-native-compiler)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-flat-float-array:installed}
-          false)
-         --disable-flat-float-array)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-flambda:installed} false)
-         --enable-flambda)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-fp:installed} false)
-         --enable-frame-pointers)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-compression:installed}
-          false)
-         --without-zstd)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-tsan:installed} false)
-         --enable-tsan)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (not %{pkg:ocaml-option-32bit:installed})
-           (not %{pkg:ocaml-option-musl:installed})
-           true)
-          false)
-         CC=cc)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-tsan:installed} true)
-          false)
-         CC=clang)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         CC=musl-gcc)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-musl:installed} true)
-          false)
-         CFLAGS=-Os)
-        (when
-         (catch_undefined_var
-          (or_absorb_undefined_var
-           %{pkg:ocaml-option-leak-sanitizer:installed}
-           false)
-          false)
-         LDFLAGS=-Wl,--no-as-needed,-ldl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-leak-sanitizer:installed}
-          false)
-         "CC=gcc -ldl -fsanitize=leak -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-address-sanitizer:installed}
-           true)
-          false)
-         "CC=clang -fsanitize=address -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         "CC=gcc -Wl,-read_only_relocs,suppress -arch i386 -m32")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         "ASPP=musl-gcc -c")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         --host=i386-apple-darwin13.2.0)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-static:installed} false)
-         LIBS=-static)
-        --disable-warn-error)
-       (run %{make} -j%{jobs}))))))
-  ((((arch arm64) (os macos)))
-   ((action
-     (withenv
-      ((= MSYS2_ARG_CONV_EXCL *)
-       (= LSAN_OPTIONS detect_leaks=0,exitcode=0)
-       (= ASAN_OPTIONS detect_leaks=0,exitcode=0))
-      (progn
-       (run
-        ./configure
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_64:installed})
-          false)
-         --host=x86_64-w64-mingw32)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:system-msvc:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-pc-windows)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (= %{os_distribution} cygwin)
-           %{pkg:system-mingw:installed}
-           %{pkg:arch-x86_32:installed})
-          false)
-         --host=i686-w64-mingw32)
-        --prefix=%{prefix}
-        --docdir=%{doc}/ocaml
-        (when
-         (catch_undefined_var %{pkg:system-msvc:installed} false)
-         --with-winpthreads-msvc=%{pkg:winpthreads:share})
-        -C
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-afl:installed} false)
-         --with-afl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-bytecode-only:installed}
-          false)
-         --disable-native-compiler)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-flat-float-array:installed}
-          false)
-         --disable-flat-float-array)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-flambda:installed} false)
-         --enable-flambda)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-fp:installed} false)
-         --enable-frame-pointers)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-no-compression:installed}
-          false)
-         --without-zstd)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-tsan:installed} false)
-         --enable-tsan)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           (not %{pkg:ocaml-option-32bit:installed})
-           (not %{pkg:ocaml-option-musl:installed})
-           true)
-          false)
-         CC=cc)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-tsan:installed} true)
-          false)
-         CC=clang)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         CC=musl-gcc)
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-musl:installed} true)
-          false)
-         "CFLAGS=-Os -mno-outline-atomics")
-        (when
-         (catch_undefined_var
-          (or_absorb_undefined_var
-           %{pkg:ocaml-option-leak-sanitizer:installed}
-           false)
-          false)
-         LDFLAGS=-Wl,--no-as-needed,-ldl)
-        (when
-         (catch_undefined_var
-          %{pkg:ocaml-option-leak-sanitizer:installed}
-          false)
-         "CC=gcc -ldl -fsanitize=leak -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-address-sanitizer:installed}
-           true)
-          false)
-         "CC=clang -fsanitize=address -fno-omit-frame-pointer -O1 -g")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         "CC=gcc -Wl,-read_only_relocs,suppress -arch i386 -m32")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var
-           %{pkg:ocaml-option-musl:installed}
-           (<> %{os_distribution} alpine))
-          false)
-         "ASPP=musl-gcc -c")
-        (when
-         (catch_undefined_var
-          (and_absorb_undefined_var %{pkg:ocaml-option-32bit:installed} true)
-          false)
-         --host=i386-apple-darwin13.2.0)
-        (when
-         (catch_undefined_var %{pkg:ocaml-option-static:installed} false)
-         LIBS=-static)
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        CC=cc
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
+        (when false "")
         --disable-warn-error)
        (run %{make} -j%{jobs}))))))))
 

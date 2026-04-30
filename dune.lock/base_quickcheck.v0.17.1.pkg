@@ -21,4 +21,5 @@
  (fetch
   (url
    https://github.com/janestreet/base_quickcheck/archive/refs/tags/v0.17.1.tar.gz)
-  (checksum md5=df06909b62c9e34e9e5436993d6d998d)))
+  (checksum
+   sha512=d345b0333508f6f49fe636455139e563b0594bd2cf56534d2f42ed083906e41bb4e009996ed7db8989d8409899d25cfcdbd71021260486c310f7e0fd63df56d9)))

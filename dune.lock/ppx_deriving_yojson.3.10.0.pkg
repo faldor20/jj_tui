@@ -16,4 +16,4 @@
   (url
    https://github.com/ocaml-ppx/ppx_deriving_yojson/releases/download/v3.10.0/ppx_deriving_yojson-3.10.0.tbz)
   (checksum
-   sha256=ced3d265e4287f1f18b09df6446a24444fad52b2a3054cbcbe0c9494d0e89b3f)))
+   sha512=038752a73690dc1b55031c119f57ee27fbee0d51a4a541d2f31ad1baf8b05637396c0b97a7dbfd77db600b689e90a62bfff7ca3fcf74545bd5b32dc3dabff511)))
