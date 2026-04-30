@@ -121,34 +121,39 @@ module Internal = struct
         try
           match os with
           | Some "linux" ->
-            (Sys.getenv_opt "XDG_STATE_HOME")|>Option.to_result
+            (match Sys.getenv_opt "XDG_STATE_HOME" with
+             | Some a ->
+               Ok a
+             | None ->
+               (match Sys.getenv_opt "HOME" with
+                | Some a ->
+                  Ok (a ^ "/.local/state")
+                | None ->
+                  Error "no XDG_STATE_HOME or HOME env vars"))
           | Some "macos" ->
             let pwd = Unix.getpwuid (Unix.getuid ()) in
             Ok (pwd.pw_dir ^ "/Library/Logs")
           | Some x ->
-            Err ("unknown os type: " ^ x)
+            Error ("unknown os type: " ^ x)
           | None ->
-            Err "no os type: "
+            Error "no os type: "
         with
         | e ->
-          Err
+          Error
             (Printf.sprintf
                "Logging couldn't be initialized. Exn: %s"
                (Printexc.to_string e))
       in
       let state_home =
-        Option.bind state_home (fun x ->
-          if Sys.file_exists x && Sys.is_directory x then Ok x else Err)
+        Result.bind state_home (fun x ->
+          if Sys.file_exists x && Sys.is_directory x
+          then Ok x
+          else Error ("system directory doesn't exist :" ^x))
       in
-      match state_home with
-      | Err _ ->
-        Unix.mkdir "~/.jj_tui" 0o755;
-        Ok "~/.jj_tui"
-      | a ->
-        a
+      state_home
     with
     | e ->
-      Err
+      Error
         (Printf.sprintf "Logging couldn't be initialized. Exn: %s" (Printexc.to_string e))
   ;;
 
@@ -157,7 +162,7 @@ module Internal = struct
       (*just no logging if we can't find a log file*)
       (*TODO: log to stderr *)
       match get_log_dir () with
-      | Some state_dir ->
+      | Ok state_dir ->
         let log_dir = Filename.concat state_dir "jj_tui" in
         (*creates or opens the log file*)
         let get_log_file_channel () =
@@ -194,10 +199,8 @@ module Internal = struct
         [%log info "Logging initialized"];
         cleanup_logs log_dir;
         [%log debug "Old logs cleaned up"]
-      | None ->
-        Printf.eprintf
-          "Logging couldn't be initialized because we don't know where to put the log \
-           files"
+      | Error e ->
+        Printf.eprintf "Logging couldn't be initialized because: %s" e
     with
     | e ->
       Printf.eprintf "Logging couldn't be initialized. Exn: %s" (Printexc.to_string e)
