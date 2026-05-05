@@ -105,16 +105,16 @@ let parse_jj_log_output (input : string) : (jj_commit list, string) result =
           (* Extract JSON from first '{' to end of line *)
           let json_str = String.sub line idx (String.length line - idx) in
           Some json_str)
-       |> List.map (fun json_str ->
-         let json = Yojson.Safe.from_string json_str in
-         (* Older tests and fixtures may not include newly added template fields.
+      |> List.map (fun json_str ->
+        let json = Yojson.Safe.from_string json_str in
+        (* Older tests and fixtures may not include newly added template fields.
             Normalize them here so the parser stays backward-compatible. *)
-         let json = json |> ensure_bool_field "trunk" false in
-         match jj_commit_of_yojson json with
-         | Ok commit ->
-           commit
-         | Error msg ->
-           failwith (Printf.sprintf "Failed to parse commit JSON: %s" msg))
+        let json = json |> ensure_bool_field "trunk" false in
+        match jj_commit_of_yojson json with
+        | Ok commit ->
+          commit
+        | Error msg ->
+          failwith (Printf.sprintf "Failed to parse commit JSON: %s" msg))
     in
     Ok commits
   with
@@ -133,8 +133,11 @@ let parse_jj_log_output (input : string) : (jj_commit list, string) result =
     node list. We therefore build one shared DAG for the full commit set first, then
     optionally derive a second emitted graph where non-visible ancestry is
     collapsed into synthetic elision nodes with the correct visible parents. *)
-let commits_to_nodes ?visible_commit_ids ?(collapse_hidden_ancestry = true) (commits : jj_commit list)
-  : Render_jj_graph.node list =
+let commits_to_nodes
+      ?visible_commit_ids
+      ?(collapse_hidden_ancestry = true)
+      (commits : jj_commit list) : Render_jj_graph.node list
+  =
   let display_refs (jj_commit : jj_commit) =
     (* Local bookmarks occupy the visible commit row; otherwise keep the remote-only
        label. Tags are appended after refs to match jj's short header output. *)
@@ -147,16 +150,15 @@ let commits_to_nodes ?visible_commit_ids ?(collapse_hidden_ancestry = true) (com
   in
   (* Index raw commits so the recursive builder can materialize the final node DAG
      in one pass instead of replacing placeholder nodes later. *)
-  let commit_tbl : (string, jj_commit) Hashtbl.t =
-    Hashtbl.create (List.length commits)
-  in
+  let commit_tbl : (string, jj_commit) Hashtbl.t = Hashtbl.create (List.length commits) in
   commits
-  |> List.iter (fun jj_commit ->
-    Hashtbl.replace commit_tbl jj_commit.commit_id jj_commit);
+  |> List.iter (fun jj_commit -> Hashtbl.replace commit_tbl jj_commit.commit_id jj_commit);
   let full_node_tbl : (string, Render_jj_graph.node) Hashtbl.t =
     Hashtbl.create (List.length commits)
   in
-  let anonymous_elided_tbl : (string, Render_jj_graph.node) Hashtbl.t = Hashtbl.create 8 in
+  let anonymous_elided_tbl : (string, Render_jj_graph.node) Hashtbl.t =
+    Hashtbl.create 8
+  in
   let rec build_full_node commit_id =
     match Hashtbl.find_opt full_node_tbl commit_id with
     | Some node ->
@@ -174,11 +176,11 @@ let commits_to_nodes ?visible_commit_ids ?(collapse_hidden_ancestry = true) (com
        | Some jj_commit ->
          let parents = List.map build_full_node jj_commit.parents in
          let node : Render_jj_graph.node =
-            {
-              parents
-            ; creation_time = Int64.of_int 0
-            ; working_copy = jj_commit.working_copy
-            ; immutable = jj_commit.immutable
+           {
+             parents
+           ; creation_time = Int64.of_int 0
+           ; working_copy = jj_commit.working_copy
+           ; immutable = jj_commit.immutable
            ; wip = jj_commit.wip
            ; change_id = jj_commit.change_id
            ; commit_id = jj_commit.commit_id
@@ -212,113 +214,115 @@ let commits_to_nodes ?visible_commit_ids ?(collapse_hidden_ancestry = true) (com
     in
     visible_commit_ids
     |> List.filter_map (fun commit_id -> Hashtbl.find_opt full_node_tbl commit_id))
-  else
-  let visible_commit_ids =
-    match visible_commit_ids with
-    | Some ids ->
-      ids
-    | None ->
-      commits |> List.map (fun commit -> commit.commit_id)
-  in
-  let visible_set =
-    visible_commit_ids |> List.to_seq |> Seq.map (fun id -> id, ()) |> Hashtbl.of_seq
-  in
-  let rec visible_parent_ids commit_id =
-    match Hashtbl.find_opt commit_tbl commit_id with
-    | None ->
-      [ commit_id ]
-    | Some jj_commit ->
-      jj_commit.parents
-      |> List.concat_map (fun parent_id ->
-        if Hashtbl.mem visible_set parent_id || not (Hashtbl.mem commit_tbl parent_id)
-        then [ parent_id ]
-        else visible_parent_ids parent_id)
-  in
-  let collapsed_node_tbl : (string, Render_jj_graph.node) Hashtbl.t =
-    Hashtbl.create (List.length visible_commit_ids * 2)
-  in
-  let rec build_collapsed_node node_id =
-    match Hashtbl.find_opt collapsed_node_tbl node_id with
-    | Some node ->
-      node
-    | None ->
-      if Render_jj_graph.is_elided_id node_id
-      then failwith "build_collapsed_node should not be called directly for elided ids"
-      else (
-        let jj_commit = Hashtbl.find commit_tbl node_id in
-        let parents =
-          jj_commit.parents
-          |> List.concat_map (fun parent_id ->
-            if Hashtbl.mem visible_set parent_id && Hashtbl.mem commit_tbl parent_id
-            then [ build_collapsed_node parent_id ]
-            else if Hashtbl.mem commit_tbl parent_id || not (Hashtbl.mem commit_tbl parent_id)
-            then [ build_elided_node ~child_id:node_id ~hidden_parent_id:parent_id ]
-            else [])
-        in
-        let node : Render_jj_graph.node =
-          {
-            parents
-          ; creation_time = Int64.of_int 0
-          ; working_copy = jj_commit.working_copy
-          ; immutable = jj_commit.immutable
-          ; wip = jj_commit.wip
-          ; change_id = jj_commit.change_id
-          ; commit_id = jj_commit.commit_id
-          ; description = jj_commit.description
-          ; bookmarks = display_refs jj_commit
-          ; author_email = jj_commit.author.email
-          ; author_timestamp = jj_commit.author.timestamp
-          ; empty = jj_commit.empty
-          ; hidden = jj_commit.hidden
-          ; divergent = jj_commit.divergent
-          ; conflict = jj_commit.conflict
-          ; is_preview = false
-          ; change_id_prefix = jj_commit.change_id_prefix
-          ; change_id_rest = jj_commit.change_id_rest
-          ; commit_id_prefix = jj_commit.commit_id_prefix
-          ; commit_id_rest = jj_commit.commit_id_rest
-          }
-        in
-        Hashtbl.add collapsed_node_tbl node_id node;
-        node)
-  and build_elided_node ~child_id ~hidden_parent_id =
-    let elided_id =
-      Printf.sprintf "%s:%s:%s" Render_jj_graph.elided_marker child_id hidden_parent_id
+  else (
+    let visible_commit_ids =
+      match visible_commit_ids with
+      | Some ids ->
+        ids
+      | None ->
+        commits |> List.map (fun commit -> commit.commit_id)
     in
-    match Hashtbl.find_opt collapsed_node_tbl elided_id with
-    | Some node ->
-      node
-    | None ->
-      let parents =
-        visible_parent_ids hidden_parent_id
-        |> List.map (fun parent_id ->
-          if Hashtbl.mem commit_tbl parent_id && Hashtbl.mem visible_set parent_id
-          then build_collapsed_node parent_id
-          else build_full_node parent_id)
-      in
-      let elided = Render_jj_graph.make_elided_node ~id:elided_id ~parents () in
-      Hashtbl.add collapsed_node_tbl elided_id elided;
-      elided
-  in
-  let emitted = Hashtbl.create (List.length visible_commit_ids * 2) in
-  commits
-  |> List.concat_map (fun jj_commit ->
-    if not (Hashtbl.mem visible_set jj_commit.commit_id)
-    then []
-    else (
-      let node = build_collapsed_node jj_commit.commit_id in
-      let elided_nodes =
+    let visible_set =
+      visible_commit_ids |> List.to_seq |> Seq.map (fun id -> id, ()) |> Hashtbl.of_seq
+    in
+    let rec visible_parent_ids commit_id =
+      match Hashtbl.find_opt commit_tbl commit_id with
+      | None ->
+        [ commit_id ]
+      | Some jj_commit ->
         jj_commit.parents
-        |> List.filter (fun parent_id -> not (Hashtbl.mem visible_set parent_id))
-        |> List.map (fun parent_id -> build_elided_node ~child_id:jj_commit.commit_id ~hidden_parent_id:parent_id)
+        |> List.concat_map (fun parent_id ->
+          if Hashtbl.mem visible_set parent_id || not (Hashtbl.mem commit_tbl parent_id)
+          then [ parent_id ]
+          else visible_parent_ids parent_id)
+    in
+    let collapsed_node_tbl : (string, Render_jj_graph.node) Hashtbl.t =
+      Hashtbl.create (List.length visible_commit_ids * 2)
+    in
+    let rec build_collapsed_node node_id =
+      match Hashtbl.find_opt collapsed_node_tbl node_id with
+      | Some node ->
+        node
+      | None ->
+        if Render_jj_graph.is_elided_id node_id
+        then failwith "build_collapsed_node should not be called directly for elided ids"
+        else (
+          let jj_commit = Hashtbl.find commit_tbl node_id in
+          let parents =
+            jj_commit.parents
+            |> List.concat_map (fun parent_id ->
+              if Hashtbl.mem visible_set parent_id && Hashtbl.mem commit_tbl parent_id
+              then [ build_collapsed_node parent_id ]
+              else if
+                Hashtbl.mem commit_tbl parent_id || not (Hashtbl.mem commit_tbl parent_id)
+              then [ build_elided_node ~child_id:node_id ~hidden_parent_id:parent_id ]
+              else [])
+          in
+          let node : Render_jj_graph.node =
+            {
+              parents
+            ; creation_time = Int64.of_int 0
+            ; working_copy = jj_commit.working_copy
+            ; immutable = jj_commit.immutable
+            ; wip = jj_commit.wip
+            ; change_id = jj_commit.change_id
+            ; commit_id = jj_commit.commit_id
+            ; description = jj_commit.description
+            ; bookmarks = display_refs jj_commit
+            ; author_email = jj_commit.author.email
+            ; author_timestamp = jj_commit.author.timestamp
+            ; empty = jj_commit.empty
+            ; hidden = jj_commit.hidden
+            ; divergent = jj_commit.divergent
+            ; conflict = jj_commit.conflict
+            ; is_preview = false
+            ; change_id_prefix = jj_commit.change_id_prefix
+            ; change_id_rest = jj_commit.change_id_rest
+            ; commit_id_prefix = jj_commit.commit_id_prefix
+            ; commit_id_rest = jj_commit.commit_id_rest
+            }
+          in
+          Hashtbl.add collapsed_node_tbl node_id node;
+          node)
+    and build_elided_node ~child_id ~hidden_parent_id =
+      let elided_id =
+        Printf.sprintf "%s:%s:%s" Render_jj_graph.elided_marker child_id hidden_parent_id
       in
-      node :: elided_nodes))
-  |> List.filter (fun (node : Render_jj_graph.node) ->
-    if Hashtbl.mem emitted node.commit_id
-    then false
-    else (
-      Hashtbl.add emitted node.commit_id ();
-      true))
+      match Hashtbl.find_opt collapsed_node_tbl elided_id with
+      | Some node ->
+        node
+      | None ->
+        let parents =
+          visible_parent_ids hidden_parent_id
+          |> List.map (fun parent_id ->
+            if Hashtbl.mem commit_tbl parent_id && Hashtbl.mem visible_set parent_id
+            then build_collapsed_node parent_id
+            else build_full_node parent_id)
+        in
+        let elided = Render_jj_graph.make_elided_node ~id:elided_id ~parents () in
+        Hashtbl.add collapsed_node_tbl elided_id elided;
+        elided
+    in
+    let emitted = Hashtbl.create (List.length visible_commit_ids * 2) in
+    commits
+    |> List.concat_map (fun jj_commit ->
+      if not (Hashtbl.mem visible_set jj_commit.commit_id)
+      then []
+      else (
+        let node = build_collapsed_node jj_commit.commit_id in
+        let elided_nodes =
+          jj_commit.parents
+          |> List.filter (fun parent_id -> not (Hashtbl.mem visible_set parent_id))
+          |> List.map (fun parent_id ->
+            build_elided_node ~child_id:jj_commit.commit_id ~hidden_parent_id:parent_id)
+        in
+        node :: elided_nodes))
+    |> List.filter (fun (node : Render_jj_graph.node) ->
+      if Hashtbl.mem emitted node.commit_id
+      then false
+      else (
+        Hashtbl.add emitted node.commit_id ();
+        true)))
 ;;
 
 (** Select the commits that should remain visible before the renderer collapses the
@@ -326,11 +330,16 @@ let commits_to_nodes ?visible_commit_ids ?(collapse_hidden_ancestry = true) (com
     `all()`, but the UI revset can further narrow which of these retained commits
     are shown. *)
 let select_visible_commit_ids ?filter_commit_ids (commits : jj_commit list) : string list =
-  let retained_commit_ids : (string, unit) Hashtbl.t = Hashtbl.create (List.length commits * 2) in
+  (* Only local bookmarks pin immutable commits open in the default graph. Remote-only
+     refs are informational and should not prevent ancestry elision. *)
+  let has_branch_assignment (commit : jj_commit) = commit.local_bookmarks <> [] in
+  let retained_commit_ids : (string, unit) Hashtbl.t =
+    Hashtbl.create (List.length commits * 2)
+  in
   let retain commit_id = Hashtbl.replace retained_commit_ids commit_id () in
   commits
   |> List.iter (fun (commit : jj_commit) ->
-    if (not commit.immutable) || commit.trunk
+    if (not commit.immutable) || commit.trunk || has_branch_assignment commit
     then (
       retain commit.commit_id;
       commit.parents |> List.iter retain));

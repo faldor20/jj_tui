@@ -498,7 +498,11 @@ module Test_graph_nodes = Make (struct
       | [ "log"; "-T"; _template; "--limit"; _limit; "-r"; "all()" ] ->
         {|{"commit_id":"trunk","parents":["old"],"change_id":"t","description":"Trunk","working_copy":false,"immutable":true,"trunk":true,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"t","change_id_rest":"","commit_id_prefix":"tru","commit_id_rest":"nk"}
 {"commit_id":"old","parents":[],"change_id":"o","description":"Old immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"o","change_id_rest":"","commit_id_prefix":"old","commit_id_rest":""}
-{"commit_id":"feature","parents":["trunk"],"change_id":"f","description":"Feature","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"f","change_id_rest":"","commit_id_prefix":"fea","commit_id_rest":"ture"}|}
+{"commit_id":"feature","parents":["trunk"],"change_id":"f","description":"Feature","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"f","change_id_rest":"","commit_id_prefix":"fea","commit_id_rest":"ture"}
+{"commit_id":"branch_tip","parents":["old"],"change_id":"bt","description":"Branch tip","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":["feature*"],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-05"},"change_id_prefix":"b","change_id_rest":"t","commit_id_prefix":"bra","commit_id_rest":"nch_tip"}
+{"commit_id":"remote_tip","parents":["old"],"change_id":"rt","description":"Remote tip","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":["main@origin"],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-06"},"change_id_prefix":"r","change_id_rest":"t","commit_id_prefix":"rem","commit_id_rest":"ote_tip"}
+{"commit_id":"mutable_side_parent","parents":["old"],"change_id":"msp","description":"Mutable side parent","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-07"},"change_id_prefix":"m","change_id_rest":"sp","commit_id_prefix":"mut","commit_id_rest":"able_side_parent"}
+{"commit_id":"mutable_side_head","parents":["mutable_side_parent"],"change_id":"msh","description":"Mutable side head","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-08"},"change_id_prefix":"m","change_id_rest":"sh","commit_id_prefix":"mut","commit_id_rest":"able_side_head"}|}
       | [ "log"; "-T"; _template; "--limit"; _limit; "-r"; "feature|old" ] ->
         {|{"commit_id":"feature","parents":["trunk"],"change_id":"f","description":"Feature","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"f","change_id_rest":"","commit_id_prefix":"fea","commit_id_rest":"ture"}
 {"commit_id":"old","parents":[],"change_id":"o","description":"Old immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"o","change_id_rest":"","commit_id_prefix":"old","commit_id_rest":""}|}
@@ -507,7 +511,27 @@ module Test_graph_nodes = Make (struct
     ;;
   end)
 
-let%expect_test "get_graph_nodes_default_view_elides_old_immutable_ancestry" =
+module Test_graph_nodes_mutable_side_branch = Make (struct
+    let jj_no_log ?get_stderr:_ ?snapshot:_ ?color:_ args =
+      match args with
+      | [ "log"; "-T"; _template; "--limit"; _limit; "-r"; "all()" ] ->
+        (* This topology keeps a long immutable mainline, plus a mutable side branch
+           hanging off commit4. The default elision logic should still keep all three
+           mutable commits visible even though only one lives on the main chain. *)
+        {|{"commit_id":"commit1","parents":["commit2"],"change_id":"c1","description":"Commit 1 mutable","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-02-06"},"change_id_prefix":"c","change_id_rest":"1","commit_id_prefix":"com","commit_id_rest":"mit1"}
+{"commit_id":"commit2","parents":["commit3"],"change_id":"c2","description":"Commit 2 immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-02-05"},"change_id_prefix":"c","change_id_rest":"2","commit_id_prefix":"com","commit_id_rest":"mit2"}
+{"commit_id":"commit3","parents":["commit4"],"change_id":"c3","description":"Commit 3 immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-02-04"},"change_id_prefix":"c","change_id_rest":"3","commit_id_prefix":"com","commit_id_rest":"mit3"}
+{"commit_id":"commit4","parents":["commit5"],"change_id":"c4","description":"Commit 4 immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-02-03"},"change_id_prefix":"c","change_id_rest":"4","commit_id_prefix":"com","commit_id_rest":"mit4"}
+{"commit_id":"side_mutable1","parents":["commit4"],"change_id":"sm1","description":"Side mutable 1","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-02-02"},"change_id_prefix":"s","change_id_rest":"m1","commit_id_prefix":"sid","commit_id_rest":"e_mutable1"}
+{"commit_id":"side_mutable2","parents":["side_mutable1"],"change_id":"sm2","description":"Side mutable 2","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-02-01"},"change_id_prefix":"s","change_id_rest":"m2","commit_id_prefix":"sid","commit_id_rest":"e_mutable2"}
+{"commit_id":"commit5","parents":["root"],"change_id":"c5","description":"Commit 5 immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-31"},"change_id_prefix":"c","change_id_rest":"5","commit_id_prefix":"com","commit_id_rest":"mit5"}
+{"commit_id":"root","parents":[],"change_id":"r","description":"Root","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-30"},"change_id_prefix":"r","change_id_rest":"","commit_id_prefix":"roo","commit_id_rest":"t"}|}
+      | _ ->
+        failwith (Printf.sprintf "Unexpected jj invocation: %s" (String.concat " " args))
+    ;;
+  end)
+
+let%expect_test "get_graph_nodes_default_view_keeps_trunk_branch_assigned_and_mutable_nodes" =
   let nodes, rev_ids = Test_graph_nodes.get_graph_nodes 20 in
   let rev_id_to_string = function Unique id -> id | Duplicate id -> id in
   Printf.printf "Nodes: [%s]\n" (String.concat ";" (List.map (fun n -> n.Render_jj_graph.commit_id) nodes));
@@ -516,8 +540,8 @@ let%expect_test "get_graph_nodes_default_view_elides_old_immutable_ancestry" =
     (rev_ids |> Array.to_list |> List.map rev_id_to_string |> String.concat ";");
   [%expect
     {|
-    Nodes: [trunk;old;feature]
-    Rev ids: [t;o;f]
+    Nodes: [trunk;old;feature;branch_tip;mutable_side_parent;mutable_side_head]
+    Rev ids: [t;o;f;bt;msp;msh]
     |}]
 ;;
 
@@ -530,8 +554,41 @@ let%expect_test "get_graph_nodes_custom_revset_disables_local_elision" =
     (rev_ids |> Array.to_list |> List.map rev_id_to_string |> String.concat ";");
   [%expect
     {|
-    Nodes: [feature;old]
-    Rev ids: [f;o]
+     Nodes: [feature;old]
+     Rev ids: [f;o]
+     |}]
+;;
+
+let%expect_test "get_graph_nodes_default_view_keeps_all_mutable_nodes_in_side_branch_topology" =
+  let (nodes : Render_jj_graph.node list), (rev_ids : string maybe_unique array) =
+    Test_graph_nodes_mutable_side_branch.get_graph_nodes 20
+  in
+  let rev_id_to_string = function Unique id -> id | Duplicate id -> id in
+  (* Elided rows use synthetic nodes, so this test checks visibility by filtering
+     them out and then asserting the three mutable commit ids remain present. *)
+  let visible_commit_ids =
+    nodes
+    |> List.filter (fun (node : Render_jj_graph.node) -> not (Render_jj_graph.is_elided node))
+    |> List.map (fun (node : Render_jj_graph.node) -> node.commit_id)
+  in
+  let all_mutable_commits_visible =
+    [ "commit1"; "side_mutable1"; "side_mutable2" ]
+    |> List.for_all (fun commit_id -> List.mem commit_id visible_commit_ids)
+  in
+  Printf.printf
+    "Nodes: [%s]\n"
+    (String.concat ";" (List.map (fun (n : Render_jj_graph.node) -> n.commit_id) nodes));
+  Printf.printf "Visible commits: [%s]\n" (String.concat ";" visible_commit_ids);
+  Printf.printf "All mutable commits visible: %b\n" all_mutable_commits_visible;
+  Printf.printf
+    "Rev ids: [%s]\n"
+    (rev_ids |> Array.to_list |> List.map rev_id_to_string |> String.concat ";");
+  [%expect
+    {|
+    Nodes: [commit1;commit2;~ELIDED~:commit2:commit3;commit4;~ELIDED~:commit4:commit5;side_mutable1;side_mutable2]
+    Visible commits: [commit1;commit2;commit4;side_mutable1;side_mutable2]
+    All mutable commits visible: true
+    Rev ids: [c1;c2;c4;sm1;sm2]
     |}]
 ;;
 

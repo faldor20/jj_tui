@@ -240,33 +240,35 @@ let%expect_test "commits_to_nodes_missing_parent_creates_elided" =
     |}]
 ;;
 
-let%expect_test "select_visible_commit_ids_keeps_mutable_trunk_and_direct_parents" =
+let%expect_test "select_visible_commit_ids_keeps_trunk_local_bookmarks_and_mutable_commits" =
   let input =
     {|{"commit_id":"root","parents":[],"change_id":"r","description":"Root","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"r","change_id_rest":"","commit_id_prefix":"roo","commit_id_rest":"t"}
 {"commit_id":"trunk_parent","parents":["root"],"change_id":"tp","description":"Trunk parent","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"t","change_id_rest":"p","commit_id_prefix":"tru","commit_id_rest":"nk_parent"}
 {"commit_id":"trunk_head","parents":["trunk_parent"],"change_id":"th","description":"Trunk head","working_copy":false,"immutable":true,"trunk":true,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"t","change_id_rest":"h","commit_id_prefix":"tru","commit_id_rest":"nk_head"}
-{"commit_id":"mutable_parent","parents":["trunk_head"],"change_id":"mp","description":"Mutable parent","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"m","change_id_rest":"p","commit_id_prefix":"mut","commit_id_rest":"able_parent"}
-{"commit_id":"mutable_head","parents":["mutable_parent"],"change_id":"mh","description":"Mutable head","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-05"},"change_id_prefix":"m","change_id_rest":"h","commit_id_prefix":"mut","commit_id_rest":"able_head"}
-{"commit_id":"old_immutable","parents":["root"],"change_id":"oi","description":"Old immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-06"},"change_id_prefix":"o","change_id_rest":"i","commit_id_prefix":"old","commit_id_rest":"_immutable"}|}
+{"commit_id":"mutable_side_parent","parents":["root"],"change_id":"msp","description":"Mutable side parent","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"m","change_id_rest":"sp","commit_id_prefix":"mut","commit_id_rest":"able_side_parent"}
+{"commit_id":"mutable_side_head","parents":["mutable_side_parent"],"change_id":"msh","description":"Mutable side head","working_copy":false,"immutable":false,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-05"},"change_id_prefix":"m","change_id_rest":"sh","commit_id_prefix":"mut","commit_id_rest":"able_side_head"}
+{"commit_id":"bookmarked_local","parents":["root"],"change_id":"bl","description":"Bookmarked local","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":["feature*"],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-06"},"change_id_prefix":"b","change_id_rest":"l","commit_id_prefix":"boo","commit_id_rest":"kmarked_local"}
+{"commit_id":"bookmarked_remote","parents":["root"],"change_id":"br","description":"Bookmarked remote","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":["main@origin"],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-07"},"change_id_prefix":"b","change_id_rest":"r","commit_id_prefix":"boo","commit_id_rest":"kmarked_remote"}
+{"commit_id":"old_immutable","parents":["root"],"change_id":"oi","description":"Old immutable","working_copy":false,"immutable":true,"trunk":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-08"},"change_id_prefix":"o","change_id_rest":"i","commit_id_prefix":"old","commit_id_rest":"_immutable"}|}
   in
   (match parse_jj_log_output input with
    | Ok commits ->
-     let visible_commit_ids = select_visible_commit_ids commits in
-     Printf.printf "Visible ids: [%s]\n" (String.concat ";" visible_commit_ids);
-     let filtered_visible_commit_ids =
-       select_visible_commit_ids
-         ~filter_commit_ids:[ "mutable_head"; "trunk_head"; "old_immutable" ]
-         commits
-     in
-     Printf.printf
-       "Filtered visible ids: [%s]\n"
-       (String.concat ";" filtered_visible_commit_ids)
+      let visible_commit_ids = select_visible_commit_ids commits in
+      Printf.printf "Visible ids: [%s]\n" (String.concat ";" visible_commit_ids);
+      let filtered_visible_commit_ids =
+        select_visible_commit_ids
+          ~filter_commit_ids:[ "trunk_head"; "mutable_side_head"; "bookmarked_local"; "old_immutable" ]
+          commits
+      in
+      Printf.printf
+        "Filtered visible ids: [%s]\n"
+        (String.concat ";" filtered_visible_commit_ids)
    | Error msg ->
      Printf.printf "Error: %s\n" msg);
   [%expect
     {|
-    Visible ids: [trunk_parent;trunk_head;mutable_parent;mutable_head]
-    Filtered visible ids: [trunk_head;mutable_head]
+    Visible ids: [root;trunk_parent;trunk_head;mutable_side_parent;mutable_side_head;bookmarked_local]
+    Filtered visible ids: [trunk_head;mutable_side_head;bookmarked_local]
     |}]
 ;;
 
