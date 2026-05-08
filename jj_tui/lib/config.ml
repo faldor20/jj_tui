@@ -8,7 +8,7 @@ type t = {
 [@@deriving yaml, record_updater ~derive:yaml]
 
 let default_config : t =
-  { key_map = Key_map.default; single_pane_width_threshold = 100; max_commits = 100 }
+  { key_map = Key_map.default; single_pane_width_threshold = 100; max_commits = 1000 }
 ;;
 
 let get_config_dir () =
