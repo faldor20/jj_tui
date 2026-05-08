@@ -209,3 +209,15 @@ end
 
 (** Initialize the logging system *)
 let init_logging = Internal.init_logging
+
+let timeStampLog msg fn=
+    let start_time = Unix.gettimeofday () in
+    let ret=fn()in
+    let end_time = Unix.gettimeofday () in
+    [%log
+      debug
+      "%s took: %fms"
+        msg
+        ((end_time -. start_time) *. 1000.)];
+    ret
+

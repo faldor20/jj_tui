@@ -339,10 +339,13 @@ let select_visible_commit_ids ?filter_commit_ids (commits : jj_commit list) : st
   let retain commit_id = Hashtbl.replace retained_commit_ids commit_id () in
   commits
   |> List.iter (fun (commit : jj_commit) ->
-    if (not commit.immutable) || commit.trunk || has_branch_assignment commit
+    if not commit.immutable
     then (
       retain commit.commit_id;
-      commit.parents |> List.iter retain));
+      commit.parents |> List.iter retain)
+    (* we don't need to include parents of branch commits*)
+    else if commit.trunk || has_branch_assignment commit
+    then retain commit.commit_id);
   let filter_set =
     match filter_commit_ids with
     | None ->

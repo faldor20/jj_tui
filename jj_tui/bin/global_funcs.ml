@@ -143,7 +143,10 @@ let update_if_changed () =
       ~snapshot:true
       [ "op"; "log"; "--limit"; "1"; "-T"; "self.id()"; "--no-graph" ]
   in
-  if !last_op_id <> this_op
+  (*skip the first run otherwise we always rerender twice during startup*)
+  if !last_op_id == ""
+  then last_op_id := this_op
+  else if !last_op_id <> this_op
   then (
     [%log info "updating ui state becasue of a change in the repo"];
     last_op_id := this_op;

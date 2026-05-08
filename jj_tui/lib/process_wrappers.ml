@@ -306,6 +306,7 @@ struct
       Uses graph output (not --no-graph) because the graph order is the
       canonical input for the synthetic row renderer. *)
   let get_graph_json ?revset limit =
+    timeStampLog "fetched and parsed graph_json" @@ fun () ->
     let args =
       [ "log"; "-T"; Jj_json.json_log_template; "--limit"; string_of_int limit ]
     in
@@ -335,7 +336,10 @@ struct
         let visible_commit_ids = Jj_json.select_visible_commit_ids commits in
         let nodes = Jj_json.commits_to_nodes ~visible_commit_ids commits in
         let visible_commit_id_set =
-          visible_commit_ids |> List.to_seq |> Seq.map (fun id -> id, ()) |> Hashtbl.of_seq
+          visible_commit_ids
+          |> List.to_seq
+          |> Seq.map (fun id -> id, ())
+          |> Hashtbl.of_seq
         in
         ( commits
           |> List.filter (fun (commit : Jj_json.jj_commit) ->
@@ -345,7 +349,7 @@ struct
     let rev_ids =
       selectable_commits
       |> List.map (fun (c : Jj_json.jj_commit) ->
-         if c.divergent || c.hidden then Duplicate c.commit_id else Unique c.change_id)
+        if c.divergent || c.hidden then Duplicate c.commit_id else Unique c.change_id)
       |> Array.of_list
     in
     nodes, rev_ids
@@ -531,10 +535,14 @@ module Test_graph_nodes_mutable_side_branch = Make (struct
     ;;
   end)
 
-let%expect_test "get_graph_nodes_default_view_keeps_trunk_branch_assigned_and_mutable_nodes" =
+let%expect_test
+    "get_graph_nodes_default_view_keeps_trunk_branch_assigned_and_mutable_nodes"
+  =
   let nodes, rev_ids = Test_graph_nodes.get_graph_nodes 20 in
   let rev_id_to_string = function Unique id -> id | Duplicate id -> id in
-  Printf.printf "Nodes: [%s]\n" (String.concat ";" (List.map (fun n -> n.Render_jj_graph.commit_id) nodes));
+  Printf.printf
+    "Nodes: [%s]\n"
+    (String.concat ";" (List.map (fun n -> n.Render_jj_graph.commit_id) nodes));
   Printf.printf
     "Rev ids: [%s]\n"
     (rev_ids |> Array.to_list |> List.map rev_id_to_string |> String.concat ";");
@@ -548,7 +556,9 @@ let%expect_test "get_graph_nodes_default_view_keeps_trunk_branch_assigned_and_mu
 let%expect_test "get_graph_nodes_custom_revset_disables_local_elision" =
   let nodes, rev_ids = Test_graph_nodes.get_graph_nodes ~revset:"feature|old" 20 in
   let rev_id_to_string = function Unique id -> id | Duplicate id -> id in
-  Printf.printf "Nodes: [%s]\n" (String.concat ";" (List.map (fun n -> n.Render_jj_graph.commit_id) nodes));
+  Printf.printf
+    "Nodes: [%s]\n"
+    (String.concat ";" (List.map (fun n -> n.Render_jj_graph.commit_id) nodes));
   Printf.printf
     "Rev ids: [%s]\n"
     (rev_ids |> Array.to_list |> List.map rev_id_to_string |> String.concat ";");
@@ -559,7 +569,9 @@ let%expect_test "get_graph_nodes_custom_revset_disables_local_elision" =
      |}]
 ;;
 
-let%expect_test "get_graph_nodes_default_view_keeps_all_mutable_nodes_in_side_branch_topology" =
+let%expect_test
+    "get_graph_nodes_default_view_keeps_all_mutable_nodes_in_side_branch_topology"
+  =
   let (nodes : Render_jj_graph.node list), (rev_ids : string maybe_unique array) =
     Test_graph_nodes_mutable_side_branch.get_graph_nodes 20
   in
@@ -568,7 +580,8 @@ let%expect_test "get_graph_nodes_default_view_keeps_all_mutable_nodes_in_side_br
      them out and then asserting the three mutable commit ids remain present. *)
   let visible_commit_ids =
     nodes
-    |> List.filter (fun (node : Render_jj_graph.node) -> not (Render_jj_graph.is_elided node))
+    |> List.filter (fun (node : Render_jj_graph.node) ->
+      not (Render_jj_graph.is_elided node))
     |> List.map (fun (node : Render_jj_graph.node) -> node.commit_id)
   in
   let all_mutable_commits_visible =
