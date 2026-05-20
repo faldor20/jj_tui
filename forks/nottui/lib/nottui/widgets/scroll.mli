@@ -1,9 +1,18 @@
-(** A keyboard scroll area that only scrolls in the vertical direction *)
-val v_area : ?reset_on_content_change:bool -> Nottui_main.ui Lwd.t -> Nottui_main.ui Lwd.t
+(** A keyboard scroll area that only scrolls in the vertical direction.
 
-(** A scroll area that allows keyboard scrolling in both x and y directions*)
+    [show_scrollbars] defaults to [true] and controls displaying the visual scroll indicator.*)
+val v_area
+  :  ?reset_on_content_change:bool
+  -> ?show_scrollbars:bool
+  -> Nottui_main.ui Lwd.t
+  -> Nottui_main.ui Lwd.t
+
+(** A scroll area that allows keyboard scrolling in both x and y directions.
+
+    [show_scrollbars] defaults to [true] and controls displaying the visual scroll indicator.*)
 val area
   :  ?reset_on_content_change:bool
+  -> ?show_scrollbars:bool
   -> ?focus:Nottui_main.Focus.status
   -> Nottui_main.ui Lwd.t
   -> Nottui_main.ui Lwd.t

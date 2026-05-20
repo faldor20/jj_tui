@@ -708,6 +708,8 @@ module Ui = struct
   let zcat xs = Lwd_utils.reduce pack_z xs
   let has_focus t = Focus.has_focus t.focus
 
+  type scrollbar_thumb_style = [ `Rectangle | `Round ]
+
   type global_config_t=
   {
     mutable border_style:Border.style;
@@ -715,13 +717,15 @@ module Ui = struct
 
     mutable border_style_focused:Border.style ;
     mutable border_attr_focused:A.t ;
+    mutable scrollbar_thumb_style:scrollbar_thumb_style;
   }
 ;;
   let global_config={
     border_style=Border.unicode;
     border_style_focused= Border.unicode_bold;
     border_attr=A.empty;
-    border_attr_focused= A.fg A.blue
+    border_attr_focused= A.fg A.blue;
+    scrollbar_thumb_style=`Rectangle
     }
   ;;
 

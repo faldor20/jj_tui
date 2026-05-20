@@ -305,6 +305,7 @@ let default : key_config =
             ; cmd "P" "git_push_all"
             ; cmd "f" "git_fetch"
             ; cmd "F" "git_fetch_all"
+            ; cmd "t" "git_tag_create"
             ; cmd "r" "git_remote_menu"
             ]
         ; cmd "z" "parallelize"

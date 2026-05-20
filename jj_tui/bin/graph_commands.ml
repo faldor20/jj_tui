@@ -39,6 +39,43 @@ module Make (Vars : Global_vars.Vars) = struct
     |> ignore
   ;;
 
+  (** Git-only ref updates bypass jj's command runner, so we serialize them against
+      snapshotting jj commands and convert failures into the same popup error path. *)
+  let run_git_write_command args =
+    let cmd = [ "git" ] @ args |> String.concat " " in
+    let current_log = Lwd.peek ui_state.command_log in
+    Lwd.set ui_state.command_log (cmd :: current_log);
+    Picos_std_sync.Mutex.lock Jj_process.access_lock;
+    Fun.protect
+      ~finally:(fun () -> Picos_std_sync.Mutex.unlock Jj_process.access_lock)
+      (fun () ->
+         match cmdArgs "git" args with
+         | Ok _ ->
+           ()
+         | Error (`BadExit (code, str)) ->
+           raise
+             (Jj_process.JJError
+                (cmd, Printf.sprintf "Exited with code %i; Message:\n%s" code str)))
+  ;;
+
+  (** Tags are stored in git, so resolve the hovered jj revision to a concrete commit
+      id before creating the annotated tag with the git CLI. *)
+  let create_git_tag ~tag_name ~message =
+    let tag_name = String.trim tag_name in
+    if String.equal tag_name ""
+    then raise (Jj_process.JJError ("git tag", "Tag name cannot be empty"))
+    else (
+      let rev = Vars.get_hovered_rev () in
+      let commit_id =
+        jj_no_log
+          ~snapshot:false
+          ~color:false
+          [ "log"; "--limit"; "1"; "--no-graph"; "-r"; rev; "-T"; "commit_id" ]
+        |> String.trim
+      in
+      run_git_write_command [ "tag"; "-a"; tag_name; "-m"; message; commit_id ])
+  ;;
+
   (**
   A submenu for git commands that are specific to a remote.
   *)
@@ -501,6 +538,19 @@ module Make (Vars : Global_vars.Vars) = struct
       ; make_cmd =
           (fun () ->
             Cmd_async ("fetching all remotes...", [ "git"; "fetch"; "--all-remotes" ]))
+      }
+    ; {
+        id = "git_tag_create"
+      ; sorting_key = 25.25
+      ; description = "Create annotated git tag on hovered revision"
+      ; make_cmd =
+          (fun () ->
+            PromptThen
+              ( "tag name"
+              , fun tag_name ->
+                  PromptThen
+                    ( "tag message"
+                    , fun message -> Fun (fun () -> create_git_tag ~tag_name ~message) ) ))
       }
     ; {
         id = "git_remote_menu"

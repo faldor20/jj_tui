@@ -3,6 +3,7 @@ open Nottui_main
 
 open Shared
 open Lwd_infix
+module Scrollbar = Scrollbar
 
 module Internal = struct
   let scroll_step = 1
@@ -14,8 +15,18 @@ module Internal = struct
 
   let default_scroll_state = { position = 0; bound = 0 }
 
+  let to_scrollbar_state ({ position; bound } : scroll_state) : Scrollbar.state =
+    { position; bound }
+  ;;
+
   (** Primative for implementing scrolling, should be avoided unless you actually have reason to be changing the scroll state *)
-  let vscroll_area_intern ?(reset_on_content_change = true) ~state ~change t =
+  let vscroll_area_intern
+        ?(reset_on_content_change = true)
+        ?(show_scrollbars = true)
+        ~state
+        ~change
+        t
+    =
     let visible = ref (-1) in
     let total = ref (-1) in
     let scroll state delta =
@@ -40,38 +51,57 @@ module Internal = struct
     in
     Lwd.map2 t state ~f:(fun t state ->
       let tmh = Ui.layout_max_height t in
-      t
-      |> Ui.shift_area 0 state.position
-      |> Ui.resize ~h:0 ~sh:1 ~mh:10000
-      |> Ui.size_sensor (fun ~w:_ ~h ->
-        let tchange =
-          if !total <> (Ui.layout_spec t).Ui.h
-          then (
-            total := (Ui.layout_spec t).Ui.h;
-            true)
-          else false
-        in
-        let vchange =
-          if !visible <> h
-          then (
-            visible := h;
-            true)
-          else false
-        in
-        if tchange || vchange
-        then
-          change
-            `Content
-            { position = (if reset_on_content_change then 0 else state.position)
-            ; bound = maxi 0 (!total - !visible)
-            })
-      |> Ui.mouse_area (scroll_handler state)
-      |> Ui.keyboard_area (focus_handler state)
-      (*restore original max height*)
-      |> Ui.resize ~mh:tmh)
+      let content =
+        t
+        |> Ui.shift_area 0 state.position
+        |> Ui.resize ~w:0 ~sw:1 ~h:0 ~sh:1 ~mh:10000
+        |> Ui.size_sensor (fun ~w:_ ~h ->
+          let tchange =
+            if !total <> (Ui.layout_spec t).Ui.h
+            then (
+              total := (Ui.layout_spec t).Ui.h;
+              true)
+            else false
+          in
+          let vchange =
+            if !visible <> h
+            then (
+              visible := h;
+              true)
+            else false
+          in
+          if tchange || vchange
+          then
+            change
+              `Content
+              { position = (if reset_on_content_change then 0 else state.position)
+              ; bound = maxi 0 (!total - !visible)
+              })
+        |> Ui.mouse_area (scroll_handler state)
+        |> Ui.keyboard_area (focus_handler state)
+        (* Restore the original height cap after making the inner viewport grow. *)
+        |> Ui.resize ~mh:tmh
+      in
+      if not show_scrollbars
+      then content
+      else
+        Ui.join_x
+          content
+          (Scrollbar.render
+             `Vertical
+             ~focused:(Ui.has_focus content)
+             ~state:(to_scrollbar_state state)
+             ~visible:!visible))
   ;;
 
-  let scroll_area_intern ?(reset_on_content_change = true) ?focus ~state ~change t =
+  let scroll_area_intern
+        ?(reset_on_content_change = true)
+        ?(show_scrollbars = true)
+        ?focus
+        ~state
+        ~change
+        t
+    =
     let open Lwd_utils in
     let w_visible = ref (-1) in
     let w_total = ref (-1) in
@@ -115,61 +145,94 @@ module Internal = struct
       let tw, th = Ui.layout_width t, Ui.layout_height t in
       let tmw, tmh = Ui.layout_max_width t, Ui.layout_max_height t in
       (* let mw, mh = if max then Some tw, Some th else None, None in *)
-      t
-      |> Ui.resize ~w:0 ~sw:1 ~h:0 ~sh:1 ~mw:10000 ~mh:10000
-      |> Ui.shift_area state_w.position state_h.position
-      (* |>Ui.join_y (Ui.atom (I.string A.empty (string_of_int state_w.visible))) *)
-      (*TODO: make an alternative that has this already set*)
-      |> Ui.size_sensor (fun ~w ~h ->
-        let sense v_spec v state total visible =
-          let tchange =
-            if !total <> v_spec
-            then (
-              total := v_spec;
-              true)
-            else false
+      let content =
+        t
+        |> Ui.resize ~w:0 ~sw:1 ~h:0 ~sh:1 ~mw:10000 ~mh:10000
+        |> Ui.shift_area state_w.position state_h.position
+        (* |>Ui.join_y (Ui.atom (I.string A.empty (string_of_int state_w.visible))) *)
+        (*TODO: make an alternative that has this already set*)
+        |> Ui.size_sensor (fun ~w ~h ->
+          let sense v_spec v state total visible =
+            let tchange =
+              if !total <> v_spec
+              then (
+                total := v_spec;
+                true)
+              else false
+            in
+            let vchange =
+              if !visible <> v
+              then (
+                visible := v;
+                true)
+              else false
+            in
+            if tchange || vchange
+            then
+              Some
+                { bound = maxi 0 (!total - !visible)
+                ; position = (if reset_on_content_change then 0 else state_w.position)
+                }
+            else None
           in
-          let vchange =
-            if !visible <> v
-            then (
-              visible := v;
-              true)
-            else false
-          in
-          if tchange || vchange
-          then
-            Some
-              { bound = maxi 0 (!total - !visible)
-              ; position = (if reset_on_content_change then 0 else state_w.position)
-              }
-          else None
+          let w_update = sense tw w state_w w_total w_visible in
+          let h_update = sense th h state_h h_total h_visible in
+          match w_update, h_update with
+          | Some w, Some h -> change `ContentBoth (w, h)
+          | Some w, None -> change `ContentW (w, state_h)
+          | None, Some h -> change `ContentH (state_w, h)
+          | None, None -> ())
+        |> Ui.mouse_area (scroll_handler state_w state_h)
+        |> Ui.keyboard_area ?focus (focus_handler state_w state_h)
+        (* Restore the original width/height caps after making the inner viewport grow. *)
+        |> Ui.resize ~mw:tmw ~mh:tmh
+      in
+      let focused = Ui.has_focus content in
+      if not show_scrollbars
+      then content
+      else (
+        let content_with_bottom =
+          Ui.join_y
+            content
+            (Scrollbar.render
+               `Horizontal
+               ~focused
+               ~state:(to_scrollbar_state state_w)
+               ~visible:(max 0 (!w_visible - 2)))
         in
-        let w_update = sense tw w state_w w_total w_visible in
-        let h_update = sense th h state_h h_total h_visible in
-        match w_update, h_update with
-        | Some w, Some h -> change `ContentBoth (w, h)
-        | Some w, None -> change `ContentW (w, state_h)
-        | None, Some h -> change `ContentH (state_w, h)
-        | None, None -> ())
-      |> Ui.mouse_area (scroll_handler state_w state_h)
-      |> Ui.keyboard_area ?focus (focus_handler state_w state_h)
-      (*restore original mw*)
-      |> Ui.resize ~mw:tmw ~mh:tmh)
+        Ui.join_x
+          content_with_bottom
+          (Scrollbar.render
+             `Vertical
+             ~focused
+             ~state:(to_scrollbar_state state_h)
+             ~visible:!h_visible)))
   ;;
 end
 
 open Internal
 
-let v_area ?(reset_on_content_change = true) ui =
+let v_area ?(reset_on_content_change = true) ?(show_scrollbars = true) ui =
   let state = Lwd.var Internal.default_scroll_state in
   ui
-  |> Internal.vscroll_area_intern ~change:(fun _ x -> state $= x) ~state:(Lwd.get state)
+  |> Internal.vscroll_area_intern
+       ~reset_on_content_change
+       ~show_scrollbars
+       ~change:(fun _ x -> state $= x)
+       ~state:(Lwd.get state)
 ;;
 
-let area ?(reset_on_content_change = true) ?focus ui =
+let area
+      ?(reset_on_content_change = true)
+      ?(show_scrollbars = true)
+      ?focus
+      ui
+  =
   let state = Lwd.var (Internal.default_scroll_state, Internal.default_scroll_state) in
   ui
   |> Internal.scroll_area_intern
+       ~reset_on_content_change
+       ~show_scrollbars
        ?focus
        ~change:(fun _ x -> state $= x)
        ~state:(Lwd.get state)

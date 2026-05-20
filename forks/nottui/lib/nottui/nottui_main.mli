@@ -117,6 +117,10 @@ module Ui : sig
     val unicode_bold : style
   end
 
+  (** Glyph variants for scrollbar thumbs. Rectangle is the default because it
+      reads more clearly in dense terminal layouts. *)
+  type scrollbar_thumb_style = [ `Rectangle | `Round ]
+
   (** Global configuration for ui elements. Use to set default styles for the whole application.*)
   type global_config_t=
   {
@@ -125,6 +129,7 @@ module Ui : sig
 
     mutable border_style_focused:Border.style ;
     mutable border_attr_focused:A.t ;
+    mutable scrollbar_thumb_style:scrollbar_thumb_style;
   }
 
   (** Get the global configuration for ui elements. *)
