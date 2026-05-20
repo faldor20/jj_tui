@@ -11,29 +11,29 @@
 
 (** Glyph constants used by the renderer. *)
 module P = struct
-  let v = Util.make_uchar "│"
-  let vr = Util.make_uchar "├"
-  let vl = Util.make_uchar "┤"
-  let t = Util.make_uchar "┬"
-  let cross = Util.make_uchar "┼"
-  let h = Util.make_uchar "─"
-  let b = Util.make_uchar "┴"
+  let v = Notty.make_uchar "│"
+  let vr = Notty.make_uchar "├"
+  let vl = Notty.make_uchar "┤"
+  let t = Notty.make_uchar "┬"
+  let cross = Notty.make_uchar "┼"
+  let h = Notty.make_uchar "─"
+  let b = Notty.make_uchar "┴"
 
   (* elbow down right *)
-  let edr = Util.make_uchar "╮"
-  let eur = Util.make_uchar "╯"
-  let edl = Util.make_uchar "╭"
-  let eul = Util.make_uchar "╰"
-  let sp = Util.make_uchar " "
-  let ancestor = Util.make_uchar "╷"
-  let term = Util.make_uchar "~"
+  let edr = Notty.make_uchar "╮"
+  let eur = Notty.make_uchar "╯"
+  let edl = Notty.make_uchar "╭"
+  let eul = Notty.make_uchar "╰"
+  let sp = Notty.make_uchar " "
+  let ancestor = Notty.make_uchar "╷"
+  let term = Notty.make_uchar "~"
 
   module Node = struct
-    let normal = Util.make_uchar "○"
-    let working_copy = Util.make_uchar "@"
-    let wip = Util.make_uchar "◌"
-    let immutable = Util.make_uchar "◆"
-    let conflict = Util.make_uchar "×"
+    let normal = Notty.make_uchar "○"
+    let working_copy = Notty.make_uchar "@"
+    let wip = Notty.make_uchar "◌"
+    let immutable = Notty.make_uchar "◆"
+    let conflict = Notty.make_uchar "×"
   end
 end
 

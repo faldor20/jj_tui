@@ -24,6 +24,15 @@ type attr
 type image
 (** Rectangles of styled characters. *)
 
+val make_uchar : string -> Uchar.t
+(** [make_uchar glyph] decodes the first UTF-8 scalar value from [glyph].
+
+    This is a convenience helper for declaring named terminal glyph constants in
+    code without scattering raw Unicode code points everywhere.
+
+    @raise Invalid_argument if [glyph] does not start with a valid UTF-8 scalar
+    value. *)
+
 (** [A] is for attribute.
 
     Construction and composition of styling characteristics of text.

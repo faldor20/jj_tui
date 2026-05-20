@@ -20,6 +20,15 @@ and is_C1 x = 0x80 <= x && x < 0xa0
 let is_ctrl x = is_C0 x || is_C1 x
 and is_ascii x = x < 0x80
 
+(* Decode one named glyph once at definition time so call sites can stay
+   readable and avoid hard-coded Unicode code points. *)
+let make_uchar glyph =
+  let decoded = String.get_utf_8_uchar glyph 0 in
+  if Uchar.utf_decode_is_valid decoded
+  then Uchar.utf_decode_uchar decoded
+  else invalid_arg "Notty.make_uchar: invalid UTF-8 glyph %S" glyph
+;;
+
 let rec concatm z (@) xs =
   let rec accum (@) = function
     | []|[_] as xs -> xs
