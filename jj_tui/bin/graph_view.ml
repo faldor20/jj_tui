@@ -120,12 +120,13 @@ module Make (Vars : Global_vars.Vars) = struct
                 |> Array.of_list
               else rev_ids
             in
-            let rendered_rows =
-              Render_jj_graph.render_nodes_structured
-                state
-                nodes
-                ~node_attr:Commit_render.graph_node_attr
-            in
+             let rendered_rows =
+               Jj_tui.Logging.timeStampLog "rendered graph rows" @@ fun () ->
+               Render_jj_graph.render_nodes_structured
+                 state
+                 nodes
+                 ~node_attr:Commit_render.graph_node_attr
+             in
             error_var $= None;
             rendered_rows, rev_ids
           with

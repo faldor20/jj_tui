@@ -81,4 +81,5 @@ For a full list of commands ids see [`jj_tui/bin/graph_commands.ml`](jj_tui/bin/
 
 # Dev
 Can be built with nix `nix build` or open a nix shell with `nix develop`
+NOTE: if you are using the nix dev shell and would like to build with dune use `dune build --pkg disabled` to build using the deps provided by nix
 Can also be built directly with Dune package management via `dune build`.

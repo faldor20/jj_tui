@@ -30,22 +30,22 @@ jj_tui/
 nix develop
 
 # Build
-dune build
+dune build --pkg disabled
 
 # Build and watch
-dune build --watch
+dune build --pkg disabled --watch
 
 # Run the application
-dune exec jj_tui
+dune exec --pkg disabled jj_tui
 
 # Run all tests
-dune runtest
+dune runtest --pkg disabled
 
 # Run tests for specific library
-dune runtest -p jj_tui
+dune runtest --pkg disabled -p jj_tui
 
 # Run tests and show output
-dune runtest --force
+dune runtest --pkg disabled --force
 
 # Format code
 dune fmt

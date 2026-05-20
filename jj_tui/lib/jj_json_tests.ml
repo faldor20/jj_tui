@@ -343,6 +343,35 @@ let%expect_test "commits_to_nodes_prefers_local_refs_and_appends_tags" =
   [%expect
     {|
     Visible refs: [main*;v0.18]
-    Hidden refs: [main@origin]
+     Hidden refs: [main@origin]
+     |}]
+;;
+
+let%expect_test "commits_to_nodes_dedupes_visible_parents_through_hidden_merges" =
+  let input =
+    {|{"commit_id":"child","parents":["merge"],"change_id":"c","description":"Child","working_copy":false,"immutable":false,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-05"},"change_id_prefix":"c","change_id_rest":"","commit_id_prefix":"chi","commit_id_rest":"ld"}
+{"commit_id":"merge","parents":["left","right"],"change_id":"m","description":"Hidden merge","working_copy":false,"immutable":true,"wip":false,"hidden":true,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-04"},"change_id_prefix":"m","change_id_rest":"","commit_id_prefix":"mer","commit_id_rest":"ge"}
+{"commit_id":"left","parents":["root"],"change_id":"l","description":"Hidden left","working_copy":false,"immutable":true,"wip":false,"hidden":true,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-03"},"change_id_prefix":"l","change_id_rest":"","commit_id_prefix":"lef","commit_id_rest":"t"}
+{"commit_id":"right","parents":["root"],"change_id":"r","description":"Hidden right","working_copy":false,"immutable":true,"wip":false,"hidden":true,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-02"},"change_id_prefix":"r","change_id_rest":"","commit_id_prefix":"rig","commit_id_rest":"ht"}
+{"commit_id":"root","parents":[],"change_id":"o","description":"Root","working_copy":false,"immutable":true,"wip":false,"hidden":false,"divergent":false,"conflict":false,"empty":false,"local_bookmarks":[],"remote_bookmarks":[],"tags":[],"author":{"email":"test@example.com","timestamp":"2024-01-01"},"change_id_prefix":"o","change_id_rest":"","commit_id_prefix":"roo","commit_id_rest":"t"}|}
+  in
+  (match parse_jj_log_output input with
+   | Ok commits ->
+      let nodes = commits_to_nodes ~visible_commit_ids:[ "child"; "root" ] commits in
+      let child = List.nth nodes 0 in
+      let elided = List.nth nodes 1 in
+      Printf.printf "Child parents: %d\n" (List.length child.parents);
+      Printf.printf "Elided parents: %d\n" (List.length elided.parents);
+      let elided_parent_ids =
+        elided.parents |> List.map (fun (p : Render_jj_graph.node) -> p.commit_id)
+      in
+      Printf.printf "Elided parent commit ids: [%s]\n" (String.concat ";" elided_parent_ids)
+   | Error msg ->
+      Printf.printf "Error: %s\n" msg);
+  [%expect
+    {|
+    Child parents: 1
+    Elided parents: 1
+    Elided parent commit ids: [root]
     |}]
 ;;

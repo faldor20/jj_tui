@@ -333,8 +333,14 @@ struct
         (* Default view: fetch the full visible graph topology, then locally decide
            which commits remain visible and where elision rows must be inserted. *)
         let commits = get_graph_json ~revset:"all()" limit in
-        let visible_commit_ids = Jj_json.select_visible_commit_ids commits in
-        let nodes = Jj_json.commits_to_nodes ~visible_commit_ids commits in
+        let visible_commit_ids =
+          timeStampLog "selected visible commit ids" @@ fun () ->
+          Jj_json.select_visible_commit_ids commits
+        in
+        let nodes =
+          timeStampLog "collapsed commits to graph nodes" @@ fun () ->
+          Jj_json.commits_to_nodes ~visible_commit_ids commits
+        in
         let visible_commit_id_set =
           visible_commit_ids
           |> List.to_seq
