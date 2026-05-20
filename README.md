@@ -1,7 +1,11 @@
 # Jujutsu TUI
 [![nix](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml/badge.svg)](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml)
-A TUI for the Jujutsu version control system
 
+A TUI for the Jujutsu version control system
+Our focus here is on:
+- **Performance**: jj_tui should start fast and never slow you down, it should feel extremely snappy to browse your commits and files
+- **Intuitive**: Keybindings should be easily memorizable and quick to commit to muscle memory without uneeded popups
+- **Interactivity**: jj_tui completely re-implements jj's renderer so we can show realtime previews of the graph while you figure out how your rebase should look ( Use `r`ebase `p`review to try it out!)
 
 ![jj_tui-ezgif com-optimize](https://github.com/faldor20/jj_tui/assets/26968035/fb053320-484a-4d6f-9b66-e5b9d0d49e5d)
 
@@ -22,7 +26,7 @@ Press `?` to show the help. (commands are different between graph and files view
 - `space` can be used to select multiple commits for copying, rebasing etc, starting a `n`ew commit on top of etc 
 
 ### Creating commits from the file view:
-- `space` can be used to select files to `c`ommit seperately or `m`ove to different commit 
+- `space` can be used to select files to `c`ommit seperately or `m`ove to different commit
 - Files and be sent to `N`ext or `P`revious commits
 
 ### filtering by revsets 
