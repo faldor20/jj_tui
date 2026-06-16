@@ -55,27 +55,14 @@ jobs:
           # except any version with the key that is the same as the `primary-key`
           purge-primary-key: never
       - run: nix build .#static
+      - name: Create release tarball
+        run: tar -czf jj_tui-linux-x86_64.tar.gz -C result/bin jj_tui
       - name: Archive production artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: jj_tui_linux
-          path: result/bin/jj_tui
+          path: jj_tui-linux-x86_64.tar.gz
 
-  # linux-aarch64:
-  #   strategy:
-  #     fail-fast: false
-  #   runs-on: ubuntu-24.04-arm
-  #   timeout-minutes: 120
-  #   steps:
-  #     - *checkout
-  #     - *nix_install
-  #     - *nix_cache
-  #     - run: nix build .#static
-  #     - name: Archive production artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: jj_tui_linux-aarch64
-  #         path: result/bin/jj_tui
   macos:
     strategy:
       fail-fast: false
@@ -87,11 +74,13 @@ jobs:
       - *nix_install
       - *nix_cache
       - run: nix build
+      - name: Create release tarball
+        run: tar -czf jj_tui-macos-aarch64.tar.gz -C result/bin jj_tui
       - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jj_tui_macos
-          path: result/bin/jj_tui
+          path: jj_tui-macos-aarch64.tar.gz
 
   macos-x86:
     strategy:
@@ -104,11 +93,13 @@ jobs:
       - *nix_install
       - *nix_cache
       - run: nix build
-      - name: Create tar.gz
+      - name: Create release tarball
+        run: tar -czf jj_tui-macos-x86_64.tar.gz -C result/bin jj_tui
+      - name: Archive production artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jj_tui_macos-x86
-          path: result/bin/jj_tui
+          path: jj_tui-macos-x86_64.tar.gz
 
   release:
     permissions:
@@ -125,7 +116,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            jj_tui_linux/jj_tui
-            # jj_tui_linux-aarch64/jj_tui
-            jj_tui_macos/jj_tui
-            jj_tui_macos-x86/jj_tui
+            jj_tui_linux/jj_tui-linux-x86_64.tar.gz
+            jj_tui_macos/jj_tui-macos-aarch64.tar.gz
+            jj_tui_macos-x86/jj_tui-macos-x86_64.tar.gz
