@@ -35,6 +35,7 @@ let make_test_node
       ?(divergent = false)
       ?(conflict = false)
       ?(bookmarks = [])
+      ?(workspaces = [])
       ~change_id_prefix
       ~change_id_rest
       ~commit_id_prefix
@@ -53,6 +54,7 @@ let make_test_node
     ; commit_id = commit_id_prefix ^ commit_id_rest
     ; description
     ; bookmarks
+    ; workspaces
     ; author_email = "test@example.com"
     ; author_timestamp = "2024-01-01"
     ; empty
@@ -140,6 +142,25 @@ let%expect_test "render_working_copy_commit" =
     {|
     working test@example.com 2024-01-01 cccddd
     Working copy
+    |}]
+;;
+
+let%expect_test "render_commit_with_workspaces" =
+  let node =
+    make_test_node
+      ~change_id_prefix:"abc"
+      ~change_id_rest:"def"
+      ~commit_id_prefix:"111"
+      ~commit_id_rest:"222"
+      ~description:"With workspaces"
+      ~workspaces:[ "default"; "ws1" ]
+      ()
+  in
+  render_and_print node;
+  [%expect
+    {|
+    abcdef test@example.com 2024-01-01 default@ ws1@ 111222
+    With workspaces
     |}]
 ;;
 

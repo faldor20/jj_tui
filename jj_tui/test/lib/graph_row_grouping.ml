@@ -19,6 +19,7 @@ let test_node ?(description = "desc") ?(is_preview = false) commit_id =
   ; commit_id
   ; description
   ; bookmarks = []
+  ; workspaces = []
   ; author_email = "test@example.com"
   ; author_timestamp = "2024-01-01"
   ; empty = false

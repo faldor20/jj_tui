@@ -48,6 +48,9 @@ type node = {
   ; commit_id : string
   ; description : string
   ; bookmarks : string list
+  ; workspaces : string list
+        (** Names of workspaces whose working-copy commit is this node, e.g.
+            ["default"; "ws1"]. Rendered as [name@] after the timestamp. *)
   ; author_email : string
   ; author_timestamp : string
   ; empty : bool
@@ -80,6 +83,7 @@ let make_elided_node ?(id = elided_marker) ?(parents = []) () : node =
   ; commit_id = id
   ; description = "(elided revisions)"
   ; bookmarks = []
+  ; workspaces = []
   ; author_email = ""
   ; author_timestamp = ""
   ; empty = false

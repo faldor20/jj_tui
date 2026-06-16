@@ -83,6 +83,16 @@ let render_commit_content (node : Render_jj_graph.node) : Notty.image list =
     (* Author email and timestamp *)
     line1_parts := styled_text (fg yellow ++ bs) (" " ^ node.author_email) :: !line1_parts;
     line1_parts := styled_text (fg cyan ++ bs) (" " ^ node.author_timestamp) :: !line1_parts;
+    (* Workspaces whose working-copy commit is this node, rendered as [name@].
+       jj colors these "green", and "bright green" for the current workspace's
+       working copy (the [working_copy working_copies] label). *)
+    if List.length node.workspaces > 0
+    then (
+      let workspace_attr = fg (if node.working_copy then lightgreen else green) ++ bs in
+      let workspaces_str =
+        " " ^ (node.workspaces |> List.map (fun w -> w ^ "@") |> String.concat " ")
+      in
+      line1_parts := styled_text workspace_attr workspaces_str :: !line1_parts);
     (* Add bookmarks after timestamp if they exist *)
     if List.length node.bookmarks > 0
     then (

@@ -31,6 +31,7 @@ type jj_commit = {
   ; empty : bool
   ; local_bookmarks : string list
   ; remote_bookmarks : string list
+  ; workspaces : string list
   ; tags : string list
   ; author : jj_author
   ; change_id_prefix : string
@@ -79,6 +80,9 @@ let json_log_template =
        .map(|b| json(stringify(b.name() ++ "@" ++ b.remote())))
        .join(",")
   ++ ']'
+  ++ ',"workspaces":['
+  ++ working_copies.map(|w| json(w.name())).join(",")
+  ++ ']'
   ++ ',"tags":['
   ++ tags.map(|t| json(t.name())).join(",")
   ++ ']'
@@ -104,6 +108,14 @@ let parse_jj_log_output (input : string) : (jj_commit list, string) result =
       | json ->
         json
     in
+    let ensure_list_field field_name = function
+      | `Assoc fields as json ->
+        if List.mem_assoc field_name fields
+        then json
+        else `Assoc ((field_name, `List []) :: fields)
+      | json ->
+        json
+    in
     let lines =
       input |> String.split_on_char '\n' |> List.filter (fun s -> String.length s > 0)
     in
@@ -123,7 +135,9 @@ let parse_jj_log_output (input : string) : (jj_commit list, string) result =
         let json = Yojson.Safe.from_string json_str in
         (* Older tests and fixtures may not include newly added template fields.
             Normalize them here so the parser stays backward-compatible. *)
-        let json = json |> ensure_bool_field "trunk" false in
+        let json =
+          json |> ensure_bool_field "trunk" false |> ensure_list_field "workspaces"
+        in
         match jj_commit_of_yojson json with
         | Ok commit ->
           commit
@@ -202,6 +216,7 @@ let commits_to_nodes
                ; commit_id = jj_commit.commit_id
                ; description = jj_commit.description
                ; bookmarks = display_refs jj_commit
+               ; workspaces = jj_commit.workspaces
                ; author_email = jj_commit.author.email
                ; author_timestamp = jj_commit.author.timestamp
                ; empty = jj_commit.empty
@@ -310,6 +325,7 @@ let commits_to_nodes
                  ; commit_id = jj_commit.commit_id
                  ; description = jj_commit.description
                  ; bookmarks = display_refs jj_commit
+                 ; workspaces = jj_commit.workspaces
                  ; author_email = jj_commit.author.email
                  ; author_timestamp = jj_commit.author.timestamp
                  ; empty = jj_commit.empty
