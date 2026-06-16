@@ -87,12 +87,11 @@ module Make (Vars : Global_vars.Vars) = struct
           let rev_args = List.concat_map (fun r -> [ "-r"; r ]) revs in
           let title = Printf.sprintf "Git push (%s) will:" remote in
           let dry_run_cmd =
-            [ "git"; "push"; "--allow-new"; "--dry-run"; "--remote"; remote ] @ rev_args
+            [ "git"; "push"; "--dry-run"; "--remote"; remote ] @ rev_args
           in
           let real_cmd =
             Cmd_async
-              ( "pushing to remote..."
-              , [ "git"; "push"; "--allow-new"; "--remote"; remote ] @ rev_args )
+              ("pushing to remote...", [ "git"; "push"; "--remote"; remote ] @ rev_args)
           in
           confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
     in
@@ -101,12 +100,12 @@ module Make (Vars : Global_vars.Vars) = struct
         (fun () ->
           let title = Printf.sprintf "Git push (%s) will:" remote in
           let dry_run_cmd =
-            [ "git"; "push"; "--deleted"; "--allow-new"; "--dry-run"; "--remote"; remote ]
+            [ "git"; "push"; "--deleted";  "--dry-run"; "--remote"; remote ]
           in
           let real_cmd =
             Cmd_async
               ( "pushing to remote..."
-              , [ "git"; "push"; "--allow-new"; "--deleted"; "--remote"; remote ] )
+              , [ "git"; "push";  "--deleted"; "--remote"; remote ] )
           in
           confirm_dry_run_prompt ~title ~dry_run_cmd ~real_cmd)
     in
