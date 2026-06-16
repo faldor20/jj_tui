@@ -24,6 +24,7 @@ jj_tui/
 ## Build Commands
 
 **Requires Nix** - This project uses Nix for dependency management.
+ you MUST always include `pkg disabled` in dune commands when using the nix environment. otherwise it will not use the packages and compiler supplied by nix 
 
 ```bash
 # Enter development shell (required first)

@@ -250,12 +250,6 @@ module Make (Vars : Global_vars.Vars) = struct
               ("commit msg", fun msg -> Fun (fun () -> custom_commit ~edit:false msg)))
       }
     ; {
-        id = "split"
-      ; sorting_key = 10.0
-      ; description = "Split the current commit interacively"
-      ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd_I [ "split"; "-r"; rev; "-i" ]))
-      }
-    ; {
         id = "squash_into_parent"
       ; sorting_key = 11.0
       ; description = "Squash into parent"
@@ -317,6 +311,77 @@ module Make (Vars : Global_vars.Vars) = struct
             Dynamic_r
               (fun rev ->
                 Prompt_I ("target revision", [ "squash"; "-i"; "--from"; rev; "--into" ])))
+      }
+    ; {
+        id = "squash_into_parent_with_message"
+      ; sorting_key = 11.0
+      ; description = "Squash into parent with custom message"
+      ; make_cmd =
+          (fun () ->
+            PromptThen
+              ( "squash message"
+              , fun msg ->
+                  Fun
+                    (fun _ ->
+                      let rev = Vars.get_hovered_rev () in
+                      jj [ "squash"; "--quiet"; "-r"; rev; "-m"; msg ] |> ignore) ))
+      }
+    ; {
+        id = "squash_into_rev_with_message"
+      ; sorting_key = 12.0
+      ; description = "Squash into any commit with custom message"
+      ; make_cmd =
+          (fun () ->
+            PromptThen
+              ( "squash message"
+              , fun msg ->
+                  PromptThen
+                    ( "target revision"
+                    , fun target ->
+                        Dynamic_r
+                          (fun rev ->
+                            Cmd
+                              [
+                                "squash"
+                              ; "--quiet"
+                              ; "-m"
+                              ; msg
+                              ; "--from"
+                              ; rev
+                              ; "--into"
+                              ; target
+                              ])) ))
+      }
+    ; {
+        id = "squash_interactive_parent_with_message"
+      ; sorting_key = 14.0
+      ; description = "Interactively choose what to squash into parent with custom message"
+      ; make_cmd =
+          (fun () ->
+            PromptThen
+              ( "squash message"
+              , fun msg -> Dynamic_r (fun rev -> Cmd_I [ "squash"; "-r"; rev; "-i"; "-m"; msg ]) ))
+      }
+    ; {
+        id = "squash_interactive_rev_with_message"
+      ; sorting_key = 15.0
+      ; description = "Interactively choose what to squash into a commit with custom message"
+      ; make_cmd =
+          (fun () ->
+            PromptThen
+              ( "squash message"
+              , fun msg ->
+                  Dynamic_r
+                    (fun rev ->
+                      Prompt_I
+                        ( "target revision"
+                        , [ "squash"; "-i"; "-m"; msg; "--from"; rev; "--into" ] )) ))
+      }
+    ; {
+        id = "split"
+      ; sorting_key = 16.0
+      ; description = "Split the current commit interactively"
+      ; make_cmd = (fun () -> Dynamic_r (fun rev -> Cmd_I [ "split"; "-r"; rev; "-i" ]))
       }
     ; {
         id = "edit"

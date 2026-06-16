@@ -272,16 +272,25 @@ let default : key_config =
             "c"
             "Commit"
             [ cmd "c" "commit_base"; cmd "C" "commit_no_edit"; cmd "D" "describe_editor" ]
-        ; cmd "S" "split"
         ; sub
             "s"
-            "Squash"
+            "Squash/Split"
             [
               cmd "s" "squash_into_parent"
-            ; cmd "S" "squash_into_rev"
+            ; cmd "r" "squash_into_rev"
             ; cmd "u" "squash_unsquash"
             ; cmd "i" "squash_interactive_parent"
             ; cmd "I" "squash_interactive_rev"
+            ; cmd "x" "split"
+            ]
+        ; sub
+            "S"
+            "Squash/Split with message"
+            [
+              cmd "s" "squash_into_parent_with_message"
+            ; cmd "r" "squash_into_rev_with_message"
+            ; cmd "i" "squash_interactive_parent_with_message"
+            ; cmd "I" "squash_interactive_rev_with_message"
             ]
         ; cmd "e" "edit"
         ; cmd "d" "describe"
