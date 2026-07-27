@@ -31,6 +31,13 @@ jobs:
             keep-env-derivations = true
             keep-outputs = true
 
+      - &cachix
+        name: Set up Cachix
+        uses: cachix/cachix-action@v17
+        with:
+          name: jj-tui
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
       - &nix_cache
         name: Restore and save Nix store
         uses: nix-community/cache-nix-action@v7
@@ -54,6 +61,19 @@ jobs:
           purge-last-accessed: 0
           # except any version with the key that is the same as the `primary-key`
           purge-primary-key: never
+
+      - &cache_dev_shell
+        name: Materialize and publish the development environment
+        env:
+          CACHIX_AUTH_TOKEN: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+        run: |
+          nix develop --profile .nix-profile -c true
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$CACHIX_AUTH_TOKEN" ]; then
+            cachix push jj-tui .nix-profile
+          else
+            echo "CACHIX_AUTH_TOKEN is not configured; skipping explicit dev-shell push"
+          fi
+
       - run: nix build .#static
       - name: Create release tarball
         run: tar -czf jj_tui-linux-x86_64.tar.gz -C result/bin jj_tui
@@ -62,6 +82,27 @@ jobs:
         with:
           name: jj_tui_linux
           path: jj_tui-linux-x86_64.tar.gz
+
+  linux-aarch64:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+
+    steps:
+      - *checkout
+      - *nix_install
+      - *cachix
+      - *nix_cache
+      - *cache_dev_shell
+      - run: nix build
+      - name: Create release tarball
+        run: tar -czf jj_tui-linux-aarch64.tar.gz -C result/bin jj_tui
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jj_tui_linux_aarch64
+          path: jj_tui-linux-aarch64.tar.gz
 
   macos:
     strategy:
@@ -72,7 +113,9 @@ jobs:
     steps:
       - *checkout
       - *nix_install
+      - *cachix
       - *nix_cache
+      - *cache_dev_shell
       - run: nix build
       - name: Create release tarball
         run: tar -czf jj_tui-macos-aarch64.tar.gz -C result/bin jj_tui
@@ -91,7 +134,9 @@ jobs:
     steps:
       - *checkout
       - *nix_install
+      - *cachix
       - *nix_cache
+      - *cache_dev_shell
       - run: nix build
       - name: Create release tarball
         run: tar -czf jj_tui-macos-x86_64.tar.gz -C result/bin jj_tui
@@ -106,7 +151,7 @@ jobs:
       contents: write
       discussions: write
     runs-on: ubuntu-latest
-    needs: [macos, linux, macos-x86]
+    needs: [macos, linux, linux-aarch64, macos-x86]
     name: release if tag
     steps:
       - name: Download artifacts
@@ -117,5 +162,6 @@ jobs:
         with:
           files: |
             jj_tui_linux/jj_tui-linux-x86_64.tar.gz
+            jj_tui_linux_aarch64/jj_tui-linux-aarch64.tar.gz
             jj_tui_macos/jj_tui-macos-aarch64.tar.gz
             jj_tui_macos-x86/jj_tui-macos-x86_64.tar.gz
