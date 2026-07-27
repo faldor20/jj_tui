@@ -11,6 +11,9 @@ on:
 
 permissions: read-all
 
+env:
+  CACHIX_AUTH_TOKEN: "${{ secrets.CACHIX_AUTH_TOKEN }}"
+
 jobs:
   linux:
     strategy:
@@ -32,6 +35,7 @@ jobs:
             keep-outputs = true
 
       - &cachix
+        if: env.CACHIX_AUTH_TOKEN != ''
         name: Set up Cachix
         uses: cachix/cachix-action@v17
         with:
@@ -64,8 +68,6 @@ jobs:
 
       - &cache_dev_shell
         name: Materialize and publish the development environment
-        env:
-          CACHIX_AUTH_TOKEN: "${{ secrets.CACHIX_AUTH_TOKEN }}"
         run: |
           nix develop --profile .nix-profile -c true
           if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$CACHIX_AUTH_TOKEN" ]; then
