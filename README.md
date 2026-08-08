@@ -1,3 +1,35 @@
+
+<div align="right">
+  <details>
+    <summary >🌐 Language</summary>
+    <div>
+      <div align="center">
+        <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=en">English</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=zh-CN">简体中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=zh-TW">繁體中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=ja">日本語</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=ko">한국어</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=hi">हिन्दी</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=th">ไทย</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=fr">Français</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=de">Deutsch</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=es">Español</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=it">Italiano</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=ru">Русский</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=pt">Português</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=nl">Nederlands</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=pl">Polski</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=ar">العربية</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=fa">فارسی</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=tr">Türkçe</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=vi">Tiếng Việt</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=id">Bahasa Indonesia</a>
+        | <a href="https://openaitx.github.io/view.html?user=faldor20&project=jj_tui&lang=as">অসমীয়া</
+      </div>
+    </div>
+  </details>
+</div>
+
 # Jujutsu TUI
 [![nix](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml/badge.svg)](https://github.com/faldor20/jj_tui/actions/workflows/build-nix.yml)
 
